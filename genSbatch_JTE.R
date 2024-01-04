@@ -61,15 +61,17 @@ scen.params = tidyr::expand_grid(
   # important: if sim.env = stefan, these t2 args are ONLY used for setting start values
   #   and for checking bias of Shat, so set them to have the correct t2a
   #   not clear what t2w should be given the way stefan implements hacking
-  t2a = c(0, 0.1^2, 0.2^2, 0.5^2, 1),
+  t2a = c(0.05^2, 0.1^2, 0.2^2, 0.5^2, 1),
   t2w = c(0),
   # same with Mu
   Mu = c(0, 0.5),
-  true.dist = c("norm", "expo"),
+  true.dist = c("expo", "norm"),
   
   Nmax = 1,
   m = 50,
-  true.sei.expr = c("0.02 + rexp(n = 1, rate = 3)"),
+  true.sei.expr = c("0.02 + rexp(n = 1, rate = 3)",  # original setting close to empirical distribution
+                    "0.02 + rexp(n = 1, rate = 1)", # larger SEs overall
+                    "0.3"), # all the same, and close to mean of the first option  
   rho = c(0),
   
   # Stan control args
@@ -134,7 +136,7 @@ sbatch_params <- data.frame(jobname,
                             # how to specify job times: https://www.sherlock.stanford.edu/docs/advanced-topics/job-management/#job-submission-limits
                             # days-hh:mm:ss
                             #jobtime = "1-00:00:00",  # 1 day
-                            jobtime = "01:00:00",
+                            jobtime = "00:30:00",
                             quality = "normal",
                             node_number = 1,
                             mem_per_node = 64000,

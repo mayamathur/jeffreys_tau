@@ -193,7 +193,7 @@ if ( run.local == TRUE ) {
     
     # *If you reorder the args, need to adjust wrangle_agg_local
     ### args shared between sim environments
-    k.pub = c(50),  # intentionally out of order so that jobs with boundary choices with complete first
+    k.pub = c(10),  # intentionally out of order so that jobs with boundary choices with complete first
     hack = c("affirm"),
     prob.hacked = c(0),
     # important: if sim.env = stefan, these t2 args are ONLY used for setting start values
@@ -203,7 +203,7 @@ if ( run.local == TRUE ) {
     t2w = c(0),
     # same with Mu
     Mu = c(0.5),
-    true.dist = "norm",
+    true.dist = "expo",
     
     Nmax = 1,
     m = 50,
