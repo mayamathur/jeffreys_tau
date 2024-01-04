@@ -13,7 +13,7 @@
 
 
 # for interactive Sherlock:
-# path = "/home/groups/manishad/SAPH"
+# path = "/home/groups/manishad/JTE"
 # setwd(path)
 # source("doParallel_JTE.R")
 
@@ -93,7 +93,7 @@ if (run.local == FALSE) {
   if ( any.failed == TRUE ) stop("Some packages couldn't be installed. See outfile for details of which ones.")
   
   # helper code
-  path = "/home/groups/manishad/SAPH"
+  path = "/home/groups/manishad/JTE"
   setwd(path)
   source("helper_JTE.R")
   source("stefan_phackR_fns.R")
@@ -114,7 +114,7 @@ if (run.local == FALSE) {
   # alternatively, generate a simple scen.params in order to run doParallel manually in
   # Sherlock as a test
   if ( interactive.cluster.run == TRUE ) {
-    path = "/home/groups/manishad/SAPH"
+    path = "/home/groups/manishad/JTE"
     setwd(path)
     source("helper_JTE.R")
     source("stefan_phackR_fns.R")
@@ -187,96 +187,36 @@ if ( run.local == TRUE ) {
   
   # ~~ ****** Set Local Sim Params -----------------------------
   
-  # # Mathur environment
-  # scen.params = tidyr::expand_grid(
-  #   # full list (save):
-  #   #rep.methods = "naive ; gold-std ; pcurve ; maon ; 2psm ; jeffreys-mcmc ; jeffreys-sd ; prereg-naive",
-  #   rep.methods = "naive ; gold-std ; pcurve ; maon ; 2psm ; pet-peese ; robma ; jeffreys-mcmc ; prereg-naive",
-  #   #rep.methods = "naive",
-  #   #rep.methods = "naive ; gold-std ; jeffreys-mcmc ; 2psm",
-  #   #rep.methods = c("rtma-pkg ; jeffreys-mcmc"),
-  #   #rep.methods = "naive ; rtma-pkg",
-  #   
-  #   sim.env = "mathur",
-  #   
-  #   # *If you reorder the args, need to adjust wrangle_agg_local
-  #   ### args shared between sim environments
-  #   k.pub.nonaffirm = c(10),  # intentionally out of order so that jobs with boundary choices with complete first 
-  #   hack = c("affirm"),
-  #   prob.hacked = c(0.8),
-  #   # important: if sim.env = stefan, these t2 args are ONLY used for setting start values
-  #   #   and for checking bias of Shat, so set them to have the correct t2a
-  #   #   not clear what t2w should be given the way stefan implements hacking 
-  #   t2a = c(0),
-  #   t2w = c(0.2^2),
-  #   # same with Mu
-  #   Mu = c(0.5),
-  #   
-  #   ### only needed if sim.env = "mathur": args from sim_meta_2
-  #   Nmax = 30,
-  #   m = 50,
-  #   true.sei.expr = c("0.02 + rexp(n = 1, rate = 3)"),
-  #   rho = c(0),
-  #   ### end of stuff for sim.env = "mathur"
-  #   
-  #   # ### only needed if sim.env = "stefan": args from sim_meta_2
-  #   # strategy.stefan = c("firstsig", "smallest"),  # "firstsig" or "smallest"
-  #   # alternative.stefan = c("greater", "two.sided"),  # "two.sided" or "greater"
-  #   # stringent.hack = TRUE,  # mathur sims always effectively use stringent.hack = TRUE
-  #   # ### end of stuff for sim.env = "stefan"
-  #   
-  #   # Stan control args
-  #   stan.maxtreedepth = 25,
-  #   stan.adapt_delta = 0.995,
-  #   
-  #   get.CIs = TRUE,
-  #   run.optimx = FALSE )
-  
-  
-  
-  # Stefan environment - exactly as in genSbatch
+  # Mathur environment
   scen.params = tidyr::expand_grid(
-    # without robma:
-    rep.methods = "naive ; gold-std ; maon",
-    #rep.methods = "naive ; gold-std ; pcurve ; maon ; 2psm ; pet-peese ; rtma-pkg ; prereg-naive",
-    
-    sim.env = "stefan",
-    
+    # full list (save):
+    rep.methods = "REML ; jeffreys",
+
+    # *If you reorder the args, need to adjust wrangle_agg_local
     ### args shared between sim environments
-    #k.pub.nonaffirm = c(10, 15, 20, 30, 50, 70, 100),
-    k.pub.nonaffirm = c(100),  # intentionally out of order so that jobs with boundary choices with complete first
-    hack = c("DV"),
-    prob.hacked = c(0.8),
+    k.pub.nonaffirm = c(10),  # intentionally out of order so that jobs with boundary choices with complete first
+    hack = c("affirm"),
+    prob.hacked = c(0),
     # important: if sim.env = stefan, these t2 args are ONLY used for setting start values
     #   and for checking bias of Shat, so set them to have the correct t2a
     #   not clear what t2w should be given the way stefan implements hacking
-    t2a = c(1),
+    t2a = c(0.2^2),
     t2w = c(0),
     # same with Mu
     Mu = c(0),
-    
-    # ### only needed if sim.env = "mathur": args from sim_meta_2
-    # Nmax = 30,
-    # m = 50,
-    #
-    # true.sei.expr = c("0.02 + rexp(n = 1, rate = 3)"),
-    # rho = c(0),
-    # ### end of stuff for sim.env = "mathur"
-    
-    ### only needed if sim.env = "stefan": args from sim_meta_2
-    strategy.stefan = c("firstsig"),  # "firstsig" or "smallest"
-    alternative.stefan = c("greater"),  # "two.sided" or "greater"
-    stringent.hack = TRUE,  # mathur sims always effectively use stringent.hack = TRUE
-    ### end of stuff for sim.env = "stefan"
-    
+
+    Nmax = 30,
+    m = 50,
+    true.sei.expr = c("0.02 + rexp(n = 1, rate = 3)"),
+    rho = c(0),
+  
     # Stan control args
     stan.maxtreedepth = 25,
     stan.adapt_delta = 0.995,
-    
+
     get.CIs = TRUE,
     run.optimx = FALSE )
-  
-  
+
   
   scen.params$scen = 1:nrow(scen.params)
   
@@ -300,7 +240,7 @@ if ( run.local == TRUE ) {
 
 if ( "draw_lodder_se()" %in% scen.params$true.sei.expr ) {
   
-  setwd("/home/groups/manishad/SAPH/applied_examples/data")
+  setwd("/home/groups/manishad/JTE/applied_examples/data")
   d.lodder = fread("lodder_prepped.csv")
   lodder.ses = sqrt(d.lodder$vi)
   
@@ -677,7 +617,7 @@ doParallel.seconds = system.time({
     
     if ( "jeffreys-mcmc" %in% all.methods ) {
       # # temp for refreshing code
-      # path = "/home/groups/manishad/SAPH"
+      # path = "/home/groups/manishad/JTE"
       # setwd(path)
       # source("helper_JTE.R")
       # source("init_stan_model_JTE.R")
@@ -771,7 +711,7 @@ doParallel.seconds = system.time({
     #bm
     if ( "jeffreys-sd" %in% all.methods ) {
       # # temp for refreshing code
-      # path = "/home/groups/manishad/SAPH"
+      # path = "/home/groups/manishad/JTE"
       # setwd(path)
       # source("helper_JTE.R")
       # source("init_stan_model_JTE.R")
@@ -799,7 +739,7 @@ doParallel.seconds = system.time({
     
     if ( "jeffreys-var" %in% all.methods ) {
       # # temp for refreshing code
-      # path = "/home/groups/manishad/SAPH"
+      # path = "/home/groups/manishad/JTE"
       # setwd(path)
       # source("helper_JTE.R")
       
@@ -831,7 +771,7 @@ doParallel.seconds = system.time({
     if ( "mle-sd" %in% all.methods ) {
       
       # # temp for refreshing code
-      # path = "/home/groups/manishad/SAPH"
+      # path = "/home/groups/manishad/JTE"
       # setwd(path)
       # source("helper_JTE.R")
       
@@ -861,7 +801,7 @@ doParallel.seconds = system.time({
          nrow(dp.csm) > 0 ) {
       
       # # temp for refreshing code
-      # path = "/home/groups/manishad/SAPH"
+      # path = "/home/groups/manishad/JTE"
       # setwd(path)
       # source("helper_JTE.R")
       
@@ -890,7 +830,7 @@ doParallel.seconds = system.time({
     
     if ( "csm-mcmc" %in% all.methods ) {
       # # temp for refreshing code
-      # path = "/home/groups/manishad/SAPH"
+      # path = "/home/groups/manishad/JTE"
       # setwd(path)
       # source("helper_JTE.R")
       
@@ -1164,7 +1104,7 @@ doParallel.seconds = system.time({
       # not checking prior because helper_JTE::lprior doesn't handle affirms
       
       # # # if needed to refresh code
-      # path = "/home/groups/manishad/SAPH"
+      # path = "/home/groups/manishad/JTE"
       # setwd(path)
       # source("helper_JTE.R")
     }
@@ -1444,6 +1384,6 @@ if ( run.local == TRUE ) {
 
 # ~ WRITE LONG RESULTS ------------------------------
 if ( run.local == FALSE ) {
-  setwd("/home/groups/manishad/SAPH/long_results")
+  setwd("/home/groups/manishad/JTE/long_results")
   fwrite( rs, paste( "long_results", jobname, ".csv", sep="_" ) )
 }
