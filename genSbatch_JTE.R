@@ -55,16 +55,16 @@ scen.params = tidyr::expand_grid(
   
   # *If you reorder the args, need to adjust wrangle_agg_local
   ### args shared between sim environments
-  k.pub = c(10),  # intentionally out of order so that jobs with boundary choices with complete first
+  k.pub = c(5, 10, 15, 20, 100),  # intentionally out of order so that jobs with boundary choices with complete first
   hack = c("affirm"),
   prob.hacked = c(0),
   # important: if sim.env = stefan, these t2 args are ONLY used for setting start values
   #   and for checking bias of Shat, so set them to have the correct t2a
   #   not clear what t2w should be given the way stefan implements hacking
-  t2a = c(0.2^2),
+  t2a = c(0, 0.1^2, 0.2^2, 0.5^2, 1),
   t2w = c(0),
   # same with Mu
-  Mu = c(0.5),
+  Mu = c(0, 0.5),
   
   Nmax = 1,
   m = 50,
@@ -105,9 +105,9 @@ scen.params = fread("scen_params.csv")
 
 
 # number of sbatches to generate (i.e., iterations within each scenario)
-n.reps.per.scen = 500  
+n.reps.per.scen = 1000  
 # ~ *** set sim.reps  -------------------------------------------------
-n.reps.in.doParallel = 100
+n.reps.in.doParallel = 500
 ( n.files = ( n.reps.per.scen / n.reps.in.doParallel ) * n.scen )
 
 

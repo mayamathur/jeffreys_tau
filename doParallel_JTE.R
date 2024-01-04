@@ -157,7 +157,7 @@ if (run.local == FALSE) {
   # simulation reps to run within this job
   # **this need to match n.reps.in.doParallel in the genSbatch script
   # ***** Set cluster sim reps  -------------------------------------------------
-  if ( interactive.cluster.run == FALSE ) sim.reps = 25  # when running all methods except robma
+  if ( interactive.cluster.run == FALSE ) sim.reps = 500  # when running all methods except robma
   #if ( interactive.cluster.run == FALSE ) sim.reps = 10  # when running robma only
   
   #if ( interactive.cluster.run == TRUE ) sim.reps = 50 

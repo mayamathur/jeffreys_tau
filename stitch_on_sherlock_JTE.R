@@ -2,10 +2,10 @@
 
 
 # run this interactively in ml load R or via:
-#   sbatch -p qsu,owners,normal /home/groups/manishad/SAPH/job_stitch.sbatch
+#   sbatch -p qsu,owners,normal /home/groups/manishad/JTE/job_stitch.sbatch
 # scontrol show job 33834701
 # look at its out file:
-# cd /home/groups/manishad/SAPH
+# cd /home/groups/manishad/JTE
 # cd /home/users/mmathur
 # less rm_stitch.out
 
@@ -18,7 +18,7 @@
 
 # to be run by stitch.sbatch or manually
 # To quickly run this script in high-mem interactive session:
-# setwd("/home/groups/manishad/SAPH"); source("stitch_on_sherlock_SAPH.R")
+# setwd("/home/groups/manishad/JTE"); source("stitch_on_sherlock_JTE.R")
 
 # # load command line arguments
 # args = commandArgs(trailingOnly = TRUE)
@@ -27,23 +27,23 @@
 
 
 
-path = "/home/groups/manishad/SAPH"
+path = "/home/groups/manishad/JTE"
 setwd(path)
-source("helper_SAPH.R")
-source("analyze_sims_helper_SAPH.R")
+source("helper_JTE.R")
+source("analyze_sims_helper_JTE.R")
 
 # PRELIMINARIES ----------------------------------------------
 
 library(data.table)
 library(dplyr)
 library(testthat)
-# s = stitch_files(.results.singles.path = "/home/groups/manishad/SAPH/sim_results/long",
-#                  .results.stitched.write.path = "/home/groups/manishad/SAPH/sim_results/overall_stitched",
+# s = stitch_files(.results.singles.path = "/home/groups/manishad/JTE/sim_results/long",
+#                  .results.stitched.write.path = "/home/groups/manishad/JTE/sim_results/overall_stitched",
 #                  .name.prefix = "long_results",
 #                  .stitch.file.name="stitched.csv")
 
-.results.singles.path = "/home/groups/manishad/SAPH/long_results"
-.results.stitched.write.path = "/home/groups/manishad/SAPH/overall_stitched"
+.results.singles.path = "/home/groups/manishad/JTE/long_results"
+.results.stitched.write.path = "/home/groups/manishad/JTE/overall_stitched"
 .name.prefix = "long_results"
 .stitch.file.name="stitched.csv"
 
@@ -106,7 +106,6 @@ s = s %>% filter(!is.na(scen.name))
 summary(s$doParallel.seconds/60^2)
 
 # 90th quantile of HOURS needed (1 rep)
-# mathur WITHOUT robma: 0.78
 quantile(s$doParallel.seconds/60^2, probs = 0.95)
 
 
@@ -123,12 +122,12 @@ system(string)
 # LOOK FOR MISSED JOBS ----------------------------------------------
 
 # run in Sherlock ml load R
-path = "/home/groups/manishad/SAPH"
+path = "/home/groups/manishad/JTE"
 setwd(path)
-source("helper_SAPH.R")
+source("helper_JTE.R")
 
-missed.nums = sbatch_not_run( "/home/groups/manishad/SAPH/long_results",
-                              "/home/groups/manishad/SAPH/long_results",
+missed.nums = sbatch_not_run( "/home/groups/manishad/JTE/long_results",
+                              "/home/groups/manishad/JTE/long_results",
                               .name.prefix = "long_results",
                               .max.sbatch.num = 400 )
 
@@ -138,7 +137,7 @@ if ( FALSE ){
   
   setwd( paste(path, "/sbatch_files", sep="") )
   for (i in missed.nums) {
-    system( paste("sbatch -p qsu,owners,normal /home/groups/manishad/SAPH/sbatch_files/", i, ".sbatch", sep="") )
+    system( paste("sbatch -p qsu,owners,normal /home/groups/manishad/JTE/sbatch_files/", i, ".sbatch", sep="") )
   }
   
 }
@@ -165,15 +164,19 @@ as.data.frame( s %>% group_by(method, scen.name, k.pub.nonaffirm) %>%
 # increase width of console print area for df viewing joy
 options("width"=200)
 
-t = s %>% group_by(hack, method, k.pub.nonaffirm) %>%
-  #filter(rep.name == 1) %>% # TEMP - keep only first rep
-  #filter(rep.name == 1) %>% # TEMP - keep only first rep
-  filter(method == "rtma-pkg") %>%
-  #filter(method == "2psm") %>%
-  #filter(method %in% c("rtma-pkg", "jeffreys-mcmc-max-lp-iterate") ) %>%
+t = s %>% group_by(method, k.pub) %>%
   summarise( reps = n(),
              EstFail = mean(is.na(Mhat)),
              #Mhat = meanNA(Mhat),
+             
+             ShatBias = meanNA(Shat - sqrt(t2a)),
+             ShatCover = meanNA(SLo < sqrt(t2a) & SHi > sqrt(t2a)),
+             ShatWidth = meanNA(SHi - SLo),
+             SLo = meanNA(SLo),
+             SHi = meanNA(SHi),
+             # Shat = meanNA(Shat),
+             ShatNA = mean(is.na(Shat)),
+
              MhatBias = meanNA(Mhat - Mu),
              MhatCover = meanNA(MLo < Mu & MHi > Mu),
              MhatWidth = meanNA(MHi - MLo),
@@ -463,10 +466,10 @@ as.data.frame(t)
 
 # MAKE AGG DATA ----------------------------------------------
 
-path = "/home/groups/manishad/SAPH"
+path = "/home/groups/manishad/JTE"
 setwd(path)
-source("helper_SAPH.R")
-source("analyze_sims_helper_SAPH.R")
+source("helper_JTE.R")
+source("analyze_sims_helper_JTE.R")
 
 # if this says "problem with column OptimConverged", 
 #  you just need to comment out the optim columns in make_agg_data
@@ -505,6 +508,6 @@ table( s$overall.error[ s$method == "2psm" & is.na(s$Mhat) ] )
 ##### Move to Local #####
 
 # # stitched and agg -> local directory
-# scp mmathur@login.sherlock.stanford.edu:/home/groups/manishad/SAPH/overall_stitched/* /Users/mmathur/Dropbox/Personal\ computer/Independent\ studies/2021/Sensitivity\ analysis\ for\ p-hacking\ \(SAPH\)/Linked\ to\ OSF\ \(SAPH\)/Sherlock\ simulation\ results/Pilot\ simulations
+# scp mmathur@login.sherlock.stanford.edu:/home/groups/manishad/JTE/overall_stitched/* /Users/mmathur/Dropbox/Personal\ computer/Independent\ studies/2021/Sensitivity\ analysis\ for\ p-hacking\ \(JTE\)/Linked\ to\ OSF\ \(JTE\)/Sherlock\ simulation\ results/Pilot\ simulations
 
 
