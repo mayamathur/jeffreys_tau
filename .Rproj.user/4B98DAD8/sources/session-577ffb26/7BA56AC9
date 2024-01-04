@@ -3,7 +3,7 @@
     "path": "~/Dropbox/Personal computer/Independent studies/*Inchoate/2024/2024-01-03 - Jeffreys estimation of tau/Simulation study/Code (git)/helper_JTE.R",
     "project_path": "helper_JTE.R",
     "type": "r_source",
-    "hash": "282751411",
+    "hash": "0",
     "contents": "",
     "dirty": false,
     "created": 1704376508140.0,
@@ -12,8 +12,8 @@
     "properties": {
         "source_window_id": "",
         "Source": "Source",
-        "cursorPosition": "211,4",
-        "scrollLine": "187",
+        "cursorPosition": "308,1",
+        "scrollLine": "284",
         "docOutlineVisible": "1"
     },
     "folds": "",

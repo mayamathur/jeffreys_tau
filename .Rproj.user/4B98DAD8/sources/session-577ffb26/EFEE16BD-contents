@@ -189,11 +189,11 @@ if ( run.local == TRUE ) {
   
   scen.params = tidyr::expand_grid(
     # full list (save):
-    rep.methods = "reml ; jeffreys",
+    rep.methods = "REML ; ML ; DL ; PMM ; EB ; robu ; jeffreys",
     
     # *If you reorder the args, need to adjust wrangle_agg_local
     ### args shared between sim environments
-    k.pub = c(10),  # intentionally out of order so that jobs with boundary choices with complete first
+    k.pub = c(50),  # intentionally out of order so that jobs with boundary choices with complete first
     hack = c("affirm"),
     prob.hacked = c(0),
     # important: if sim.env = stefan, these t2 args are ONLY used for setting start values
@@ -342,20 +342,52 @@ doParallel.seconds = system.time({
     
     # ~ Existing Methods ------------------------------
     
-    # ~~ Naive Meta-Analysis (All PUBLISHED Draws) ------------------------------
+    # ~~ Metafor heterogeneity estimators ------------------------------
+  
+    # pg 282:
+    # https://cran.r-project.org/web/packages/metafor/metafor.pdf
+    metafor.methods = all.methods[ all.methods %in% c("REML", "ML", "DL", "EB", "PMM", "HS", "SJ") ]
     
-    if ( "reml" %in% all.methods ) {
-      rep.res = run_method_safe(method.label = c("reml"),
+
+    if ( length(metafor.methods) > 0 ) {
+      
+      for ( .method in metafor.methods ) {
+        rep.res = run_method_safe(method.label = c(.method),
+                                  method.fn = function() {
+                                    mod = rma( yi = d$yi,
+                                               vi = d$vi,
+                                               method = .method,
+                                               knha = TRUE )
+                                    
+                                    report_meta(mod, .mod.type = "rma")
+                                  },
+                                  .rep.res = rep.res )
+      }
+      
+    }
+    
+    
+    # NOTE: if doing run.local, this will break if you didn't run naive
+    if (run.local == TRUE) srr(rep.res)
+    
+    
+    # ~~ Robust Variance Estimation ------------------------------
+    
+    
+    if ( "robu" %in% all.methods ) {
+      rep.res = run_method_safe(method.label = c("robu"),
                                 method.fn = function() {
-                                  mod = rma( yi = d$yi,
-                                             vi = d$vi,
-                                             method = "REML",
-                                             knha = TRUE )
+                                  mod = robu( yi ~ 1,
+                                             data = d,
+                                             studynum = 1:nrow(d),
+                                             var.eff.size = vi,
+                                             small = TRUE)
                                   
-                                  report_meta(mod, .mod.type = "rma")
+                                  report_meta(mod, .mod.type = "robu")
                                 },
                                 .rep.res = rep.res )
     }
+    
     
     # NOTE: if doing run.local, this will break if you didn't run naive
     if (run.local == TRUE) srr(rep.res)
@@ -517,7 +549,7 @@ doParallel.seconds = system.time({
 
 
 # quick look
-rs %>% dplyr::select(method, Shat, SLo, SHi, Mhat, MLo, MHi)
+#rs %>% dplyr::select(method, Shat, SLo, SHi, Mhat, MLo, MHi)
 
 
 
