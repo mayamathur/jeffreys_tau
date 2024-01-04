@@ -154,7 +154,7 @@ table(s$rep.name)
 s %>% group_by(scen.name, method) %>%
   summarise(n())
 
-as.data.frame( s %>% group_by(method, scen.name, k.pub.nonaffirm) %>%
+as.data.frame( s %>% group_by(method, scen.name, k.pub) %>%
                   summarise(n()) )
 
 
@@ -165,12 +165,19 @@ as.data.frame( s %>% group_by(method, scen.name, k.pub.nonaffirm) %>%
 options("width"=200)
 
 t = s %>% group_by(method, k.pub) %>%
+  #filter(k.pub == 10 & t2a == 0.04 & Mu == 0) %>%  # jeffreys tau coverage is fine
+  #filter(k.pub == 10 & t2a == 1 & Mu == 0) %>%  # jeffreys tau coverage is fine
+  #filter(k.pub == 10 & t2a == 0 & Mu == 0) %>%  # @ALL METHODS HAVE 0 COVERAGE HERE WHEN TAU = 0 - WHY?
+  #filter(t2a > 0) %>%
+  #filter(t2a > 0 & Mu == 0.5) %>%
+  filter(t2a > 0 & k.pub == 100) %>%
+  
   summarise( reps = n(),
              EstFail = mean(is.na(Mhat)),
              #Mhat = meanNA(Mhat),
              
              ShatBias = meanNA(Shat - sqrt(t2a)),
-             ShatCover = meanNA(SLo < sqrt(t2a) & SHi > sqrt(t2a)),
+             ShatCover = meanNA(SLo <= sqrt(t2a) & SHi >= sqrt(t2a)),
              ShatWidth = meanNA(SHi - SLo),
              SLo = meanNA(SLo),
              SHi = meanNA(SHi),
@@ -192,276 +199,7 @@ t = s %>% group_by(method, k.pub) %>%
 as.data.frame(t)
 
 
-# Stefan: c.f. project log
-t = s %>% group_by(hack, method, k.pub.nonaffirm) %>%
-  filter(stringent.hack == TRUE &
-           hack == "DV" & 
-           k.pub.nonaffirm == 100 &
-           strategy.stefan == "firstsig" & 
-           alternative.stefan == "greater") %>%
-#filter( method %in% c("rtma-pkg") ) %>%
-  #filter(k.pub.nonaffirm ==10 & t2a == 0) %>%  # c.f. RSM_0
-  #filter(rep.name > 1) %>% # TEMP - keep only >first rep
-  #filter(rep.name == 1) %>% # TEMP - keep only first rep
-  #filter(method == "rtma-pkg") %>%
-  summarise( scen = scen.name[1],
-             reps = n(),
-             EstFail = mean(is.na(Mhat)),
-             Mhat = meanNA(Mhat),
-             MhatBias = meanNA(Mhat - Mu),
-             MhatCover = meanNA(MLo < Mu & MHi > Mu),
-             MhatWidth = meanNA(MHi - MLo),
-             MLo = meanNA(MLo),
-             MHi = meanNA(MHi)
-             # Shat = meanNA(Shat),
-             # MhatNA = mean(is.na(Mhat)),
-             # MhatRhatGt1.05 = mean(MhatRhat>1.05),
-             # MhatRhatGt1.02 = mean(MhatRhat>1.02)
-  ) %>%
-  #filter(reps > 1000) %>%
-  mutate_if(is.numeric, function(x) round(x,2))
-
-as.data.frame(t)
-
-
-
-
-t = s %>%
-  #filter(scen.name == 1) %>%
-  filter(hack == "affirm") %>%
-  filter( method %in% c("jeffreys-mcmc-max-lp-iterate", "rtma-pkg", "robma") ) %>%
-  #filter(k.pub.nonaffirm ==10 & t2a == 0) %>%  # c.f. RSM_0
-  #filter(rep.name != 1) %>% # TEMP - keep only later reps
-  #filter(rep.name == 1) %>% # TEMP - keep only first rep
-  group_by(method) %>%
-  summarise( reps = n(),
-             EstFail = mean(is.na(Mhat)),
-             Mhat = meanNA(Mhat),
-             MhatBias = meanNA(Mhat - Mu),
-             MhatCover = meanNA(MLo < Mu & MHi > Mu),
-             MhatWidth = meanNA(MHi - MLo),
-             MLo = meanNA(MLo),
-             MHi = meanNA(MHi)
-             # Shat = meanNA(Shat),
-             # MhatNA = mean(is.na(Mhat)),
-             # MhatRhatGt1.05 = mean(MhatRhat>1.05),
-             # MhatRhatGt1.02 = mean(MhatRhat>1.02)
-  ) %>%
-  #filter(reps > 1000) %>%
-  mutate_if(is.numeric, function(x) round(x,2))
-
-as.data.frame(t)
-# when filtering to rep.name == 1, n() should be equal to reps.per.scen / reps.in.doParallel
-
-
-
-#### For normal, large sims
-
-# summarize scens that have run
-param.vars.manip = c("hack", "k.pub.nonaffirm", "t2a")
-library(tableone)
-temp = s %>% filter(method == "naive")  # keep only 1 row per iterate
-CreateCatTable(data = s, vars = param.vars.manip )
-
-
-# increase width of console print area for df viewing joy
-options("width"=200)
-
-# General summary
-t = s %>% group_by(hack, method) %>%
-  #filter(k.pub.nonaffirm == 100 & hack == "DV") %>%
-  #filter(k.pub.nonaffirm == 100 & hack == "subgroup") %>%  # choose sample size
-  #filter(k.pub.nonaffirm == 30) %>%  # choose sample size
-  #filter(method == "robma") %>%
-  filter( method %in% c("robma", "jeffreys-mcmc-max-lp-iterate", "jeffreys-mcmc-pmed") ) %>%
-  #filter(k.pub.nonaffirm >0 & t2a == 0) %>%
-  summarise( reps = n(),
-             EstFail = mean(is.na(Mhat)),
-             Mhat = meanNA(Mhat),
-             MhatBias = meanNA(Mhat - Mu),
-             MhatCover = meanNA(MLo < Mu & MHi > Mu),
-             MhatWidth = meanNA(MHi - MLo),
-             MLo = meanNA(MLo),
-             MHi = meanNA(MHi)
-             # Shat = meanNA(Shat),
-             # MhatNA = mean(is.na(Mhat)),
-             # MhatRhatGt1.05 = mean(MhatRhat>1.05),
-             # MhatRhatGt1.02 = mean(MhatRhat>1.02)
-  ) %>%
-  #filter(reps > 1000) %>%
-  mutate_if(is.numeric, function(x) round(x,2))
-
-as.data.frame(t)
-
-
-# compare to results in RSM_0 (mathur env)
-#bm: this should look like the upper left of Fig 3 (close to 0 bias), but doesn't! Why??
-t = s %>% group_by(hack, method) %>%
-  #filter(k.pub.nonaffirm == 100 & hack == "DV") %>%
-  #filter(k.pub.nonaffirm == 100 & hack == "subgroup") %>%  # choose sample size
-  #filter(k.pub.nonaffirm == 30) %>%  # choose sample size
-  #filter(method == "robma") %>%
-  filter( method %in% c("rtma-pkg")) %>%
-  #filter( method %in% c("naive", "2psm")) %>%
-  filter(k.pub.nonaffirm == 10 &
-           #hack == "favor-best-affirm-wch" & # favor first affirm
-           hack == "affirm" &
-           t2a == 0^2) %>%
-  summarise( scens = length(unique(scen.name)),
-             reps = n(),
-             EstFail = mean(is.na(Mhat)),
-             Mhat = meanNA(Mhat),
-             MhatBias = meanNA(Mhat - Mu),
-             MhatCover = meanNA(MLo < Mu & MHi > Mu),
-             MhatWidth = meanNA(MHi - MLo),
-             MLo = meanNA(MLo),
-             MHi = meanNA(MHi),
-             # Shat = meanNA(Shat),
-             # MhatNA = mean(is.na(Mhat)),
-             MhatRhatGt1.05 = meanNA(MhatRhat>1.05),
-             MhatRhatGt1.02 = meanNA(MhatRhat>1.02)
-  ) %>%
-  #filter(reps > 1000) %>%
-  mutate_if(is.numeric, function(x) round(x,2))
-
-as.data.frame(t)
-
-# sanity check
-temp = s[ s$k.pub.nonaffirm == 10 &
-     s$hack == "affirm" & # favor first affirm
-     s$t2a == 0^2 &
-       s$method == "jeffreys-mcmc-max-lp-iterate", ]
-meanNA(temp$Mhat)
-median(temp$Mhat, na.rm = TRUE)
-meanNA(temp$Mhat - temp$Mu)
-meanNA(temp$MLo < temp$Mu & temp$MHi > temp$Mu)
-
-meanNA(temp$MhatRhat > 1.05)
-
-# before increasing stan parameters:
-# as.data.frame(t)
-#     hack                       method scens reps EstFail Mhat MhatBias MhatCover MhatWidth   MLo  MHi
-# 1 affirm jeffreys-mcmc-max-lp-iterate     1  500       0 0.16    -0.34      0.98      4.76 -0.15 4.60
-# 2 affirm           jeffreys-mcmc-pmed     1  500       0 0.31    -0.19      0.98      4.76 -0.15 4.60
-# 3 affirm                        robma     1  500       0 0.30    -0.20      0.98      0.52  0.06 0.58
-
-
-
-
-# summarize the scens that have run - stefan
-
-t = s %>% group_by(hack, alternative.stefan, strategy.stefan) %>%
-  summarise(n()) 
-data.frame(t)
-nrow(t)
-
-table(s$hack)
-table(s$alternative.stefan, s$strategy.stefan)
-table(s$strategy.stefan)
-table(s$k.pub.nonaffirm)
-
-table(s$hack, s$k.pub.nonaffirm)
-
-
-
-
-
-#** temp - explore robma issues
-x = s %>% filter(k.pub.nonaffirm == 100 & hack == "DV") %>%  # choose sample size
-  filter(method == "robma")
-
-mean(x$MLo > x$Mhat)
-mean(x$MHi < x$Mhat)
-
-# by individual scen params
-t = s %>% group_by(scen.name,
-                   k.pub.nonaffirm,
-                   hack,
-                   strategy.stefan,
-                   alternative.stefan,
-                   method) %>%
-
-  summarise( reps = n(),
-             EstFail = mean(is.na(Mhat)),
-             Mhat = meanNA(Mhat),
-             MhatBias = meanNA(Mhat - Mu),
-             MhatCover = meanNA(MLo < Mu & MHi > Mu),
-             MhatWidth = meanNA(MHi - MLo)
-             # MLo = meanNA(MLo),
-             # MHi = meanNA(MHi),
-             #Shat = meanNA(Shat),
-             # MhatRhatGt1.05 = mean(MhatRhat>1.05),
-             # MhatRhatGt1.02 = mean(MhatRhat>1.02)
-             ) %>%
-  #filter(reps > 1000) %>%
-  mutate_if(is.numeric, function(x) round(x,2))
-
-as.data.frame(t)
-
-
-
-t = s %>% group_by(scen.name, k.pub.nonaffirm, Mu,
-                   t2a, t2w, 
-                   true.sei.expr,
-                   method) %>%
-  filter( method == "jeffreys-mcmc-max-lp-iterate" ) %>%
-  # filter( grepl("jeffreys-mcmc", method) ) %>%
-  summarise( reps = n(),
-             MhatBias = meanNA(Mhat - Mu),
-             MhatCover = meanNA(MLo < Mu & MHi > Mu),
-             MhatWidth = meanNA(MHi - MLo),
-             # MLo = meanNA(MLo),
-             # MHi = meanNA(MHi),
-             Shat = meanNA(Shat),
-             MhatNA = mean(is.na(Mhat)),
-             MhatRhatGt1.05 = mean(MhatRhat>1.05),
-  MhatRhatGt1.02 = mean(MhatRhat>1.02)) %>%
-  #filter(reps > 1000) %>%
-    mutate_if(is.numeric, function(x) round(x,2))
-
-as.data.frame(t)
-
-
-# iterates with small Rhat
-t = s %>% group_by(scen.name, k.pub.nonaffirm, Mu,
-                   t2a, t2w, 
-                   true.sei.expr,
-                   method) %>%
-  filter( method == "jeffreys-mcmc-max-lp-iterate" ) %>% &
-            MhatRhat < 1.02) %>%
-  # filter( grepl("jeffreys-mcmc", method) ) %>%
-  summarise( reps = n(),
-             MhatBias = meanNA(Mhat - Mu),
-             MhatCover = meanNA(MLo < Mu & MHi > Mu),
-             MhatWidth = meanNA(MHi - MLo),
-             # MLo = meanNA(MLo),
-             # MHi = meanNA(MHi),
-             # Shat = meanNA(Shat),
-             MhatNA = mean(is.na(Mhat)) ) %>%
-  #filter(reps > 1000) %>%
-  mutate_if(is.numeric, function(x) round(x,2))
-
-
-as.data.frame(t)
-
-
-# max-lp iterate 
-t = s %>% group_by(scen.name, k.pub.nonaffirm, Mu, t2a, t2w, method) %>%
-  filter( method == "jeffreys-mcmc-pmed" &
-            MhatRhat < 1.01) %>%
-  summarise( reps = n(),
-             MhatMn = meanNA(Mhat),
-             MhatCover = meanNA(MLo < Mu & MHi > Mu),
-             MhatWidth = meanNA(MHi - MLo),
-             # MLo = meanNA(MLo),
-             # MHi = meanNA(MHi),
-             # Shat = meanNA(Shat),
-             MhatNA = mean(is.na(Mhat)) ) %>%
-  #filter(reps > 1000) %>%
-  mutate_if(is.numeric, function(x) round(x,2))
-
-
-as.data.frame(t)
+sum(s$k.pub == 10 & s$t2a == 0.2^2 & s$Mu == 0)
 
 
 # MAKE AGG DATA ----------------------------------------------

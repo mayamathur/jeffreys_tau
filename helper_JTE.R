@@ -1422,6 +1422,7 @@ quick_sim = function(.p,
 sim_meta_2 = function(Nmax,  
                       Mu,  
                       t2a,  
+                      true.dist,
                       
                       # study parameters, assumed same for all studies:
                       m,  # sample size for this study
@@ -1734,6 +1735,8 @@ sim_meta = function(Nmax,  # max draws to try
 sim_one_study_set = function(Nmax,  # max draws to try
                              Mu,  # overall mean for meta-analysis
                              t2a,  # across-study heterogeneity (NOT total heterogeneity)
+                             true.dist,
+                             
                              m,  # sample size for this study
                              t2w,  # within-study heterogeneity
                              se,  # TRUE SE for this study
@@ -1756,10 +1759,21 @@ sim_one_study_set = function(Nmax,  # max draws to try
   # rho=0
   
   # ~~ Mean for this study set ----
-  # doesn't have t2w because that applies to results within this study set
-  mui = Mu + rnorm(mean = 0,
-                   sd = sqrt(t2a),
-                   n = 1)
+
+  if ( true.dist == "norm" ){
+    mui = Mu + rnorm(mean = 0,
+                     sd = sqrt(t2a),
+                     n = 1)
+  }
+  
+  if ( true.dist == "expo" ){
+    # set the rate so the heterogeneity is correct
+    mui = rexp( n = 1, rate = sqrt(1/t2a) )
+    # now the mean is sqrt(t2a) rather than Mu
+    # shift to have the correct mean (in expectation)
+    mui = mui + ( Mu - sqrt(t2a))
+  }
+  
   
   # TRUE SD (not estimated)
   sd.y = se * sqrt(m)

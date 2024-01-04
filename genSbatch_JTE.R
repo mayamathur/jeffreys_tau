@@ -65,6 +65,7 @@ scen.params = tidyr::expand_grid(
   t2w = c(0),
   # same with Mu
   Mu = c(0, 0.5),
+  true.dist = c("norm", "expo"),
   
   Nmax = 1,
   m = 50,

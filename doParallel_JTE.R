@@ -203,6 +203,7 @@ if ( run.local == TRUE ) {
     t2w = c(0),
     # same with Mu
     Mu = c(0.5),
+    true.dist = "norm",
     
     Nmax = 1,
     m = 50,
@@ -305,6 +306,7 @@ doParallel.seconds = system.time({
     d = sim_meta_2( Nmax = p$Nmax,
                     Mu = p$Mu,
                     t2a = p$t2a,
+                    true.dist = p$true.dist,
                     m = p$m,
                     t2w = p$t2w,
                     true.sei.expr = p$true.sei.expr,
