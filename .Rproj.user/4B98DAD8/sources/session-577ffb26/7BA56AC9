@@ -3,7 +3,7 @@
     "path": "~/Dropbox/Personal computer/Independent studies/*Inchoate/2024/2024-01-03 - Jeffreys estimation of tau/Simulation study/Code (git)/helper_JTE.R",
     "project_path": "helper_JTE.R",
     "type": "r_source",
-    "hash": "866440968",
+    "hash": "282751411",
     "contents": "",
     "dirty": false,
     "created": 1704376508140.0,
@@ -12,15 +12,16 @@
     "properties": {
         "source_window_id": "",
         "Source": "Source",
-        "cursorPosition": "2180,45",
-        "scrollLine": "2154"
+        "cursorPosition": "211,4",
+        "scrollLine": "187",
+        "docOutlineVisible": "1"
     },
     "folds": "",
-    "lastKnownWriteTime": 1704376664,
+    "lastKnownWriteTime": 1704377648,
     "encoding": "UTF-8",
     "collab_server": "",
     "source_window": "",
-    "last_content_update": 1704376664048,
+    "last_content_update": 1704377648715,
     "read_only": false,
     "read_only_alternatives": []
 }

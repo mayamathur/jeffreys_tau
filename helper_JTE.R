@@ -166,19 +166,17 @@ estimate_jeffreys_RTMA = function( yi,
 # .stan.adapt_delta: passed to rstan
 # .stan.maxtreedepth: same
 #  we should later use ellipsis to allow passing arbitrary args to rstan
-estimate_jeffreys_mcmc_RTMA = function(.yi,
-                                       .sei,
-                                       .tcrit, 
-                                       .Mu.start,
-                                       .Tt.start,
-                                       .stan.adapt_delta = 0.8,
-                                       .stan.maxtreedepth = 10 ) {
+estimate_jeffreys = function(.yi,
+                             .sei,
+                             
+                             .Mu.start,
+                             .Tt.start,
+                             .stan.adapt_delta = 0.8,
+                             .stan.maxtreedepth = 10 ) {
   
   # stan.model (used later) is compiled OUTSIDE this fn in doParallel to avoid 
   #  issues with nodes competing with one another
   
-  # handle scalar tcrit
-  if ( length(.tcrit) < length(.yi) ) .tcrit = rep( .tcrit, length(.yi) )
   
   # prepare to capture warnings from Stan
   stan.warned = 0
@@ -197,16 +195,13 @@ estimate_jeffreys_mcmc_RTMA = function(.yi,
     # https://groups.google.com/g/stan-users/c/8snqQTTfWVs?pli=1
     options(mc.cores = parallel::detectCores())
     
-    cat( paste("\n estimate_jeffreys_mcmc flag 2: about to call sampling") )
+    cat( paste("\n estimate_jeffreys flag 2: about to call sampling") )
     
     post = sampling(stan.model,
                     cores = 1,
                     refresh = 0,
                     data = list( k = length(.yi),
                                  sei = .sei,
-                                 tcrit = .tcrit,
-                                 #2022-4-5: HANDLE AFFIRMATIVES FOR CSM CASE
-                                 affirm = as.numeric( (.yi/.sei) > .tcrit ),
                                  y = .yi ),
                     
                     #iter = p$stan.iter,   
@@ -221,7 +216,7 @@ estimate_jeffreys_mcmc_RTMA = function(.yi,
     stan.warning <<- condition$message
   } )
   
-  cat( paste("\n estimate_jeffreys_mcmc flag 3: about to call postSumm") )
+  cat( paste("\n estimate_jeffreys flag 3: about to call postSumm") )
   postSumm = summary(post)$summary
   
   # pull out best iterate to pass to MAP optimization later
@@ -1446,7 +1441,7 @@ sim_meta_2 = function(Nmax,
   # collect arguments
   .args = mget(names(formals()), sys.frame(sys.nframe()))
   # remove unnecessary args for sim_one_study_set
-  .args = .args[ !names(.args) %in% c("k.pub.nonaffirm", "prob.hacked", "true.sei.expr")]
+  .args = .args[ !names(.args) %in% c("k.pub", "prob.hacked", "true.sei.expr")]
   
   
   if ( hack == "no" ) stop("hack should only be 'affirm' or 'signif' for this fn")
@@ -1459,7 +1454,7 @@ sim_meta_2 = function(Nmax,
     is.hacked = rbinom(n = 1, size = 1, prob = prob.hacked)
     true.se = eval( parse( text = true.sei.expr) )
     
-
+    
     if ( is.hacked == 0 ) {
       # to generate unhacked studies, need to change argument "hack"
       .argsUnhacked = .args
@@ -2182,7 +2177,7 @@ sim_meta_2_stefan = function(strategy.stefan,
                              return.only.published = FALSE
 ) {
   
-
+  
   # # test only
   # strategy.stefan = "firstsig"
   # alternative.stefan = "greater"
@@ -2198,7 +2193,7 @@ sim_meta_2_stefan = function(strategy.stefan,
   while( k.pub.nonaffirm.achieved < k.pub.nonaffirm ) {
     
     is.hacked = rbinom(n = 1, size = 1, prob = prob.hacked)
-  
+    
     
     newRow = sim_one_study_set_stefan(strategy.stefan = strategy.stefan,
                                       alternative.stefan = alternative.stefan,
@@ -2208,13 +2203,13 @@ sim_meta_2_stefan = function(strategy.stefan,
                                       return.only.published = return.only.published,
                                       is.hacked = is.hacked,  
                                       hack.type = hack.type)
-      
- 
+    
+    
     
     # add study ID
     newRow = newRow %>% add_column( .before = 1,
-                                      study = i )
-  
+                                    study = i )
+    
     
     if ( i == 1 ) .dat = newRow else .dat = rbind( .dat, newRow )
     
@@ -2266,78 +2261,78 @@ sim_one_study_set_stefan = function(strategy.stefan,
   # hackily prevent this:
   #bm
   #while ( sei > 2 | sei < 0.02 ) {
-   
+  
+  
+  # even if is.hacked == FALSE, we call the appropriate hack fn for the entire
+  #   meta-analysis for comparability between hacked and unhacked studies, then later
+  #  use the original (unhacked) stats if is.hacked = FALSE
+  if (hack.type == "DV") {
+    d = as.data.frame( sim.multDVhack(nobs.group = 30,
+                                      nvar = 5, # default is 5
+                                      r = 0.3,
+                                      iter = 1,
+                                      strategy = strategy.stefan,
+                                      alternative = alternative.stefan,
+                                      alpha = 0.05) )
+  }
+  
+  if (hack.type == "optstop") {
+    # IMPORTANT: this doesn't have strategy arg because it's inherently firstsig:
+    # The dataset is evaluated row-by-row, starting with a minimum sample size of n.min. At each step, a number of observations is added to the sample, defined by the argument step and the t-test is computed. This continues until the maximum sample size specified in n.max is reached. The p-hacked p-value is defined as the first p-value that is smaller than the defined alpha level.
     
-    # even if is.hacked == FALSE, we call the appropriate hack fn for the entire
-    #   meta-analysis for comparability between hacked and unhacked studies, then later
-    #  use the original (unhacked) stats if is.hacked = FALSE
-    if (hack.type == "DV") {
-      d = as.data.frame( sim.multDVhack(nobs.group = 30,
-                                        nvar = 5, # default is 5
-                                        r = 0.3,
-                                        iter = 1,
+    if ( strategy.stefan != "firstsig" ) stop("hack.type optstop requires strategy = firstsig")
+    
+    d = as.data.frame( sim.optstop(n.min = 10,
+                                   #n.max = 20,  # default
+                                   n.max = 50,
+                                   step = 2,
+                                   #strategy = strategy.stefan,
+                                   alternative = alternative.stefan,
+                                   iter = 1,
+                                   alpha = 0.05) )
+  }
+  
+  
+  if (hack.type == "subgroup") {
+    d = as.data.frame( sim.subgroupHack(nobs.group = 30,
+                                        nsubvars = 5, # default: 3
                                         strategy = strategy.stefan,
                                         alternative = alternative.stefan,
-                                        alpha = 0.05) )
-    }
-    
-    if (hack.type == "optstop") {
-      # IMPORTANT: this doesn't have strategy arg because it's inherently firstsig:
-      # The dataset is evaluated row-by-row, starting with a minimum sample size of n.min. At each step, a number of observations is added to the sample, defined by the argument step and the t-test is computed. This continues until the maximum sample size specified in n.max is reached. The p-hacked p-value is defined as the first p-value that is smaller than the defined alpha level.
-      
-      if ( strategy.stefan != "firstsig" ) stop("hack.type optstop requires strategy = firstsig")
-      
-      d = as.data.frame( sim.optstop(n.min = 10,
-                                     #n.max = 20,  # default
-                                     n.max = 50,
-                                     step = 2,
-                                     #strategy = strategy.stefan,
-                                     alternative = alternative.stefan,
-                                     iter = 1,
-                                     alpha = 0.05) )
-    }
-    
-    
-    if (hack.type == "subgroup") {
-      d = as.data.frame( sim.subgroupHack(nobs.group = 30,
-                                          nsubvars = 5, # default: 3
-                                          strategy = strategy.stefan,
-                                          alternative = alternative.stefan,
-                                          alpha = 0.05,
-                                          iter = 1) )
-    }
-    
-
-    
-    ### Post-processing that doesn't depend on hacking type ###
+                                        alpha = 0.05,
+                                        iter = 1) )
+  }
   
-    # save the "original" (ideal draw) estimate for use with gold-std method
-    d$yio = d$ds.orig
-    d$pvalo = d$ps.orig
-    d$seio = calc_sei(yi = d$yio, pval = d$pvalo, alternative.stefan = alternative.stefan)
   
-    # choose appropriate stats as yi, sei, vi depending on whether this study is hacked
-    # and get dataset into same format as in my own sim_one_study_set
-    if ( is.hacked == TRUE ) {
-      d = d %>% rename(pval = ps.hack,
-                       yi = ds.hack) %>%
-        select( !c(ps.orig, r2s.hack, r2s.orig, ds.orig) )
-    } 
-    if ( is.hacked == FALSE ) {
-      d = d %>% rename(pval = ps.orig,
-                       yi = ds.orig) %>%
-        select( !c(ps.hack, r2s.hack, r2s.orig, ds.hack) )
-      
-    }
+  
+  ### Post-processing that doesn't depend on hacking type ###
+  
+  # save the "original" (ideal draw) estimate for use with gold-std method
+  d$yio = d$ds.orig
+  d$pvalo = d$ps.orig
+  d$seio = calc_sei(yi = d$yio, pval = d$pvalo, alternative.stefan = alternative.stefan)
+  
+  # choose appropriate stats as yi, sei, vi depending on whether this study is hacked
+  # and get dataset into same format as in my own sim_one_study_set
+  if ( is.hacked == TRUE ) {
+    d = d %>% rename(pval = ps.hack,
+                     yi = ds.hack) %>%
+      select( !c(ps.orig, r2s.hack, r2s.orig, ds.orig) )
+  } 
+  if ( is.hacked == FALSE ) {
+    d = d %>% rename(pval = ps.orig,
+                     yi = ds.orig) %>%
+      select( !c(ps.hack, r2s.hack, r2s.orig, ds.hack) )
     
-    
-    # calculate sei, vi
-    d$sei = calc_sei(yi = d$yi, pval = d$pval, alternative.stefan = alternative.stefan)
-    sei = d$sei  # for the while-loop condition
-    
+  }
+  
+  
+  # calculate sei, vi
+  d$sei = calc_sei(yi = d$yi, pval = d$pval, alternative.stefan = alternative.stefan)
+  sei = d$sei  # for the while-loop condition
+  
   #}  # end "while ( sei > 2 | sei < 0.02 )"
   
- 
+  
   d$vi = d$sei^2
   d$tcrit = qnorm(0.975)  # here using z-approx since that's what we use to calculate sei
   
