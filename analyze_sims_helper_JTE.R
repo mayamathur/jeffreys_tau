@@ -21,7 +21,7 @@ make_agg_data = function( .s,
   
   
   # make unique scenario variable, defined as scen.name AND method
-  if ( !"unique.scen" %in% names(.s) ) .s$unique.scen = paste(.s$sim.env, .s$scen.name, .s$method)
+  if ( !"unique.scen" %in% names(.s) ) .s$unique.scen = paste(.s$scen.name, .s$method)
   
   ##### Outcome and Parameter Variables #####
   # "outcome" variables used in analysis
@@ -65,20 +65,6 @@ make_agg_data = function( .s,
     "ShatEstFail",
     "ShatCIFail",
     
-    # #@2022-3-10 TEMP: COMMENTED OUT BECAUSE I DIDN'T RUN OPTIMX METHODS, SO THIS BREAKS
-    # # diagnostics for main Mhat optimizer
-    # "OptimConverged",
-    # 
-    # #@2022-3-10 TEMP: COMMENTED OUT BECAUSE I DIDN'T RUN OPTIMX METHODS, SO THIS BREAKS
-    # # diagnostics for other optimizers
-    # "OptimxMhatWinner",
-    # "OptimxPropAgreeMhatWinner",
-    # "OptimxPropAgreeConvergersMhatWinner",
-    # 
-    # "OptimxShatWinner",
-    # "OptimxPropAgreeShatWinner",
-    # "OptimxPropAgreeConvergersShatWinner",
-    
     # Stan diagnostics, part 2
     "StanWarned",
     "MhatRhatGt1.01",
@@ -93,71 +79,56 @@ make_agg_data = function( .s,
   )
   
   
-  
+  # scen.params = tidyr::expand_grid(
+  #   # full list (save):
+  #   rep.methods = "REML ; ML ; DL ; PMM ; EB ; robu ; jeffreys",
+  #   
+  #   # *If you reorder the args, need to adjust wrangle_agg_local
+  #   ### args shared between sim environments
+  #   k.pub = c(5, 10, 15, 20, 100),  # intentionally out of order so that jobs with boundary choices with complete first
+  #   hack = c("affirm"),
+  #   prob.hacked = c(0),
+  #   # important: if sim.env = stefan, these t2 args are ONLY used for setting start values
+  #   #   and for checking bias of Shat, so set them to have the correct t2a
+  #   #   not clear what t2w should be given the way stefan implements hacking
+  #   t2a = c(0.05^2, 0.1^2, 0.2^2, 0.5^2, 1),
+  #   t2w = c(0),
+  #   # same with Mu
+  #   Mu = c(0, 0.5),
+  #   true.dist = c("expo", "norm"),
+  #   
+  #   Nmax = 1,
+  #   m = 50,
+  #   true.sei.expr = c("0.02 + rexp(n = 1, rate = 3)",  # original setting close to empirical distribution
+  #                     "0.02 + rexp(n = 1, rate = 1)", # larger SEs overall
+  #                     "0.3"), # all the same, and close to mean of the first option  
+  #   rho = c(0),
+  #   
+  #   # Stan control args
+  #   stan.maxtreedepth = 25,
+  #   stan.adapt_delta = 0.995,
+  #   
+  #   get.CIs = TRUE,
+  #   run.optimx = FALSE )
   
   # variables that define the scenarios
-  
-  
-  if ( all(.s$sim.env == "mathur") ) {
-    param.vars = c("unique.scen",  
-                   "method",
-                   "sim.env",
-                   
-                   "Nmax",
-                   "Mu",
-                   "t2a",
-                   "t2w",
-                   "m",
-                   "true.sei.expr",
-                   "hack",
-                   "rho",
-                   "k.pub.nonaffirm",
-                   "prob.hacked",
-                   "stan.adapt_delta",
-                   "stan.maxtreedepth")
-    
-  } else if ( all(.s$sim.env == "stefan") ) {
-    param.vars = c("unique.scen",  
-                   "method",
-                   "sim.env",
-                   
-                   "Mu",
-                   "t2a",
-                   "t2w",
-                   
-                   "hack",
-                   "strategy.stefan",
-                   "alternative.stefan",
-                   "stringent.hack",
-                   
-                   "k.pub.nonaffirm",
-                   "prob.hacked",
-                   "stan.adapt_delta",
-                   "stan.maxtreedepth")
-  }
-  
- # TEMP aggregation issue
   param.vars = c("unique.scen",  
                  "method",
-                 "sim.env",
                  
                  "Nmax",
                  "Mu",
                  "t2a",
                  "t2w",
+                 "true.dist",
                  "m",
                  "true.sei.expr",
                  "hack",
                  "rho",
-                 "k.pub.nonaffirm",
+                 "k.pub",
                  "prob.hacked",
                  "stan.adapt_delta",
-                 "stan.maxtreedepth",
-                 
-                 "strategy.stefan",
-                 "alternative.stefan",
-                 "stringent.hack")
-  
+                 "stan.maxtreedepth")
+
   
   # sanity check to make sure we've listed all param vars
   t = .s %>% group_by_at(param.vars) %>% summarise(n())
@@ -179,7 +150,7 @@ make_agg_data = function( .s,
   .s$V = .s$t2a + .s$t2w
   .s$S = sqrt(.s$t2a + .s$t2w)
   
-
+  
   toDrop = c("rep.methods",
              "get.CIs",
              "error",
@@ -187,9 +158,9 @@ make_agg_data = function( .s,
              #"doParallel.seconds",
              "optim.converged",
              "stan.warned",
-             "stan.warning", #@ADDED FOR STEFAN
+             "stan.warning", 
              "job.name",
-             "overall.error",  #@ADDED FOR STEFAN
+             "overall.error",  
              names_with(.dat = .s, .pattern = "optimx") )
   
   firstOnly = c("scen.name",
@@ -230,6 +201,7 @@ make_agg_data = function( .s,
             MhatBias = Mhat - Mu,
             MhatAbsBias = abs(Mhat - Mu),
             ShatBias = Shat - S,
+            ShatAbsBias = abs(Shat - S),
             
             # varies within scenario
             MhatCover = covers(truth = Mu, lo = MLo, hi = MHi),
@@ -382,7 +354,7 @@ wrangle_agg_local = function(agg) {
   table(agg$method, agg$method.pretty)
   
   ##### Specific to Sim Env #####
-
+  
   if ( "true.sei.expr" %in% names(agg) ){
     agg$true.sei.expr = as.factor(agg$true.sei.expr)
     
@@ -409,7 +381,7 @@ wrangle_agg_local = function(agg) {
   # indicates that RTMA is incorrectly specified
   agg$rtma.misspec = 1
   agg$rtma.misspec[ agg$hack %in% c("favor-best-affirm-wch",
-                                      "affirm")] = 0
+                                    "affirm")] = 0
   
   return(agg)
 }
@@ -422,18 +394,16 @@ wrangle_agg_local = function(agg) {
 
 make_winner_table_col = function(.agg,
                                  yName,
-                                 methods = c("naive",
-                                             "gold-std",
-                                             "maon",
-                                             "2psm",
-                                             "pcurve",
-                                             "pet-peese", 
-                                             "robma",
-                                             "jeffreys-mcmc-pmean",
-                                             "jeffreys-mcmc-pmed",
-                                             "jeffreys-mcmc-max-lp-iterate", 
-                                             "rtma-pkg",
-                                             "prereg-naive"),
+                                 methods = c("DL",
+                                             "ML",
+                                             "PMM",
+                                             "REML",
+                                             "EB",
+                                             "robu", 
+                                          
+                                             "jeffreys-pmean",
+                                             "jeffreys-pmed",
+                                             "jeffreys-max-lp-iterate"),
                                  summarise.fun.name = "median",
                                  digits = 2) {
   
@@ -454,16 +424,17 @@ make_winner_table_col = function(.agg,
   # summarise.fun.name = "worst10th"
   # digits = 2
   
-  
+
   # sanity check
   if ( any( is.na( .agg$method.pretty ) ) ) {
     stop(".agg has NAs in method.pretty; will mess up group_by")
   }
   
   
-  higherBetterYNames = c("MhatEstConverge")
+  higherBetterYNames = c("MhatEstConverge", "ShatEstConverge")
   
-  lowerBetterYNames = c("MhatAbsBias", "MhatRMSE", "MhatWidth")
+  lowerBetterYNames = c("MhatAbsBias", "MhatRMSE", "MhatWidth",
+                        "ShatAbsBias", "ShatRMSE", "ShatWidth")
   
   # Y_disp is what will be DISPLAYED in the table (e.g., retaining signs)
   .agg$Y_disp = .agg[[yName]]
@@ -495,7 +466,7 @@ make_winner_table_col = function(.agg,
   
   # for bias, worst 10% performance is in terms of absolute value of bias
   # note this isn't abs bias
-  if ( summarise.fun.name == "worst10th" & yName %in% c("MhatBias") ) {
+  if ( summarise.fun.name == "worst10th" & yName %in% c("MhatBias", "ShatBias") ) {
     .t = .agg %>% filter(method %in% methods) %>%
       group_by(method.pretty) %>%
       summarise( Y_disp = round( bias_worst10th(Y_disp), digits = digits ) )
@@ -504,7 +475,7 @@ make_winner_table_col = function(.agg,
   #quantile(.agg$MhatBias[.agg$method.pretty == "MAN"], probs = c(0.1, .9))
   
   # MhatCover gets summarized simply as 10th percentile
-  if ( summarise.fun.name == "worst10th" & yName %in% c("MhatCover") ) {
+  if ( summarise.fun.name == "worst10th" & yName %in% c("MhatCover", "ShatCover") ) {
     .t = .agg %>% filter(method %in% methods) %>%
       group_by(method.pretty) %>%
       summarise( Y_disp = round( quantile(Y_disp, probs = 0.10, na.rm = TRUE), digits = digits ) )
@@ -513,7 +484,7 @@ make_winner_table_col = function(.agg,
   #quantile(.agg$MhatCover[.agg$method.pretty == "MAN"], probs = c(0.1))
   #quantile(.agg$MhatCover[.agg$method.pretty == "RoBMA"], probs = c(0.1))
   
-
+  
   ##### Sort Best to Worst #####
   
   # Y_sort is the version that is used to compare and sort performances 
@@ -525,20 +496,20 @@ make_winner_table_col = function(.agg,
   if ( yName %in% lowerBetterYNames ) {
     .t$Y_sort = -.t$Y_disp
   }
-  if ( yName %in% "MhatBias" ) {
+  if ( yName %in% c("MhatBias", "ShatBias" ) ) {
     .t$Y_sort = -abs(.t$Y_disp)
   }
-  if ( yName %in% "MhatCover" ) {
+  if ( yName %in% c("MhatCover", "ShatCover") ) {
     .t$Y_sort = -abs(.t$Y_disp - 0.95)
   }
   
-
+  
   # sort best to worst
   .t = .t %>% arrange( desc(Y_sort) )
   
   # remove unneeded col
   .t = .t %>% select(-Y_sort)
-
+  
   
   names(.t) = c(yName, summarise.fun.name)
   .t
@@ -570,13 +541,13 @@ make_winner_table = function( .agg,
                                           "MhatRMSE", 
                                           "MhatCover",
                                           "MhatWidth" ),
-                                          #"MhatEstConverge"),
+                              #"MhatEstConverge"),
                               summarise.fun.name,
                               display = "dataframe"
                               #display = "xtable"
-                              ){
-
+){
   
+
   # sanity check
   if ( !( all( .yNames %in% names(.agg) ) )  ){
     not_here = paste( .yNames[ !( .yNames %in% names(.agg) ) ], collapse = ", " )
@@ -594,9 +565,9 @@ make_winner_table = function( .agg,
   
   cat( paste("\n\n**** WINNER TABLE", summarise.fun.name) )
   
-  cat( paste("\n\n     Number of scens:", nuni(.agg$scen.name2),
+  cat( paste("\n\n     Number of scens:", nuni(.agg$scen.name),
              "; proportion of all scens: ",
-             round( nuni(.agg$scen.name) / nuni(agg$scen.name2), 3 ) ) )
+             round( nuni(.agg$scen.name) / nuni(agg$scen.name), 3 ) ) )
   
   cat("\n\n")
   
@@ -616,7 +587,8 @@ make_winner_table = function( .agg,
 
 # makes both winner tables (medians and worst 10th pctiles)
 make_both_winner_tables = function( .agg,
-                                    .yNames = c("MhatBias", "MhatAbsBias", "MhatRMSE", "MhatCover", "MhatWidth") ){
+                                    .yNames = c("MhatBias", "MhatAbsBias", "MhatRMSE", "MhatCover", "MhatWidth",
+                                                "ShatBias", "ShatAbsBias", "ShatRMSE", "ShatCover", "ShatWidth") ){
   
   make_winner_table( .agg = .agg,
                      .yNames = .yNames,

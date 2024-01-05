@@ -61,7 +61,18 @@ length(keepers)
 names = names( read.csv(keepers[1] ) )
 
 # read in and rbind the keepers
-tables <- lapply( keepers, function(x) read.csv(x, header= TRUE) )
+tables <- lapply( keepers, function(x) {
+  y = read.csv(x, header = TRUE)
+  y[[ "true.sei.expr" ]] = as.character(y[[ "true.sei.expr" ]] )  # only needed if true.sei.expr is just a number, because it turns into a double for certain datasets and then can't be concatenated with character ones
+  y
+  } )
+
+
+# DEBUGGING
+tables <- lapply( keepers[1], function(x) {
+  read.csv(x, header = TRUE)
+  x[[ "true.sei.expr" ]] = as.character(x[[ "true.sei.expr" ]] )  # only needed
+} )
 
 # sanity check: do all files have the same names?
 # if not, could be because some jobs were killed early so didn't get doParallelTime
@@ -122,25 +133,31 @@ system(string)
 # LOOK FOR MISSED JOBS ----------------------------------------------
 
 # run in Sherlock ml load R
-path = "/home/groups/manishad/JTE"
-setwd(path)
-source("helper_JTE.R")
 
-missed.nums = sbatch_not_run( "/home/groups/manishad/JTE/long_results",
-                              "/home/groups/manishad/JTE/long_results",
-                              .name.prefix = "long_results",
-                              .max.sbatch.num = 400 )
-
-
-if ( FALSE ){
+if (FALSE) {
   
+  path = "/home/groups/manishad/JTE"
+  setwd(path)
+  source("helper_JTE.R")
+  
+  missed.nums = sbatch_not_run( "/home/groups/manishad/JTE/long_results",
+                                "/home/groups/manishad/JTE/long_results",
+                                .name.prefix = "long_results",
+                                .max.sbatch.num = 400 )
   
   setwd( paste(path, "/sbatch_files", sep="") )
   for (i in missed.nums) {
     system( paste("sbatch -p qsu,owners,normal /home/groups/manishad/JTE/sbatch_files/", i, ".sbatch", sep="") )
   }
   
+  
+
+  
 }
+
+
+
+
 
 
 
@@ -164,13 +181,13 @@ as.data.frame( s %>% group_by(method, scen.name, k.pub) %>%
 # increase width of console print area for df viewing joy
 options("width"=200)
 
-t = s %>% group_by(method, k.pub) %>%
+t = s %>% group_by(method) %>%
   #filter(k.pub == 10 & t2a == 0.04 & Mu == 0) %>%  # jeffreys tau coverage is fine
   #filter(k.pub == 10 & t2a == 1 & Mu == 0) %>%  # jeffreys tau coverage is fine
   #filter(k.pub == 10 & t2a == 0 & Mu == 0) %>%  # @ALL METHODS HAVE 0 COVERAGE HERE WHEN TAU = 0 - WHY?
   #filter(t2a > 0) %>%
   #filter(t2a > 0 & Mu == 0.5) %>%
-  filter(t2a > 0 & k.pub == 100) %>%
+  #filter(k.pub == 10 & true.dist == "norm" & true.sei.expr == "0.02 + rexp(n = 1, rate = 3)") %>%  # **this is an interesting case where mine clearly wins
   
   summarise( reps = n(),
              EstFail = mean(is.na(Mhat)),
@@ -179,16 +196,18 @@ t = s %>% group_by(method, k.pub) %>%
              ShatBias = meanNA(Shat - sqrt(t2a)),
              ShatCover = meanNA(SLo <= sqrt(t2a) & SHi >= sqrt(t2a)),
              ShatWidth = meanNA(SHi - SLo),
-             SLo = meanNA(SLo),
-             SHi = meanNA(SHi),
+             ShatMSE = meanNA( ( Shat - sqrt(t2a) )^2 ),
+             # SLo = meanNA(SLo),
+             # SHi = meanNA(SHi),
              # Shat = meanNA(Shat),
              ShatNA = mean(is.na(Shat)),
 
              MhatBias = meanNA(Mhat - Mu),
-             MhatCover = meanNA(MLo < Mu & MHi > Mu),
+             MhatCover = meanNA(MLo <= Mu & MHi >= Mu),
              MhatWidth = meanNA(MHi - MLo),
-             MLo = meanNA(MLo),
-             MHi = meanNA(MHi),
+             MhatMSE = meanNA( ( Mhat - Mu )^2 ),
+             # MLo = meanNA(MLo),
+             # MHi = meanNA(MHi),
              # Shat = meanNA(Shat),
              MhatNA = mean(is.na(Mhat))
              #MhatRhatGt1.05 = mean(MhatRhat>1.05),
@@ -199,7 +218,7 @@ t = s %>% group_by(method, k.pub) %>%
 as.data.frame(t)
 
 
-sum(s$k.pub == 10 & s$t2a == 0.2^2 & s$Mu == 0)
+#sum(s$k.pub == 10 & s$t2a == 0.2^2 & s$Mu == 0)
 
 
 # MAKE AGG DATA ----------------------------------------------
@@ -220,10 +239,6 @@ fwrite(agg, "agg.csv")
 cat("\n\n nrow(agg) =", nrow(agg))
 cat("\n nuni(agg$scen.name) =", nuni(agg$scen.name) )
 
-# OPTIONAL: agg that keeps only iterates with very low Rhat
-agg2 = make_agg_data( s %>% filter(MhatRhat<1.02 & ShatRhat<1.02))
-fwrite(agg2, "agg_RhatsLt1.02.csv")
-
 
 
 
@@ -236,10 +251,6 @@ t = agg %>% group_by(k.pub.nonaffirm, method) %>%
              #meanNA(OptimxNAgreeOfConvergersMhatWinner)
              )
 as.data.frame(t)
-
-
-# errors of 2PSM when it fails
-table( s$overall.error[ s$method == "2psm" & is.na(s$Mhat) ] )
 
 
 

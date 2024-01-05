@@ -602,7 +602,7 @@ if ( run.local == TRUE ) {
                ShatEmpSE = sd( Shat, na.rm = TRUE ),
                #ShatMn = meanNA(Shat),
                
-               ShatCover = meanNA(SLo < tau & SHi > tau),
+               ShatCover = meanNA(SLo <= tau & SHi >= tau),
                ShatWidth = meanNA( SHi - SLo ),
                SLo = meanNA(SLo),
                SHi = meanNA(SHi),
@@ -613,7 +613,7 @@ if ( run.local == TRUE ) {
                MhatEmpSE = sd( Mhat, na.rm = TRUE ),
                #ShatMn = meanNA(Shat),
                
-               MhatCover = meanNA(MLo < Mu & MHi > Mu),
+               MhatCover = meanNA(MLo <= Mu & MHi >= Mu),
                MhatWidth = meanNA( MHi - MLo ),
                MLo = meanNA(MLo),
                MHi = meanNA(MHi) )

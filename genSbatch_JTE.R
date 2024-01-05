@@ -136,7 +136,7 @@ sbatch_params <- data.frame(jobname,
                             # how to specify job times: https://www.sherlock.stanford.edu/docs/advanced-topics/job-management/#job-submission-limits
                             # days-hh:mm:ss
                             #jobtime = "1-00:00:00",  # 1 day
-                            jobtime = "00:30:00",
+                            jobtime = "02:00:00",
                             quality = "normal",
                             node_number = 1,
                             mem_per_node = 64000,
