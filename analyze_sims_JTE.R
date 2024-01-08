@@ -61,10 +61,13 @@ overwrite.res = TRUE
 # ~~ Set directories -------------------------
 code.dir = here()
 
-# dataset prepped by prep_sims_SAPH.R
-data.dir = str_replace( string = here(),
-                           pattern = "Code \\(git\\)/Sherlock code",
-                           replacement = "Simulation results/*2023-06-21 aggregated simulations (as in published paper)" )
+( data.dir = str_replace( string = here(),
+                          pattern = "Code \\(git\\)",
+                          replacement = "Results/Working dataset") )
+
+( results.dir = str_replace( string = here(),
+                             pattern = "Code \\(git\\)",
+                             replacement = "Results/Working results") )
 
 # check that they're specified correctly
 setwd(data.dir)
@@ -75,12 +78,17 @@ setwd(results.dir)
 # this is an absolute path because it must live in Dropbox, outside the project directory, in order to sync with Overleaf
 # to reproduce results, just set this to any directory on your local machine
 # results will be written to a csv file in that location
-overleaf.dir.figs = "/Users/mmathur/Dropbox/Apps/Overleaf/P-hacking (SAPH)/figures_SAPH/sims"
+overleaf.dir.figs = results.dir
 
 
 setwd(code.dir)
-source("helper_SAPH.R")
-source("analyze_sims_helper_SAPH.R")
+source("analyze_sims_helper_JTE.R")
+
+
+Ynames = c("ShatAbsBias", "ShatCover", "ShatRMSE", "ShatWidth",
+           "MhatAbsBias", "MhatCover", "MhatRMSE", "MhatWidth")
+
+param.vars = c("true.dist", "true.sei.expr", "k.pub", "Mu", "t2a")
 
 
 
@@ -98,16 +106,11 @@ dim(agg)
 
 # drop any "NA" methods (i.e., ones that didn't get labeled in wrangle_agg_local)
 agg = agg %>% filter( method.pretty != "" )
+table(agg$method.pretty)
 
 # look at number of actual sim reps
 table(agg$sim.reps.actual)
 
-
-#@important: stefan and mathur share scen.names, so relabel them
-agg$scen.name2 = paste(agg$sim.env, agg$scen.name)
-# stefan: 40 scens, mathur: 48
-expect_equal( nuni(agg$scen.name2), 40 + 48)
- 
 
 
 # ~~ List variable names -------------------------
@@ -119,10 +122,8 @@ init_var_names()
 
 # ~~ Make data subsets -------------------------
 
-# stefan only
-aggs = agg %>% filter(sim.env == "stefan")
-# mathur only
-aggm = agg %>% filter(sim.env == "mathur")
+# realistically small metas only
+aggs = agg %>% filter( k.pub <= 20 )
 
 
 
@@ -144,11 +145,31 @@ t = aggs %>% group_by(method) %>%
 
 View(t)
 
+# PLOTS -------------------------------------------------
+
+.true.dist = "norm"
+.true.sei.expr = "0.02 + rexp(n = 1, rate = 3)"
+.Mu = 0.5
+.estimate = "Shat"
+.local.results.dir = results.dir
 
 
-# ******** WINNER TABLES -------------------------
 
-# QUICK AND SIMPLE ANALYSES -------------------------------------------------
+
+sim_plot_multiple_outcomes(.agg = agg,
+                           
+                           .true.dist = .true.dist,
+                           .true.sei.expr = .true.sei.expr,
+                           .Mu = .Mu,
+                           .estimate = .estimate, 
+                           
+                           .y.breaks = NULL,
+                           .ggtitle = "",
+                           .local.results.dir = .local.results.dir)
+
+
+
+# QUICK AND SIMPLE SUBSET ANALYSIS -------------------------------------------------
 
 
 t = aggo %>%
@@ -170,10 +191,7 @@ t = aggo %>%
 
 View(t)
 
-
-
-aggo$method.pretty = aggo$method
-agg = aggo
+# ******** WINNER TABLES -------------------------
 
 make_both_winner_tables(.agg = agg)
 
@@ -187,12 +205,13 @@ make_both_winner_tables(.agg = agg %>% filter(t2a == 1 & k.pub < 20))
 
 
 
+# PLOTS -------------------------------------------------
+
+
 # EXPLORE PREDICTORS OF PERFORMANCE  -------------------------------------------------
 
-Ynames = c("ShatAbsBias", "ShatCover", "ShatRMSE", "ShatWidth",
-           "MhatAbsBias", "MhatCover", "MhatRMSE", "MhatWidth")
+# not sure how useful this is
 
-param.vars = c("true.dist", "true.sei.expr", "k.pub", "Mu", "t2a")
 
 
 # possible figures:

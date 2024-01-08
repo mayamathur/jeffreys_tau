@@ -124,12 +124,12 @@ n.scens = 300
 n.methods = nuni(aggo$method)
 expect_equal( sum( n.scens * n.methods ),
               nrow(aggo) )
-setwd(results.dir); fwrite(aggo, "agg.csv")
+setwd(data.dir); fwrite(aggo, "agg.csv")
 
 
 # add fancy variables for plotting, etc.
 agg = wrangle_agg_local(aggo)
-setwd(results.dir); fwrite(agg, "agg.csv")
+setwd(data.dir); fwrite(agg, "agg.csv")
 
 
 
