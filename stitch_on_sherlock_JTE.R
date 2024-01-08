@@ -140,10 +140,12 @@ if (FALSE) {
   setwd(path)
   source("helper_JTE.R")
   
+  #@THIS SEEMS TO NOT REALIZE IF JOBS ARE MISSING. C.F.:
+  x = 1:300; x[!x %in% s$scen.name]
   missed.nums = sbatch_not_run( "/home/groups/manishad/JTE/long_results",
                                 "/home/groups/manishad/JTE/long_results",
                                 .name.prefix = "long_results",
-                                .max.sbatch.num = 400 )
+                                .max.sbatch.num = 600 )
   
   setwd( paste(path, "/sbatch_files", sep="") )
   for (i in missed.nums) {

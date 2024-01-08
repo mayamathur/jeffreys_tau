@@ -340,17 +340,7 @@ wrangle_agg_local = function(agg) {
   ##### Make New Variables At Scenario Level ##### 
   
   # label methods more intelligently for use in plots
-  agg$method.pretty = NA
-  agg$method.pretty[ agg$method == c("naive") ] = "Uncorrected"
-  agg$method.pretty[ agg$method == c("gold-std") ] = "Gold standard"
-  agg$method.pretty[ agg$method == c("maon") ] = "MAN"
-  agg$method.pretty[ agg$method == c("2psm") ] = "SM"
-  agg$method.pretty[ agg$method == c("2psm-csm-dataset") ] = "SMKH" # "known hacking"
-  agg$method.pretty[ agg$method == c("prereg-naive") ] = "Unhacked only"
-  agg$method.pretty[ agg$method == c("pet-peese") ] = "PET-PEESE"
-  agg$method.pretty[ agg$method == c("robma") ] = "RoBMA"
-  #agg$method.pretty[ agg$method %in% c("jeffreys-mcmc-max-lp-iterate") ] = "RTMA"
-  agg$method.pretty[ agg$method %in% c("rtma-pkg") ] = "RTMA"
+  agg$method.pretty = agg$method # temporarily not relabeling them
   table(agg$method, agg$method.pretty)
   
   ##### Specific to Sim Env #####
@@ -359,14 +349,9 @@ wrangle_agg_local = function(agg) {
     agg$true.sei.expr = as.factor(agg$true.sei.expr)
     
     agg$true.sei.expr.pretty = dplyr::recode( agg$true.sei.expr,
-                                              `0.1 + rexp(n = 1, rate = 1.5)` = "sei ~ Exp(1.5)",
-                                              `runif(n = 1, min = 0.1, max = 1)` = "sei ~ U(0.1, 1)",
-                                              `runif(n = 1, min = 0.50, max = 0.60)` = "sei ~ U(0.5, 0.6)",
-                                              `runif(n = 1, min = 0.51, max = 1.5)` = "sei ~ U(0.51, 1.5)",
-                                              `runif(n = 1, min = 0.1, max = 3)` = "sei ~ U(0.1, 3)",
-                                              `runif(n = 1, min = 1, max = 3)` = "sei ~ U(1, 3)",
-                                              `rbeta(n = 1, 2, 5)` = "sei ~ Beta(2, 5)",
                                               `0.02 + rexp(n = 1, rate = 3)` = "sei ~ Exp(3) + 0.02",
+                                              `0.02 + rexp(n = 1, rate = 1)` = "sei ~ Exp(1) + 0.02",
+                                              `0.3` = "sei = 0.3",
                                               `draw_lodder_se()` = "sei from Lodder",
                                               
                                               # by default, retain original factor level
@@ -374,15 +359,8 @@ wrangle_agg_local = function(agg) {
     print( table(agg$true.sei.expr, agg$true.sei.expr.pretty ) )
   }
   
-  if ( "rho.pretty" %in% names(agg) )   agg$rho.pretty = paste("rho = ", agg$rho, sep = "")
-  
   agg$MhatEstConverge = 1 - agg$MhatEstFail
-  
-  # indicates that RTMA is incorrectly specified
-  agg$rtma.misspec = 1
-  agg$rtma.misspec[ agg$hack %in% c("favor-best-affirm-wch",
-                                    "affirm")] = 0
-  
+
   return(agg)
 }
 
@@ -455,13 +433,13 @@ make_winner_table_col = function(.agg,
   if ( summarise.fun.name == "worst10th" & yName %in% higherBetterYNames ) {
     .t = .agg %>% filter(method %in% methods) %>%
       group_by(method.pretty) %>%
-      summarise( Y_disp = round( quantile(Y_disp, probs = 0.10), digits = digits ) )
+      summarise( Y_disp = round( quantile(Y_disp, probs = 0.10, na.rm = TRUE), digits = digits ) )
   }
   
   if ( summarise.fun.name == "worst10th" & yName %in% lowerBetterYNames ) {
     .t = .agg %>% filter(method %in% methods) %>%
       group_by(method.pretty) %>%
-      summarise( Y_disp = round( quantile(Y_disp, probs = 0.90), digits = digits ) )
+      summarise( Y_disp = round( quantile(Y_disp, probs = 0.90, na.rm = TRUE), digits = digits ) )
   }
   
   # for bias, worst 10% performance is in terms of absolute value of bias
@@ -587,16 +565,16 @@ make_winner_table = function( .agg,
 
 # makes both winner tables (medians and worst 10th pctiles)
 make_both_winner_tables = function( .agg,
-                                    .yNames = c("MhatBias", "MhatAbsBias", "MhatRMSE", "MhatCover", "MhatWidth",
-                                                "ShatBias", "ShatAbsBias", "ShatRMSE", "ShatCover", "ShatWidth") ){
+                                    .yNames = c("MhatAbsBias", "MhatRMSE", "MhatCover", "MhatWidth",
+                                                "ShatAbsBias", "ShatRMSE", "ShatCover", "ShatWidth") ){
   
   make_winner_table( .agg = .agg,
                      .yNames = .yNames,
                      summarise.fun.name = "median")
   
-  make_winner_table( .agg = .agg,
-                     .yNames = .yNames,
-                     summarise.fun.name = "mean")
+  # make_winner_table( .agg = .agg,
+  #                    .yNames = .yNames,
+  #                    summarise.fun.name = "mean")
   
   make_winner_table( .agg = .agg,
                      .yNames = .yNames,

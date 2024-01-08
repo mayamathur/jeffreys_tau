@@ -53,8 +53,8 @@ code.dir = here()
                           replacement = "Results/Working dataset") )
 
 ( results.dir = str_replace( string = here(),
-                          pattern = "Code \\(git\\)",
-                          replacement = "Results/Working results") )
+                             pattern = "Code \\(git\\)",
+                             replacement = "Results/Working results") )
 
 # check that they're specified correctly
 setwd(data.dir)
@@ -116,7 +116,6 @@ s = fread("stitched.csv")
 
 aggo = make_agg_data(s,
                      expected.sim.reps = 1000) 
-setwd(results.dir); fwrite(aggo, "aggo.csv")
 
 
 # sanity check:
@@ -129,37 +128,13 @@ setwd(results.dir); fwrite(aggo, "agg.csv")
 
 
 # add fancy variables for plotting, etc.
-# agg = wrangle_agg_local(aggo)
-# setwd(results.dir); fwrite(agg, "agg.csv")
+agg = wrangle_agg_local(aggo)
+setwd(results.dir); fwrite(agg, "agg.csv")
 
 
 
 
-# QUICK AND SIMPLE ANALYSES -------------------------------------------------
-
-
-t = aggo %>%
-  filter(k.pub <= 20) %>%
-  #filter(true.dist == "expo") %>%
-  #filter(true.sei.expr == "0.02 + rexp(n = 1, rate = 1)") %>%
-  filter(true.sei.expr != "0.3") %>%
-  group_by(method) %>%
-  summarise( meanNA(ShatBias),
-                   meanNA(ShatCover),
-                   meanNA(ShatRMSE),
-                   meanNA(ShatWidth),
-             
-             meanNA(MhatBias),
-             meanNA(MhatCover),
-             meanNA(MhatRMSE),
-             meanNA(MhatWidth) ) %>%
-  mutate_if(is.numeric, function(x) round(x,2))
-
-View(t)
 
 
 
-aggo$method.pretty = aggo$method
-agg = aggo
 
-make_both_winner_tables(.agg = agg)

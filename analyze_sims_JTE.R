@@ -148,47 +148,124 @@ View(t)
 
 # ******** WINNER TABLES -------------------------
 
-# ~ Winner tables in paper ------------------------------
-
-# can toggle output of fn below by changing the default arg of 
-#  make_winner_table between display = "dataframe" (easy viewing)
-#  and display = "xtable" (Overleaf)
+# QUICK AND SIMPLE ANALYSES -------------------------------------------------
 
 
+t = aggo %>%
+  filter(k.pub <= 20) %>%
+  #filter(true.dist == "expo") %>%
+  #filter(true.sei.expr == "0.02 + rexp(n = 1, rate = 1)") %>%
+  filter(true.sei.expr != "0.3") %>%
+  group_by(method) %>%
+  summarise( meanNA(ShatBias),
+             meanNA(ShatCover),
+             meanNA(ShatRMSE),
+             meanNA(ShatWidth),
+             
+             meanNA(MhatBias),
+             meanNA(MhatCover),
+             meanNA(MhatRMSE),
+             meanNA(MhatWidth) ) %>%
+  mutate_if(is.numeric, function(x) round(x,2))
 
-# ~~~ Stefan ------------------------------
-# all scenarios
-make_both_winner_tables(.agg = aggs)
-
-# by k
-make_both_winner_tables(.agg = aggs %>% filter(k.pub.nonaffirm == 10) )
-
-
-# by two- vs. one-tailed selection
-make_both_winner_tables(.agg = aggs %>% filter(alternative.stefan == "two.sided") )
-make_both_winner_tables(.agg = aggs %>% filter(alternative.stefan == "greater") )
-
-# by strategy (favor-first vs. favor-best)
-make_both_winner_tables(.agg = aggs %>% filter(strategy.stefan == "firstsig") )
-make_both_winner_tables(.agg = aggs %>% filter(strategy.stefan == "smallest") )
+View(t)
 
 
 
-# ~ Winner tables not in paper per reviewers: Mathur sim environment ------------------------------
+aggo$method.pretty = aggo$method
+agg = aggo
 
-# can toggle output of fn below by changing the default arg of 
-#  make_winner_table between display = "dataframe" (easy viewing)
-#  and display = "xtable" (Overleaf)
+make_both_winner_tables(.agg = agg)
 
-# ~~~ Mathur  ------------------------------
+# small metas
+make_both_winner_tables(.agg = agg %>% filter(k.pub <= 20))
+make_both_winner_tables(.agg = agg %>% filter(k.pub == 5))
 
-# 1: scenarios where stringent overall selection holds (not "favor-best-affirm-wch", "affirm")
-make_both_winner_tables(.agg = aggm %>% filter(rtma.misspec == FALSE))
-
-# 2: all scenarios
-make_both_winner_tables(.agg = aggm)
-# scenarios with "favor-best-affirm-wch" or "affirm"
-make_both_winner_tables(.agg = aggm %>% filter(rtma.misspec == TRUE))
+# t2a
+make_both_winner_tables(.agg = agg %>% filter(t2a == 0.0025 & k.pub < 20))
+make_both_winner_tables(.agg = agg %>% filter(t2a == 1 & k.pub < 20))
 
 
+
+# EXPLORE PREDICTORS OF PERFORMANCE  -------------------------------------------------
+
+Ynames = c("ShatAbsBias", "ShatCover", "ShatRMSE", "ShatWidth",
+           "MhatAbsBias", "MhatCover", "MhatRMSE", "MhatWidth")
+
+param.vars = c("true.dist", "true.sei.expr", "k.pub", "Mu", "t2a")
+
+
+# possible figures:
+# x = k.pub
+# colors = methods
+# row panels = Yname
+# column panels = t2a
+
+# average over: true.dist, true.sei.expr, Mu?
+
+regressions.from.scratch = TRUE
+
+
+
+
+performance_regressions = function(.agg,
+                                   Ynames = Ynames,
+                                   covariates = param.vars ) {
+  
+  
+  for (i in Ynames) {
+    
+    # # TEST
+    # .agg = agg %>% filter(method == "jeffreys-pmed")
+    # Ynames = Ynames
+    # covariates = param.vars
+    # i = "ShatCover"
+    
+    string = paste( i, "~", paste(covariates, collapse = "+"), sep="" )
+    mod = lm( eval(parse(text=string)),
+              data = .agg )
+    
+    coefs = coef(mod)[-1]
+    
+    pvals = summary(mod)$coefficients[,"Pr(>|t|)"]
+    pvals = pvals[-1]  # remove intercept
+    
+    # which vars are good vs. bad for the outcome?
+    # flip coeff signs so that positive means it improves the outcome
+    if ( grepl(pattern = "AbsBias", x = i) | grepl(pattern = "Width", x = i) | grepl(pattern = "RMSE", x = i) ) coefs = -coefs
+    good = names( coefs[ coefs > 0 & pvals < 0.01 ] )
+    bad = names( coefs[ coefs < 0 & pvals < 0.01 ] )
+    
+    good = paste(good, collapse = ", ")
+    bad = paste(bad, collapse = ", ")
+    
+    newRow = data.frame( outcome = i,
+                         good = good, 
+                         bad = bad )
+    
+    if (i==Ynames[1]) res = newRow else res = rbind(res, newRow)
+    
+    cat( paste("\n\n*******************", toupper(i), " PREDICTORS*******************\n" ) )
+    print(summary(mod))
+    
+  }  # end loop over outcomes
+  
+  
+  # look at results
+  res
+  
+  # clean up string formatting
+  # res2 = res %>% mutate_at( vars(good, bad), my_recode )
+  
+}
+
+
+( t1 = performance_regressions(.agg = agg %>% filter(method == "jeffreys-pmed"),
+                               Ynames = Ynames,
+                               covariates = param.vars) )
+
+
+( t2 = performance_regressions(.agg = agg %>% filter(method == "EB"),
+                               Ynames = Ynames,
+                               covariates = param.vars) )
 
