@@ -33,7 +33,6 @@ toLoad = c("crayon",
            "dplyr",
            "foreach",
            "doParallel",
-           "boot",
            "metafor",
            "robumeta",
            "data.table",
@@ -44,17 +43,15 @@ toLoad = c("crayon",
            "ICC",
            "cfdecomp",
            "tidyr",
-           "truncdist",
            "tibble",
-           "tmvtnorm",
            "testthat",
-           "truncreg",
-           "truncnorm",
            "rstan", # note: to reinstall this one, need to use high-mem session
            "optimx",
            "weightr",
-           "phacking",
-           "RoBMA")  # note: to reinstall this one, need ml load jags
+           "phacking")  # note: to reinstall this one, need ml load jags
+
+# to install everything
+# lapply(toLoad, install.packages)
 
 if ( run.local == TRUE | interactive.cluster.run == TRUE ) toLoad = c(toLoad, "here")
 
@@ -408,7 +405,7 @@ doParallel.seconds = system.time({
     
     
     # ~ New Methods ------------------------------
-    # ~~ ***** MCMC ------------------------------
+    # ~~ ***** Jeffreys ------------------------------
     
     if ( "jeffreys" %in% all.methods ) {
       # # temp for refreshing code
@@ -433,7 +430,6 @@ doParallel.seconds = system.time({
       # order of labels in method arg needs to match return structure of estimate_jeffreys_mcmc
       rep.res = run_method_safe(method.label = c("jeffreys-pmean",
                                                  "jeffreys-pmed",
-                                                 "jeffreys-pmode",
                                                  "jeffreys-max-lp-iterate"),
                                 method.fn = function() estimate_jeffreys(.yi = d$yi,
                                                                          .sei = d$sei,

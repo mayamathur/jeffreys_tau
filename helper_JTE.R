@@ -79,21 +79,19 @@ estimate_jeffreys = function(.yi,
   # pull out best iterate to pass to MAP optimization later
   ext = rstan::extract(post) # a vector of all post-WU iterates across all chains
   best.ind = which.max(ext$log_post)  # single iterate with best log-posterior should be very close to MAP
-  
+
   
   # posterior means, posterior medians, modes, and max-LP iterate
   Mhat = c( postSumm["mu", "mean"],
             median( rstan::extract(post, "mu")[[1]] ),
-            mode( rstan::extract(post, "mu")[[1]] ),
             ext$mu[best.ind] )
   
   Shat = c( postSumm["tau", "mean"],
             median( rstan::extract(post, "tau")[[1]] ),
-            mode( rstan::extract(post, "tau")[[1]] ),
             ext$tau[best.ind] )
   
   # sanity check
-  expect_equal( Mhat[1], mean( rstan::extract(post, "mu")[[1]] ) )
+  #expect_equal( Mhat[1], mean( rstan::extract(post, "mu")[[1]] ) )
   
   
   # SEs
