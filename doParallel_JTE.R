@@ -115,7 +115,7 @@ if (run.local == FALSE) {
     setwd(path)
     source("helper_JTE.R")
     source("stefan_phackR_fns.R")
-
+    
     
     scen.params = tidyr::expand_grid(
       # full list (save):
@@ -196,28 +196,24 @@ if ( run.local == TRUE ) {
   scen.params = tidyr::expand_grid(
     # full list (save):
     #rep.methods = "REML ; ML ; DL ; PMM ; EB ; robu ; jeffreys",
-    rep.methods = "jeffreys",
+    rep.methods = "REML ; jeffreys",
     
     # *If you reorder the args, need to adjust wrangle_agg_local
     ### args shared between sim environments
     k.pub = c(10),  # intentionally out of order so that jobs with boundary choices with complete first
-    hack = c("affirm"),
-    prob.hacked = c(0),
-    # important: if sim.env = stefan, these t2 args are ONLY used for setting start values
-    #   and for checking bias of Shat, so set them to have the correct t2a
-    #   not clear what t2w should be given the way stefan implements hacking
+   
     #t2a = c(0.05^2, 0.1^2, 0.2^2, 0.5^2, 1),
     t2a = 0.1,
-    t2w = c(0),
+
     # same with Mu
-    Mu = c(0, 0.5),
+    Mu = c(0.1),
     true.dist = c("norm"),
     
-    Nmax = 1,
-    m = 50,
-    true.sei.expr = c("0.02 + rexp(n = 1, rate = 3)"), # original setting  
-    rho = c(0),
-    
+    muN = 50,
+    minN = 20,
+    Ytype = "bin",
+    p0 = 0.1,
+   
     # Stan control args
     stan.maxtreedepth = 25,
     stan.adapt_delta = 0.995,
@@ -243,20 +239,6 @@ if ( run.local == TRUE ) {
   i = 1
 }
 
-# READ IN LODDER SEs ONCE AT BEGINNING ------------------------------
-
-# only needed if using "draw_lodder_se()" as one of the true.sei.expr
-
-if ( "draw_lodder_se()" %in% scen.params$true.sei.expr ) {
-  
-  setwd("/home/groups/manishad/JTE/applied_examples/data")
-  d.lodder = fread("lodder_prepped.csv")
-  lodder.ses = sqrt(d.lodder$vi)
-  
-  cat("\n\ndoParallel: just read in Lodder SEs:")
-  summary(lodder.ses)
-  
-}
 
 
 
@@ -297,8 +279,7 @@ doParallel.seconds = system.time({
     
     p = scen.params[ scen.params$scen == scen, names(scen.params) != "scen"]
     
-    # calculate TOTAL heterogeneity
-    p$V = p$t2a + p$t2w
+    p$V = p$t2a
     p$S = sqrt(p$V)
     
     if ( i == 1 ) cat("\n\nDIM AND HEAD OF P (SINGLE ROW OF SCEN.PARAMS):\n")
@@ -312,19 +293,16 @@ doParallel.seconds = system.time({
     # includes unpublished studies
     
     
-    d = sim_meta_2( Nmax = p$Nmax,
-                    Mu = p$Mu,
-                    t2a = p$t2a,
-                    true.dist = p$true.dist,
-                    m = p$m,
-                    t2w = p$t2w,
-                    true.sei.expr = p$true.sei.expr,
-                    hack = p$hack,
-                    rho = p$rho,
-                    
-                    k.pub = p$k.pub,
-                    prob.hacked = p$prob.hacked,
-                    return.only.published = FALSE)
+    d = sim_meta( Mu = p$Mu,
+                  t2a = p$t2a,
+                  true.dist = p$true.dist,
+                  
+                  muN = p$muN,
+                  minN = p$minN,
+                  Ytype = p$Ytype,
+                  p0 = p$p0,
+                  
+                  k.pub = p$k.pub)
     
     
     
@@ -354,12 +332,12 @@ doParallel.seconds = system.time({
     # ~ Existing Methods ------------------------------
     
     # ~~ Metafor heterogeneity estimators ------------------------------
-  
+    
     # pg 282:
     # https://cran.r-project.org/web/packages/metafor/metafor.pdf
     metafor.methods = all.methods[ all.methods %in% c("REML", "ML", "DL", "EB", "PMM", "HS", "SJ") ]
     
-
+    
     if ( length(metafor.methods) > 0 ) {
       
       for ( .method in metafor.methods ) {
@@ -389,10 +367,10 @@ doParallel.seconds = system.time({
       rep.res = run_method_safe(method.label = c("robu"),
                                 method.fn = function() {
                                   mod = robu( yi ~ 1,
-                                             data = d,
-                                             studynum = 1:nrow(d),
-                                             var.eff.size = vi,
-                                             small = TRUE)
+                                              data = d,
+                                              studynum = 1:nrow(d),
+                                              var.eff.size = vi,
+                                              small = TRUE)
                                   
                                   report_meta(mod, .mod.type = "robu")
                                 },
@@ -463,94 +441,11 @@ doParallel.seconds = system.time({
     rep.res = rep.res %>% add_column( scen.name = scen, .before = 1 )
     rep.res = rep.res %>% add_column( job.name = jobname, .before = 1 )
     
+    rep.res$mean_pY = mean(d$pY)
+    rep.res$mean_N = mean(d$N)
     
-    cat("\ndoParallel flag: Before adding sanity checks to rep.res")
     
-    
-    # some san.checks will fail for sim.env = stefan b/c e.g., we don't have within-study sample sizes
-    if (FALSE) {
-      # add info about simulated datasets
-      # "ustudies"/"udraws" refers to underlying studies/draws prior to hacking or publication bias
-      ( sancheck.prob.ustudies.published =  mean( d.first$study %in% unique(d$study) ) )
-      expect_equal( sancheck.prob.ustudies.published, nrow(dp)/nrow(d.first) )
-      # this one should always be 100% unless there's also publication bias:
-      ( sancheck.prob.unhacked.ustudies.published =  mean( d.first$study[ d.first$hack == "no" ] %in% unique( d$study[ d$hack == "no" ] ) ) )
-      # under affim hacking, will be <100%:
-      ( sancheck.prob.hacked.ustudies.published =  mean( d.first$study[ d.first$hack != "no" ] %in% unique( d$study[ d$hack != "no" ] ) ) )
-      
-      # might NOT be 100% if you're generating multiple draws per unhacked studies but favoring, e.g., a random one:
-      ( sancheck.prob.unhacked.udraws.published =  mean( d$study.draw[ d$hack == "no" ] %in% unique( d$study.draw[ d$hack == "no" ] ) ) )
-      ( sancheck.prob.hacked.udraws.published =  mean( d$study.draw[ d$hack != "no" ] %in% unique( d$study.draw[ d$hack != "no" ] ) ) )
-      
-      
-      
-      #*this one is especially important: under worst-case hacking, it's analogous to prop.retained  in
-      #  TNE since it's the proportion of the underlying distribution that's nonaffirmative
-      ( sancheck.prob.unhacked.udraws.nonaffirm =  mean( d$affirm[ d$hack == "no" ] == FALSE ) )
-      # a benchmark for average power:
-      ( sancheck.prob.unhacked.udraws.affirm =  mean( d$affirm[ d$hack == "no" ] ) )
-      ( sancheck.prob.hacked.udraws.nonaffirm =  mean( d$affirm[ d$hack != "no" ] == FALSE ) )
-      ( sancheck.prob.hacked.udraws.affirm =  mean( d$affirm[ d$hack != "no" ] ) )
-      
-      # probability that a published, nonaffirmative draw is from a hacked study
-      # under worst-case hacking, should be 0
-      ( sancheck.prob.published.nonaffirm.is.hacked = mean( d$hack[ d$affirm == 0 ] != "no" ) )
-      # this will be >0
-      ( sancheck.prob.published.affirm.is.hacked = mean( d$hack[ d$affirm == 1 ] != "no" ) )
-      
-      # average yi's 
-      
-      rep.res = rep.res %>% add_column(   sancheck.dp.k = nrow(dp),
-                                          sancheck.dp.k.affirm = sum(d$affirm == TRUE),
-                                          sancheck.dp.k.nonaffirm = sum(d$affirm == FALSE),
-                                          
-                                          sancheck.dp.k.affirm.unhacked = sum(d$affirm == TRUE & d$hack == "no"),
-                                          sancheck.dp.k.affirm.hacked = sum(d$affirm == TRUE & d$hack != "no"),
-                                          sancheck.dp.k.nonaffirm.unhacked = sum(d$affirm == FALSE & d$hack == "no"),
-                                          sancheck.dp.k.nonaffirm.hacked = sum(d$affirm == FALSE & d$hack != "no"),
-                                          
-                                          # means draws per HACKED, published study
-                                          sancheck.dp.meanN.hacked = mean( d$N[d$hack != "no"] ),
-                                          sancheck.dp.q90N.hacked = quantile( d$N[d$hack != "no"], 0.90 ),
-                                          
-                                          # average yi's of published draws from each study type
-                                          sancheck.mean.yi.unhacked.pub.study = mean( d$yi[ d$hack == "no"] ),
-                                          sancheck.mean.yi.hacked.pub.study = mean( d$yi[ d$hack != "no"] ),
-                                          
-                                          
-                                          sancheck.mean.mui.unhacked.pub.nonaffirm = mean( d$mui[ d$hack == "no" & d$affirm == FALSE ] ),
-                                          sancheck.mean.yi.unhacked.pub.nonaffirm = mean( d$yi[ d$hack == "no" & d$affirm == FALSE ] ),
-                                          sancheck.mean.yi.unhacked.pub.affirm = mean( d$yi[ d$hack == "no" & d$affirm == TRUE ] ),
-                                          
-                                          sancheck.mean.yi.hacked.pub.nonaffirm = mean( d$yi[ d$hack != "no" & d$affirm == FALSE ] ),
-                                          sancheck.mean.yi.hacked.pub.affirm = mean( d$yi[ d$hack != "no" & d$affirm == TRUE ] ),
-                                          
-                                          # average Zi's
-                                          sancheck.mean.Zi.unhacked.pub.study = mean( d$Zi[ d$hack == "no"] ),
-                                          sancheck.mean.Zi.hacked.pub.study = mean( d$Zi[ d$hack != "no"] ),
-                                          
-                                          sancheck.mean.Zi.unhacked.pub.nonaffirm = mean( d$Zi[ d$hack == "no" & d$affirm == FALSE ] ),
-                                          sancheck.mean.Zi.unhacked.pub.affirm = mean( d$Zi[ d$hack == "no" & d$affirm == TRUE ] ),
-                                          
-                                          sancheck.mean.Zi.hacked.pub.nonaffirm = mean( d$Zi[ d$hack != "no" & d$affirm == FALSE ] ),
-                                          sancheck.mean.Zi.hacked.pub.affirm = mean( d$Zi[ d$hack != "no" & d$affirm == TRUE ] ),
-                                          
-                                          
-                                          sancheck.prob.ustudies.published = sancheck.prob.ustudies.published,
-                                          sancheck.prob.unhacked.ustudies.published = sancheck.prob.unhacked.ustudies.published,
-                                          sancheck.prob.hacked.ustudies.published = sancheck.prob.hacked.ustudies.published,
-                                          
-                                          sancheck.prob.unhacked.udraws.published = sancheck.prob.unhacked.udraws.published,
-                                          sancheck.prob.hacked.udraws.published = sancheck.prob.hacked.udraws.published,
-                                          
-                                          sancheck.prob.unhacked.udraws.nonaffirm = sancheck.prob.unhacked.udraws.nonaffirm,
-                                          sancheck.prob.unhacked.udraws.affirm = sancheck.prob.unhacked.udraws.affirm,
-                                          sancheck.prob.hacked.udraws.nonaffirm = sancheck.prob.hacked.udraws.nonaffirm,
-                                          sancheck.prob.hacked.udraws.affirm = sancheck.prob.hacked.udraws.affirm,
-                                          
-                                          sancheck.prob.published.nonaffirm.is.hacked = sancheck.prob.published.nonaffirm.is.hacked
-      )
-    }
+    #cat("\ndoParallel flag: Before adding sanity checks to rep.res")
     
     rep.res
     
@@ -562,6 +457,9 @@ doParallel.seconds = system.time({
 # quick look
 #rs %>% dplyr::select(method, Shat, SLo, SHi, Mhat, MLo, MHi)
 
+
+# bm: will results look reasonable for binary outcome? will we match the scen.params?
+#  then try similar thing with different p0; make sure you can manipulate mean_pY :)
 
 
 
@@ -625,7 +523,10 @@ if ( run.local == TRUE ) {
                MhatCover = meanNA(MLo <= Mu & MHi >= Mu),
                MhatWidth = meanNA( MHi - MLo ),
                MLo = meanNA(MLo),
-               MHi = meanNA(MHi) )
+               MHi = meanNA(MHi),
+               
+               mean_pY = meanNA(mean_pY),
+               mean_N = mean(mean_N) )
   
   # round
   agg = as.data.frame( agg %>% mutate_if( is.numeric,

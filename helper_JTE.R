@@ -79,7 +79,7 @@ estimate_jeffreys = function(.yi,
   # pull out best iterate to pass to MAP optimization later
   ext = rstan::extract(post) # a vector of all post-WU iterates across all chains
   best.ind = which.max(ext$log_post)  # single iterate with best log-posterior should be very close to MAP
-
+  
   
   # posterior means, posterior medians, modes, and max-LP iterate
   Mhat = c( postSumm["mu", "mean"],
@@ -524,116 +524,92 @@ run_method_safe = function( method.label,
 #  are hacked, following various hacking mechanisms. Each study makes multiple draws (hypothesis tests)
 #  until some stopping criterion based on Nmax and the hacking mechanism.
 
-# - Nmax: max number of draws (hypothesis tests) that each hacked study can make before giving up
-# - Mu: overall mean for meta-analysis
+# - Mu: overall mean for meta-analysis (SMD if Ytype = "cont"; log-RR if Ytype = "bin")
 # - t2a: across-study heterogeneity (NOT total heterogeneity)
 # Study parameters, assumed same for all studies:
-#  - m: sample size
-#  - t2w: within-study heterogeneity across draws
 #  - true.sei.expr: quoted expression to evaluate to simulate a single study's standard error
-#  - rho: autocorrelation of draws from a given study
-#  - hack: mechanism of p-hacking (see sim_one_study_set for details)
-# - k.pub.nonaffirm: number of published nonaffirmative studies desired in meta-analysis
-#    (will simulate as many studies as needed to achieve that number)
-# - prob.hacked: probability that an underlying study is hacked
-sim_meta_2 = function(Nmax,  
-                      Mu,  
-                      t2a,  
-                      true.dist,
-                      
-                      # study parameters, assumed same for all studies:
-                      m,  # sample size for this study
-                      t2w,  # within-study heterogeneity
-                      true.sei.expr,  # TRUE SE string to evaluate
-                      rho = 0,  # autocorrelation of muin's
-                      
-                      hack,  # mechanism of hacking for studies that DO hack (so not "no")
-                      
-                      k.pub,  # number of published studies
-                      prob.hacked,
-                      
-                      return.only.published = FALSE
-) {
+
+sim_meta = function(k.pub,
+                    
+                    Mu,  
+                    t2a,  
+                    true.dist,
+                    
+                    # within-study parameters
+                    muN,
+                    minN,
+                    Ytype,
+                    p0) {
   
   
   # collect arguments
   .args = mget(names(formals()), sys.frame(sys.nframe()))
   # remove unnecessary args for sim_one_study_set
-  .args = .args[ !names(.args) %in% c("k.pub", "prob.hacked", "true.sei.expr")]
+  .args = .args[ !names(.args) %in% c("k.pub")]
   
-  
-  if ( hack == "no" ) stop("hack should only be 'affirm' or 'signif' for this fn")
-  
-  k.pub.achieved = 0
-  i = 1
-  
-  while( k.pub.achieved < k.pub ) {
+  #browser()
+
+  for( i in 1:k.pub ) {
     
-    is.hacked = rbinom(n = 1, size = 1, prob = prob.hacked)
-    true.se = eval( parse( text = true.sei.expr) )
-    
-    
-    if ( is.hacked == 0 ) {
-      # to generate unhacked studies, need to change argument "hack"
-      .argsUnhacked = .args
-      .argsUnhacked[ names(.args) == "hack" ] = "no"
-      .argsUnhacked$se = true.se
-      
-      # might be multiple rows if return.only.published = FALSE
-      newRows = do.call( sim_one_study_set, .argsUnhacked )
-      
-    } else if ( is.hacked == 1 ) {
-      
-      # for unhacked studies, no need to change argument "hack"
-      .argsHacked = .args
-      .argsHacked$se = true.se
-      
-      # might be multiple rows if return.only.published = FALSE
-      newRows = do.call( sim_one_study_set, .argsHacked )
-      
-    }
+    newRow = do.call( sim_one_study, .args )
     
     # add study ID
-    newRows = newRows %>% add_column( .before = 1,
+    newRow = newRow %>% add_column( .before = 1,
                                       study = i )
     
-    # add study-draw ID
-    study.draw = paste(newRows$study, 1:nrow(newRows), sep = "_")
-    newRows = newRows %>% add_column( .after = 1,
-                                      study.draw )
-    
-    if ( i == 1 ) .dat = newRows else .dat = rbind( .dat, newRows )
-    
-    i = i + 1
-    k.pub.achieved = sum( .dat$Di == 1 ) 
-    
+    if ( i == 1 ) .dat = newRow else .dat = rbind( .dat, newRow )
   }
   
   # add more info to dataset
-  .dat$k.underlying = length(unique(.dat$study))
-  .dat$k.nonaffirm.underlying = length( unique( .dat$study[ .dat$affirm == FALSE ] ) )
-  
-  if ( return.only.published == TRUE ) .dat = .dat[ .dat$Di == 1, ]
+  .dat$mean_pY = mean(.dat$pY, na.rm = TRUE)
   
   return(.dat)
 }
 
-# d = sim_meta_2(  # test only
-#   Nmax = 20,
-#   Mu = 1,
-#   t2a = 0.1,
-#   m = 50,
-#   t2w = .5,
-#   true.sei.expr = "runif( n = 1, min = 0.5, max = 2 )",
-#   hack = "affirm",
-#   return.only.published = FALSE,
-#   rho=0,
-#   k.pub = 30,
-#   prob.hacked = 0.4 )
-# 
-# d$k.nonaffirm.underlying[1]
-# d$k.underlying[1]
-# table(d$Di, d$affirm)
+# test
+if (FALSE) {
+  # example: continuous Y
+  d = sim_meta(k.pub = 10,
+               
+               Mu = 0.5,  
+               t2a = 0.1^2,  
+               true.dist = "norm",
+               
+               # within-study parameters
+               muN = 1000,
+               minN = 1000,
+               Ytype = "cont",
+               p0 = NA)
+  
+  # example: binary Y
+  d = sim_meta(k.pub = 10,
+               
+               Mu = 0.5,  
+               t2a = 0.1^2,  
+               true.dist = "norm",
+               
+               # within-study parameters
+               muN = 1000,
+               minN = 1000,
+               Ytype = "bin",
+               p0 = 0.1)
+  
+  
+  d = sim_meta(k.pub = 500,
+               
+               Mu = -0.5,  
+               t2a = 0.1^2,  
+               true.dist = "norm",
+               
+               # within-study parameters
+               muN = 1000,
+               minN = 1000,
+               Ytype = "bin",
+               p0 = 0.01)
+  
+  mean(d$pY)
+}
+
 
 
 # ~ Simulate a single study ----------------- 
@@ -663,19 +639,18 @@ sim_meta_2 = function(Nmax,
 # estimate itself, not a problem with the simulation code
 # For more about the small-sample bias: # https://www.jstor.org/stable/2332719?seq=1#metadata_info_tab_contents
 
-sim_one_study_set = function(Nmax,  # max draws to try
-                             Mu,  # overall mean for meta-analysis
-                             t2a,  # across-study heterogeneity (NOT total heterogeneity)
-                             true.dist,
-                             
-                             m,  # sample size for this study
-                             t2w,  # within-study heterogeneity
-                             se,  # TRUE SE for this study
-                             return.only.published = FALSE,
-                             hack, # should this study set be hacked? ("no", "affirm","affirm2", "signif")
-                             
-                             # for correlated draws; see make_one_draw
-                             rho = 0
+sim_one_study = function( Mu,  # overall mean for meta-analysis
+                          t2a,  # across-study heterogeneity
+                          true.dist,
+                          
+                          # within-study sample size parameters
+                          muN,  
+                          minN, 
+                          
+                          sd.w = 1,  # within-study SD(Y|X)
+                          
+                          Ytype,  # "cont" or "bin"
+                          p0 = NULL # P(Y | X=0); only needed for binary outcome
 ) {  
   
   
@@ -689,7 +664,9 @@ sim_one_study_set = function(Nmax,  # max draws to try
   # hack = "favor-best-affirm-wch"
   # rho=0
   
-  # ~~ Mean for this study set ----
+  # ~~ Mean for this study set -------------------------------------------------
+  
+  if( !true.dist %in% c("norm", "expo") ) stop("true.dist not recognized")
   
   if ( true.dist == "norm" ){
     mui = Mu + rnorm(mean = 0,
@@ -705,250 +682,82 @@ sim_one_study_set = function(Nmax,  # max draws to try
     mui = mui + ( Mu - sqrt(t2a))
   }
   
+  # simulate total N for this study
+  if ( muN < minN ) stop("Should not have muN < minN")
+  N = round( runif( n = 1, min = minN, max = minN + 2*( muN - minN ) ) ) # draw from uniform centered on muN
   
-  # TRUE SD (not estimated)
-  sd.y = se * sqrt(m)
+  # ~~ Simulate individual subject data -------------------------------------------------
   
-  # collect all args from outer fn, including default ones
-  .args = mget(names(formals()), sys.frame(sys.nframe()))
-  .args$mui = mui
-  .args$sd.y = sd.y
-  
-  
-  stop = FALSE  # indicator for whether to stop drawing results
-  N = 0  # counts draws actually made
-  
-  # ~~ Draw until study reaches its stopping criterion ----
-  # we use this loop whether there's hacking or not
-  while( stop == FALSE & N < Nmax ) {
+  # as in MRM helper code
+  if ( Ytype == "cont" ) {
+    # group assignments
+    X = c( rep( 0, N/2 ), rep( 1, N/2 ) )
     
-    if ( rho == 0 ) {
-      # make uncorrelated draw
-      newRow = do.call( make_one_draw, .args )
-    } else {
-      # make correlated draw
-      if ( N == 0 ) .args$last.muin = NA  # on first draw, so there's no previous one
-      if ( N > 0 ) .args$last.muin = d$muin[ nrow(d) ]
-      newRow = do.call( make_one_draw, .args ) 
-    }
+    # generate continuous Y
+    # 2-group study of raw mean difference with means 0 and Mi in each group
+    # and same SD
+    Y = c( rnorm( n = N/2, mean = 0, sd = sd.w ),
+           rnorm( n = N/2, mean = mui, sd = sd.w ) )
     
+    # calculate ES for this study using metafor (see Viechtbauer "Conducting...", pg 10)
+    ES = escalc( measure="SMD",   
+                 n1i = N/2, 
+                 n2i = N/2,
+                 m1i = mean( Y[X==1] ),
+                 m2i = mean( Y[X==0] ),
+                 sd1i = sd( Y[X==1] ),
+                 sd2i = sd( Y[X==0] ) ) 
     
-    # number of draws made so far
-    N = N + 1
-    
-    # add new draw to dataset
-    if ( N == 1 ) d = newRow
-    if ( N > 1 ) d = rbind( d, newRow )
-    
-    # check if it's time to stop drawing results
-    if (hack == "signif") {
-      stop = (newRow$pval < 0.05)
-    } else if ( hack %in% c("affirm", "affirm2") ) {
-      stop = (newRow$pval < 0.05 & newRow$yi > 0)
-    } else if ( hack %in% c("no", "favor-best-affirm-wch") ) {
-      # if this study set is unhacked, then stopping criterion
-      #  is just whether we've reached Nmax draws
-      # and for favor-best-affirm-wch, we always do Nmax draws so 
-      #  we can pick the smallest p-value
-      stop = (N == Nmax)
-    } else {
-      stop("No stopping criterion implemented for your chosen hack mechanism")
-    }
-    
-    
-  }  # end while-loop until N = Nmax or we succeed
-  
-  # record info in dataset
-  d$N = N
-  d$hack = hack
-  
-  # ~~ Empirical correlation of muin's ----
-  #  but note this will be biased for rho in small samples (i.e., Nmax small)
-  if ( nrow(d) > 1 ) {
-    # get lag-1 autocorrelation
-    d$rhoEmp = cor( d$muin[ 2:length(d$muin) ],
-                    d$muin[ 1: ( length(d$muin) - 1 ) ] )
-    
-    # mostly for debugging; could remove later
-    d$covEmp = cov( d$muin[ 2:length(d$muin) ],
-                    d$muin[ 1: ( length(d$muin) - 1 ) ] )
-    
-  } else {
-    d$rhoEmp = NA
-    d$covEmp = NA
+    # only here to be consistent with binary Y case below
+    pY = NA
   }
   
-  # convenience indicators for significance and affirmative status
-  d$signif = d$pval < 0.05
-  d$affirm = (d$pval < 0.05 & d$yi > 0)
   
-  
-  # ~~ Decide which draw to favor & publish ----
-  # in the first 2 cases, Di=1 for only the last draw IF we got an affirm result
-  #  but if we didn't, then it will always be 0
-  if ( hack == "signif" ) d$Di = (d$signif == TRUE)
-  if (hack == "affirm") d$Di = (d$affirm == TRUE)
-  
-  # if no hacking or affirmative hacking without file drawer,
-  #   assume only LAST draw is published,
-  #   which could be affirm or nonaffirm
-  if ( hack %in% c("no", "affirm2") ) {
-    d$Di = 0
-    d$Di[ length(d$Di) ] = 1
+  # similar to Metasens helper code
+  if ( Ytype == "bin" ) {
+    
+    if ( is.null(p0) ) stop("Must specify p0 for Ytype = bin")
+    
+    # group assignments
+    X = c( rep( 0, N/2 ), rep( 1, N/2 ) )
+    
+    # generate binary Y
+    linpred = log(p0) + mui*X  # Mi is already on log scale
+    # exp here because log-RR model
+    Y = rbinom( size=1, n=N, prob=exp(linpred) )  
+    
+    # sanity check: see whether unconfounded RR generated here is correct
+    #   mod = glm(Y ~ X, family=binomial)
+    #   exp(coef(mod)); exp(mui)
+    
+    # calculate deaths and sample sizes in each group
+    n1 = sum(X)  # number with X=1
+    n0 = length(X) - sum(X)
+    y1 = sum(Y[X==1])  # number of deaths in Tx group
+    y0 = sum(Y[X==0])  # number of deaths in control group
+    
+    # calculate log-RR for this study using metafor (see Viechtbauer "Conducting...", pg 10)
+    ES = escalc( measure="RR", ai=y1, bi=n1-y1, ci=y0, di=n0-y0 )  # returns on log scale
+    
+    # overall P(Y=1)
+    pY = mean(Y)
   }
   
-  # for favor-best-affirm-wch, favor the one with the 
-  if ( hack %in% c("favor-best-affirm-wch") ) {
-    d$Di = 0
-    # if there was at least 1 affirm, publish it 
-    if ( any(d$affirm == TRUE) ) {
-      best.affirm.pval = min( d$pval[d$affirm == TRUE] )
-      d$Di[ d$pval == best.affirm.pval & d$affirm == TRUE ] = 1
-    }
-    # ...otherwise don't publish any draw
-    # sanity check:
-    #View(d%>%select(Di,affirm,pval,yi))
-  }
+  yi = ES$yi
+  vi = ES$vi
+  sei = sqrt(vi)
   
-  if ( return.only.published == TRUE ) d = d[ d$Di == 1, ]
+  # ~~ Meta-analytic dataset  -------------------------------------------------
+  d = data.frame( yi = yi, 
+                  vi = vi, 
+                  sei = sei, 
+                  N = N,
+                  pY = pY)
   
   return(d)
   
 }
 
-
-# ~ Draw one unbiased result within one study ------------------
-# muin should be NA if either we want uncorrelated draws OR it's the first of a series of correlated draws
-make_one_draw = function(mui,  # mean for this study set
-                         t2w,
-                         sd.y,  # TRUE SD
-                         m,  # sample size
-                         
-                         # for making correlated draws
-                         rho = 0,  # autocorrelation of muin's (not yi's)
-                         last.muin = NA,  
-                         ...) {
-  
-  
-  # true mean for draw n (based on within-study heterogeneity)
-  # either we want uncorrelated draws OR it's the first of a series of correlated draws
-  if ( rho == 0 | is.na(last.muin) ) {
-    muin = rnorm(mean = mui,
-                 sd = sqrt(t2w),
-                 n = 1)
-  }
-  
-  # make correlated draw
-  if ( rho != 0 & !is.na(last.muin) ) {
-    # draw from BVN conditional, given muin from last draw
-    # conditional moments given here:
-    #  https://www.amherst.edu/system/files/media/1150/bivarnorm.PDF
-    muin = rnorm(mean = mui + rho * (last.muin - mui),
-                 sd = sqrt( t2w * (1 - rho^2) ),
-                 n = 1)
-  }
-  
-  
-  # draw subject-level data from this study's population effect
-  y = rnorm( mean = muin,
-             sd = sd.y,
-             n = m)
-  
-  # run a one-sample t-test
-  test = t.test(y,
-                alternative = "two.sided")
-  
-  pval = test$p.value
-  tstat = test$statistic
-  vi = test$stderr^2  # ESTIMATED variance
-  
-  
-  # if (hack == "signif") success = (pval < 0.05)
-  # if (hack == "affirm") success = (pval < 0.05 & mean(y) > 0)
-  
-  return( data.frame(pval = pval,
-                     tstat = tstat,
-                     tcrit = qt(0.975, df = m-1),
-                     mui = mui,
-                     muin = muin,
-                     yi = mean(y),
-                     vi = vi,
-                     viTrue = sd.y^2 / m,  # true variance; will equal p$se^2
-                     m = m ) )
-  #success = success,
-  #N = Nmax ) )
-}
-
-# make_one_draw(mui = 0.1,
-#               t2w = 0,
-#               sd.y = 0.3,
-#               m = 30 )
-# 
-# # rho = 1, so should get exactly the same muin again
-# make_one_draw(mui = 0.1,
-#               t2w = 0.1,
-#               sd.y = 0.3,
-#               m = 30,
-#               rho = 1,
-#               last.muin = 0.8)
-# 
-# # sanity check by simulation: uncorrelated draws
-# for ( i in 1:5000 ) {
-#   
-#   # get last draw
-#   last.muin = NA
-#   if ( i > 1 ) last.muin = .d$muin[ nrow(.d) ]
-#   
-#   newRow = make_one_draw(mui = 0.1,
-#                   t2w = 0.1,
-#                   sd.y = 0.3,
-#                   m = 30,
-#                   rho = 0.9,
-#                   last.muin = last.muin)
-# 
-#   if ( i == 1 ) .d = newRow else .d = rbind(.d, newRow)
-# 
-# }
-# 
-# .d %>% summarise( mean(mui),
-#                   mean(muin),
-#                   var(muin),
-#                   mean(yi) )
-# 
-# 
-# # sanity check by simulation: correlated draws
-# for ( i in 1:5000 ) {
-#   newRow = make_one_draw(mui = 0.1,
-#                          t2w = 0.1,
-#                          sd.y = 0.3,
-#                          m = 30,
-#                          rho = 1,
-#                          last.muin = 0.8)
-#   
-#   if ( i == 1 ) .d = newRow else .d = rbind(.d, newRow)
-#   
-# }
-# 
-# .d %>% summarise(
-#   mean(mui),
-#   mean(muin),
-#   var(muin),
-#   mean(yi) )
-# 
-# # look at autocorrelation of muin's (should match rho above)
-# acf(.d$muin, lag = 1)$acf
-# 
-# # look at autocorrelation of yi's (<rho because of SE>0)
-# acf(.d$yi, lag = 1)$acf
-
-# draw SE from Lodder distribution (with replacement)
-#  this assumes that Lodder dataset has already been read in (by doParallel)
-#  and there's global vector called "lodder.ses"
-draw_lodder_se = function() {
-  sample(x = lodder.ses,
-         size = 1, 
-         replace = TRUE)
-}
 
 
 # DATA WRANGLING ---------------------------------------------------------------
