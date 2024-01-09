@@ -158,10 +158,7 @@ n.files
 #     sbatch -p qsu,owners,normal /home/groups/manishad/JTE/sbatch_files/1.sbatch
 
 
-# 2023-06-12 - 960 - mathur all other methods
-# 2023-06-11 - 400 - stefan with only robma
-# 2023-06-09 - 80 - stefan with all other methods
-# 2023-05-30 - 480 - mathur with only robma
+# 2024-01-09 - 360
 path = "/home/groups/manishad/JTE"
 setwd( paste(path, "/sbatch_files", sep="") )
 for (i in 1:n.files) {

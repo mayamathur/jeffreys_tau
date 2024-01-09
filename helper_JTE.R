@@ -755,6 +755,7 @@ sim_one_study_set = function(Nmax,  # max draws to try
       stop("No stopping criterion implemented for your chosen hack mechanism")
     }
     
+    
   }  # end while-loop until N = Nmax or we succeed
   
   # record info in dataset
