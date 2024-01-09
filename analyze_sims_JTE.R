@@ -199,9 +199,38 @@ make_both_winner_tables(.agg = agg)
 make_both_winner_tables(.agg = agg %>% filter(k.pub <= 20))
 make_both_winner_tables(.agg = agg %>% filter(k.pub == 5))
 
+# **exclude the very high and possible unreasonable t2a values
+make_both_winner_tables(.agg = agg %>% filter(k.pub <= 20 & t2a<1))
+make_both_winner_tables(.agg = agg %>% filter(k.pub == 5 & t2a<1))
+
+#make_both_winner_tables(.agg = agg %>% filter(k.pub <= 20 & sqrt(t2a)==0.05))
+#make_both_winner_tables(.agg = agg %>% filter(k.pub <= 20 & t2a<1))
+
 # t2a
 make_both_winner_tables(.agg = agg %>% filter(t2a == 0.0025 & k.pub < 20))
 make_both_winner_tables(.agg = agg %>% filter(t2a == 1 & k.pub < 20))
+
+
+
+# ** stratified by distribution
+make_both_winner_tables(.agg = agg %>% filter(k.pub <= 20 & t2a<1 & true.dist == "norm"))
+make_both_winner_tables(.agg = agg %>% filter(k.pub == 5 & t2a<1  & true.dist == "norm"))
+
+make_both_winner_tables(.agg = agg %>% filter(k.pub <= 20 & t2a<1 & true.dist == "expo"))
+make_both_winner_tables(.agg = agg %>% filter(k.pub == 5 & t2a<1  & true.dist == "expo"))
+
+
+
+# ** stratified by distribution; restrict to the most realistic sei distribution
+temp = agg %>% filter(t2a<1 & true.sei.expr == "0.02 + rexp(n = 1, rate = 3)" & true.dist == "norm")
+make_both_winner_tables(.agg = temp %>% filter(k.pub <= 20))
+make_both_winner_tables(.agg = temp %>% filter(k.pub == 5))
+
+temp = agg %>% filter(t2a<1 & true.sei.expr == "0.02 + rexp(n = 1, rate = 3)" & true.dist == "expo")
+make_both_winner_tables(.agg = temp %>% filter(k.pub <= 20))
+make_both_winner_tables(.agg = temp %>% filter(k.pub == 5))
+
+#*really interesting that expo distribution doesn't particularly hurt jeffreys performance; still arguably wins
 
 
 
@@ -279,12 +308,12 @@ performance_regressions = function(.agg,
 }
 
 
-( t1 = performance_regressions(.agg = agg %>% filter(method == "jeffreys-pmed"),
+( t1 = performance_regressions(.agg = agg %>% filter(method == "jeffreys-max-lp-iterate"),
                                Ynames = Ynames,
-                               covariates = param.vars) )
+                               covariates = param.vars.manip2) )
 
 
 ( t2 = performance_regressions(.agg = agg %>% filter(method == "EB"),
                                Ynames = Ynames,
-                               covariates = param.vars) )
+                               covariates = param.vars.manip2) )
 
