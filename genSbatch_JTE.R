@@ -55,7 +55,7 @@ scen.params = tidyr::expand_grid(
   
   # *If you reorder the args, need to adjust wrangle_agg_local
   ### args shared between sim environments
-  k.pub = c(5, 10, 15, 20, 100),  # intentionally out of order so that jobs with boundary choices with complete first
+  k.pub = c(2, 3, 5, 10, 20, 100),  # intentionally out of order so that jobs with boundary choices with complete first
   hack = c("affirm"),
   prob.hacked = c(0),
   # important: if sim.env = stefan, these t2 args are ONLY used for setting start values
@@ -64,7 +64,7 @@ scen.params = tidyr::expand_grid(
   t2a = c(0.05^2, 0.1^2, 0.2^2, 0.5^2, 1),
   t2w = c(0),
   # same with Mu
-  Mu = c(0, 0.5),
+  Mu = c(0.5),
   true.dist = c("expo", "norm"),
   
   Nmax = 1,

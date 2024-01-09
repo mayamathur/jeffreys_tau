@@ -118,27 +118,36 @@ if (run.local == FALSE) {
     setwd(path)
     source("helper_JTE.R")
     source("stefan_phackR_fns.R")
+
+    
     scen.params = tidyr::expand_grid(
-      rep.methods = "naive ; jeffreys-mcmc ; jeffreys-sd",
+      # full list (save):
+      #rep.methods = "REML ; ML ; DL ; PMM ; EB ; robu ; jeffreys",
+      rep.methods = "jeffreys",
       
-      # args from sim_meta_2
-      Nmax = 30,
-      Mu = c(0.5),
-      t2a = 0,
-      t2w = 0,
+      # *If you reorder the args, need to adjust wrangle_agg_local
+      ### args shared between sim environments
+      k.pub = c(10),  # intentionally out of order so that jobs with boundary choices with complete first
+      hack = c("affirm"),
+      prob.hacked = c(0),
+      # important: if sim.env = stefan, these t2 args are ONLY used for setting start values
+      #   and for checking bias of Shat, so set them to have the correct t2a
+      #   not clear what t2w should be given the way stefan implements hacking
+      #t2a = c(0.05^2, 0.1^2, 0.2^2, 0.5^2, 1),
+      t2a = 0.1,
+      t2w = c(0),
+      # same with Mu
+      Mu = c(0, 0.5),
+      true.dist = c("norm"),
+      
+      Nmax = 1,
       m = 50,
-      
-      
-      hack = c("favor-best-affirm-wch"),
+      true.sei.expr = c("0.02 + rexp(n = 1, rate = 3)"), # original setting  
       rho = c(0),
-      k.pub.nonaffirm = 20,
-      prob.hacked = c(0.8),
-      
-      true.sei.expr = c("0.02 + rexp(n = 1, rate = 3)"),
       
       # Stan control args
-      stan.maxtreedepth = 20,
-      stan.adapt_delta = 0.98,
+      stan.maxtreedepth = 25,
+      stan.adapt_delta = 0.995,
       
       get.CIs = TRUE,
       run.optimx = FALSE )
@@ -189,7 +198,8 @@ if ( run.local == TRUE ) {
   
   scen.params = tidyr::expand_grid(
     # full list (save):
-    rep.methods = "REML ; ML ; DL ; PMM ; EB ; robu ; jeffreys",
+    #rep.methods = "REML ; ML ; DL ; PMM ; EB ; robu ; jeffreys",
+    rep.methods = "jeffreys",
     
     # *If you reorder the args, need to adjust wrangle_agg_local
     ### args shared between sim environments
@@ -199,15 +209,16 @@ if ( run.local == TRUE ) {
     # important: if sim.env = stefan, these t2 args are ONLY used for setting start values
     #   and for checking bias of Shat, so set them to have the correct t2a
     #   not clear what t2w should be given the way stefan implements hacking
-    t2a = c(0.2^2),
+    #t2a = c(0.05^2, 0.1^2, 0.2^2, 0.5^2, 1),
+    t2a = 0.1,
     t2w = c(0),
     # same with Mu
-    Mu = c(0.5),
-    true.dist = "expo",
+    Mu = c(0, 0.5),
+    true.dist = c("norm"),
     
     Nmax = 1,
     m = 50,
-    true.sei.expr = c("0.02 + rexp(n = 1, rate = 3)"),
+    true.sei.expr = c("0.02 + rexp(n = 1, rate = 3)"), # original setting  
     rho = c(0),
     
     # Stan control args
@@ -216,6 +227,7 @@ if ( run.local == TRUE ) {
     
     get.CIs = TRUE,
     run.optimx = FALSE )
+  
   
   
   scen.params$scen = 1:nrow(scen.params)
@@ -421,6 +433,7 @@ doParallel.seconds = system.time({
       # order of labels in method arg needs to match return structure of estimate_jeffreys_mcmc
       rep.res = run_method_safe(method.label = c("jeffreys-pmean",
                                                  "jeffreys-pmed",
+                                                 "jeffreys-pmode",
                                                  "jeffreys-max-lp-iterate"),
                                 method.fn = function() estimate_jeffreys(.yi = d$yi,
                                                                          .sei = d$sei,
@@ -432,8 +445,8 @@ doParallel.seconds = system.time({
                                                                          .stan.maxtreedepth = p$stan.maxtreedepth), .rep.res = rep.res )
       
       
-      Mhat.MaxLP = rep.res$Mhat[ rep.res$method == "jeffreys-max-lp-iterate" ]
-      Shat.MaxLP = rep.res$Shat[ rep.res$method == "jeffreys-max-lp-iterate" ]
+      # Mhat.MaxLP = rep.res$Mhat[ rep.res$method == "jeffreys-max-lp-iterate" ]
+      # Shat.MaxLP = rep.res$Shat[ rep.res$method == "jeffreys-max-lp-iterate" ]
       
       cat("\n doParallel flag: Done jeffreys-mcmc if applicable")
     }

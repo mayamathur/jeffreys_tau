@@ -78,17 +78,18 @@ estimate_jeffreys = function(.yi,
   
   # pull out best iterate to pass to MAP optimization later
   ext = rstan::extract(post) # a vector of all post-WU iterates across all chains
-  #best.ind = which.max(ext$lp__)  # single iterate with best log-posterior should be very close to MAP
   best.ind = which.max(ext$log_post)  # single iterate with best log-posterior should be very close to MAP
   
   
-  # posterior means, posterior medians, and max-LP iterate
+  # posterior means, posterior medians, modes, and max-LP iterate
   Mhat = c( postSumm["mu", "mean"],
             median( rstan::extract(post, "mu")[[1]] ),
+            mode( rstan::extract(post, "mu")[[1]] ),
             ext$mu[best.ind] )
   
   Shat = c( postSumm["tau", "mean"],
             median( rstan::extract(post, "tau")[[1]] ),
+            mode( rstan::extract(post, "tau")[[1]] ),
             ext$tau[best.ind] )
   
   # sanity check
@@ -123,7 +124,7 @@ estimate_jeffreys = function(.yi,
     MhatSE = MhatSE,
     ShatSE = ShatSE,
     
-    # this will use same CI limits for all 3 pt estimates
+    # this will use same CI limits for all pt estimates
     MLo = M.CI[1],
     MHi = M.CI[2],
     
@@ -635,6 +636,186 @@ sim_meta_2 = function(Nmax,
 # d$k.nonaffirm.underlying[1]
 # d$k.underlying[1]
 # table(d$Di, d$affirm)
+
+
+# ~ Simulate a single study ----------------- 
+
+# Simulate study from potentially heterogeneous meta-analysis distribution;
+#  within-study draws have their own heterogeneous within-study distribution
+
+### Hacking types ###
+
+# - "no": Makes exactly Nmax results and treats the last one as the reported one,
+#     so the final result could be affirmative or nonaffirmative
+
+# - "affirm" (worst-case hacking): Makes draws until the first affirmative is obtained
+#    but if you reach Nmax, do NOT report any result at all. (Hack type "signif" is the 
+#    same but favors all significant results.)
+
+# - "affirm2": (NOT worst-case hacking): Similar to "affirm", but always reports the last draw,
+#    even if it was nonaffirm (no file drawer)
+
+# - "favor-best-affirm-wch" (worst-case hacking): Always makes Nmax draws. If you get any affirmatives,
+#    publish the one with the lowest p-value. If you don't get any affirmatives, don't publish anything.
+
+# NOTE: If you add args here, need to update quick_sim as well
+
+# If Nmax is small, rhoEmp (empirical autocorrelation of muin's) will be smaller
+#  than rho. That's okay because it reflects small-sample bias in autocorrelation
+# estimate itself, not a problem with the simulation code
+# For more about the small-sample bias: # https://www.jstor.org/stable/2332719?seq=1#metadata_info_tab_contents
+
+sim_one_study_set = function(Nmax,  # max draws to try
+                             Mu,  # overall mean for meta-analysis
+                             t2a,  # across-study heterogeneity (NOT total heterogeneity)
+                             true.dist,
+                             
+                             m,  # sample size for this study
+                             t2w,  # within-study heterogeneity
+                             se,  # TRUE SE for this study
+                             return.only.published = FALSE,
+                             hack, # should this study set be hacked? ("no", "affirm","affirm2", "signif")
+                             
+                             # for correlated draws; see make_one_draw
+                             rho = 0
+) {  
+  
+  
+  # # test only
+  # Nmax = 20
+  # Mu = 0.1
+  # t2a = 0.1
+  # m = 50
+  # t2w = .5
+  # se = 1
+  # hack = "favor-best-affirm-wch"
+  # rho=0
+  
+  # ~~ Mean for this study set ----
+  
+  if ( true.dist == "norm" ){
+    mui = Mu + rnorm(mean = 0,
+                     sd = sqrt(t2a),
+                     n = 1)
+  }
+  
+  if ( true.dist == "expo" ){
+    # set the rate so the heterogeneity is correct
+    mui = rexp( n = 1, rate = sqrt(1/t2a) )
+    # now the mean is sqrt(t2a) rather than Mu
+    # shift to have the correct mean (in expectation)
+    mui = mui + ( Mu - sqrt(t2a))
+  }
+  
+  
+  # TRUE SD (not estimated)
+  sd.y = se * sqrt(m)
+  
+  # collect all args from outer fn, including default ones
+  .args = mget(names(formals()), sys.frame(sys.nframe()))
+  .args$mui = mui
+  .args$sd.y = sd.y
+  
+  
+  stop = FALSE  # indicator for whether to stop drawing results
+  N = 0  # counts draws actually made
+  
+  # ~~ Draw until study reaches its stopping criterion ----
+  # we use this loop whether there's hacking or not
+  while( stop == FALSE & N < Nmax ) {
+    
+    if ( rho == 0 ) {
+      # make uncorrelated draw
+      newRow = do.call( make_one_draw, .args )
+    } else {
+      # make correlated draw
+      if ( N == 0 ) .args$last.muin = NA  # on first draw, so there's no previous one
+      if ( N > 0 ) .args$last.muin = d$muin[ nrow(d) ]
+      newRow = do.call( make_one_draw, .args ) 
+    }
+    
+    
+    # number of draws made so far
+    N = N + 1
+    
+    # add new draw to dataset
+    if ( N == 1 ) d = newRow
+    if ( N > 1 ) d = rbind( d, newRow )
+    
+    # check if it's time to stop drawing results
+    if (hack == "signif") {
+      stop = (newRow$pval < 0.05)
+    } else if ( hack %in% c("affirm", "affirm2") ) {
+      stop = (newRow$pval < 0.05 & newRow$yi > 0)
+    } else if ( hack %in% c("no", "favor-best-affirm-wch") ) {
+      # if this study set is unhacked, then stopping criterion
+      #  is just whether we've reached Nmax draws
+      # and for favor-best-affirm-wch, we always do Nmax draws so 
+      #  we can pick the smallest p-value
+      stop = (N == Nmax)
+    } else {
+      stop("No stopping criterion implemented for your chosen hack mechanism")
+    }
+    
+  }  # end while-loop until N = Nmax or we succeed
+  
+  # record info in dataset
+  d$N = N
+  d$hack = hack
+  
+  # ~~ Empirical correlation of muin's ----
+  #  but note this will be biased for rho in small samples (i.e., Nmax small)
+  if ( nrow(d) > 1 ) {
+    # get lag-1 autocorrelation
+    d$rhoEmp = cor( d$muin[ 2:length(d$muin) ],
+                    d$muin[ 1: ( length(d$muin) - 1 ) ] )
+    
+    # mostly for debugging; could remove later
+    d$covEmp = cov( d$muin[ 2:length(d$muin) ],
+                    d$muin[ 1: ( length(d$muin) - 1 ) ] )
+    
+  } else {
+    d$rhoEmp = NA
+    d$covEmp = NA
+  }
+  
+  # convenience indicators for significance and affirmative status
+  d$signif = d$pval < 0.05
+  d$affirm = (d$pval < 0.05 & d$yi > 0)
+  
+  
+  # ~~ Decide which draw to favor & publish ----
+  # in the first 2 cases, Di=1 for only the last draw IF we got an affirm result
+  #  but if we didn't, then it will always be 0
+  if ( hack == "signif" ) d$Di = (d$signif == TRUE)
+  if (hack == "affirm") d$Di = (d$affirm == TRUE)
+  
+  # if no hacking or affirmative hacking without file drawer,
+  #   assume only LAST draw is published,
+  #   which could be affirm or nonaffirm
+  if ( hack %in% c("no", "affirm2") ) {
+    d$Di = 0
+    d$Di[ length(d$Di) ] = 1
+  }
+  
+  # for favor-best-affirm-wch, favor the one with the 
+  if ( hack %in% c("favor-best-affirm-wch") ) {
+    d$Di = 0
+    # if there was at least 1 affirm, publish it 
+    if ( any(d$affirm == TRUE) ) {
+      best.affirm.pval = min( d$pval[d$affirm == TRUE] )
+      d$Di[ d$pval == best.affirm.pval & d$affirm == TRUE ] = 1
+    }
+    # ...otherwise don't publish any draw
+    # sanity check:
+    #View(d%>%select(Di,affirm,pval,yi))
+  }
+  
+  if ( return.only.published == TRUE ) d = d[ d$Di == 1, ]
+  
+  return(d)
+  
+}
 
 
 # ~ Draw one unbiased result within one study ------------------
