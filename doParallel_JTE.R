@@ -163,7 +163,7 @@ if (run.local == FALSE) {
   # simulation reps to run within this job
   # **this need to match n.reps.in.doParallel in the genSbatch script
   # ***** Set cluster sim reps  -------------------------------------------------
-  if ( interactive.cluster.run == FALSE ) sim.reps = 500  # when running all methods except robma
+  if ( interactive.cluster.run == FALSE ) sim.reps = 1000  # when running all methods except robma
   #if ( interactive.cluster.run == FALSE ) sim.reps = 10  # when running robma only
   
   #if ( interactive.cluster.run == TRUE ) sim.reps = 50 
@@ -200,18 +200,18 @@ if ( run.local == TRUE ) {
     
     # *If you reorder the args, need to adjust wrangle_agg_local
     ### args shared between sim environments
-    k.pub = c(10),  # intentionally out of order so that jobs with boundary choices with complete first
+    k.pub = c(50),  # intentionally out of order so that jobs with boundary choices with complete first
    
     #t2a = c(0.05^2, 0.1^2, 0.2^2, 0.5^2, 1),
     t2a = 0.1,
 
     # same with Mu
-    Mu = c(0.1),
+    Mu = c(2.3),
     true.dist = c("norm"),
     
     muN = 50,
     minN = 20,
-    Ytype = "bin",
+    Ytype = "bin-OR",
     p0 = 0.1,
    
     # Stan control args
@@ -463,12 +463,12 @@ doParallel.seconds = system.time({
     rep.res = rep.res %>% add_column( scen.name = scen, .before = 1 )
     rep.res = rep.res %>% add_column( job.name = jobname, .before = 1 )
     
-    rep.res$mean_pY = mean(d$pY)
-    rep.res$mean_N = mean(d$N)
-    
-    
-    #cat("\ndoParallel flag: Before adding sanity checks to rep.res")
-    
+    cat("\ndoParallel flag: Before adding sanity checks to rep.res")
+    rep.res$sancheck_mean_pY0 = mean(d$pY0)
+    rep.res$sancheck_mean_pY1 = mean(d$pY1)
+    rep.res$sancheck_mean_pY = mean(d$pY)
+    rep.res$sancheck_mean_N = mean(d$N)
+
     rep.res
     
   }  ### end foreach loop
@@ -479,7 +479,7 @@ doParallel.seconds = system.time({
 # quick look
 #rs %>% dplyr::select(method, Shat, SLo, SHi, Mhat, MLo, MHi)
 
-
+names(rs)
 table(rs$method)
 
 

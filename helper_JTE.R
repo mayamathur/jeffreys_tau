@@ -1224,12 +1224,12 @@ sim_one_study = function( Mu,  # overall mean for meta-analysis
   # for testing
   if (FALSE){
     true.dist = "expo"
-    Mu = 0.5
+    Mu = 2.3
     t2a = 0
     muN = minN = 20000
     Ytype = "bin-OR"
     sd.w = 1
-    p0 = 0.3
+    p0 = 0.5
   }
   
   # ~~ Mean for this study set -------------------------------------------------
@@ -1291,6 +1291,11 @@ sim_one_study = function( Mu,  # overall mean for meta-analysis
     
     # generate binary Y
     if (Ytype == "bin-RR") {
+      
+      # check that args are ok
+      if ( p0 * exp(mui) > 1 ) stop("Theoretical P(Y=1 | X=1) > 1. Adjust p0 or Mu.")
+      if ( p0 * exp(mui) < 1 ) stop("Theoretical P(Y=1 | X=1) < 1. Adjust p0 or Mu.")
+      
       linpred = log(p0) + mui*X  # mui is already on log scale
       # exp here because log-RR model
       Y = rbinom( size=1, n=N, prob=exp(linpred) ) 
@@ -1303,6 +1308,9 @@ sim_one_study = function( Mu,  # overall mean for meta-analysis
       }
       
     } else if (Ytype == "bin-OR") {
+      
+      # no need to check that args are ok as above, since expit in [0,1]
+      
       linpred = logit(p0) + mui*X 
       Y = rbinom( size=1, n=N, prob=expit(linpred) ) 
       

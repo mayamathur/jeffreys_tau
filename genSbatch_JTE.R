@@ -14,12 +14,8 @@ allPackages = c("here",
                 # "tidyverse", # these two can't be installed for some reason??
                 "tidyr",
                 "tibble",
-                "metafor",
-                "robumeta",
                 "testthat",
-                "truncdist",
                 "gmm",
-                "tmvtnorm",
                 "doParallel",
                 "foreach")
  
@@ -47,7 +43,7 @@ lapply( allPackages,
 
 
 
-### 2023-05-31 and 2023-06-12 - SIM.ENV = MATHUR ###
+### 2024-01-10 ###
 
 scen.params = tidyr::expand_grid(
   # full list (save):
@@ -55,16 +51,18 @@ scen.params = tidyr::expand_grid(
   
   # *If you reorder the args, need to adjust wrangle_agg_local
   ### args shared between sim environments
-  k.pub = c(2, 3, 5, 10, 20, 100),  # intentionally out of order so that jobs with boundary choices with complete first
+  k.pub = c(100, 10,
+            2, 3, 5, 20),  # intentionally out of order so that jobs with most interesting choices with complete first
  
-  t2a = c(0.01^2, 0.05^2, 0.1^2, 0.2^2, 0.5^2),
+  t2a = c(0.1^2,
+          0.01^2, 0.05^2, 0.2^2, 0.5^2),
 
   # same with Mu
-  Mu = c(0, 0.5, 1.1, 2.3), # for log-RRs; same as Lagnan's log-ORs
-  true.dist = c("expo", "norm"),
-  p0 = c(NA, 0.01, 0.1, 0.5),
+  Mu = c(0, 0.5, 1.1, 2.3), # for same as Langan's log-ORs
+  true.dist = c("norm", "expo"),
+  p0 = c(NA, 0.01, 0.05, 0.5),  # as in Langan
   
-  Ytype = c("cont", "bin"),
+  Ytype = c("bin", "cont"),
   minN = c(40, 400, 2000),
   muN = c(40, 220, 400, 3000),
   
@@ -76,6 +74,7 @@ scen.params = tidyr::expand_grid(
   run.optimx = FALSE )
 
 table(scen.params$p0, useNA = "ifany")
+
 
 #### Remove unwanted combinations
 
@@ -133,7 +132,7 @@ scen.params = fread("scen_params.csv")
 # number of sbatches to generate (i.e., iterations within each scenario)
 n.reps.per.scen = 1000  
 # ~ *** set sim.reps  -------------------------------------------------
-n.reps.in.doParallel = 500
+n.reps.in.doParallel = 1000
 ( n.files = ( n.reps.per.scen / n.reps.in.doParallel ) * n.scen )
 
 
@@ -159,7 +158,7 @@ sbatch_params <- data.frame(jobname,
                             # how to specify job times: https://www.sherlock.stanford.edu/docs/advanced-topics/job-management/#job-submission-limits
                             # days-hh:mm:ss
                             #jobtime = "1-00:00:00",  # 1 day
-                            jobtime = "02:00:00",
+                            jobtime = "03:00:00",
                             quality = "normal",
                             node_number = 1,
                             mem_per_node = 64000,
@@ -181,10 +180,10 @@ n.files
 #     sbatch -p qsu,owners,normal /home/groups/manishad/JTE/sbatch_files/1.sbatch
 
 
-# 2024-01-09 - 360
+# 2024-01-10: 3120
 path = "/home/groups/manishad/JTE"
 setwd( paste(path, "/sbatch_files", sep="") )
-for (i in 1:n.files) {
+for (i in 1:1000) {
   system( paste("sbatch -p qsu,owners,normal /home/groups/manishad/JTE/sbatch_files/", i, ".sbatch", sep="") )
 }
 
