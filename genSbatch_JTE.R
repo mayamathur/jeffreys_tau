@@ -62,7 +62,7 @@ scen.params = tidyr::expand_grid(
   true.dist = c("norm", "expo"),
   p0 = c(NA, 0.01, 0.05, 0.5),  # as in Langan
   
-  Ytype = c("bin", "cont"),
+  Ytype = c("bin-OR", "cont-SMD"),
   minN = c(40, 400, 2000),
   muN = c(40, 220, 400, 3000),
   
@@ -79,15 +79,15 @@ table(scen.params$p0, useNA = "ifany")
 #### Remove unwanted combinations
 
 # ... of Mu and Ytype
-remove = (scen.params$Mu != 0.5) & (scen.params$Ytype == "cont")
+remove = (scen.params$Mu != 0.5) & (scen.params$Ytype == "cont-SMD")
 scen.params = scen.params[!remove,]
 # sanity check:
 table(scen.params$Mu, scen.params$Ytype)
 
 # ... of Ytype and p0
 remove = rep(FALSE, nrow(scen.params))
-remove[ !is.na(scen.params$p0) & (scen.params$Ytype == "cont") ] = TRUE
-remove[ is.na(scen.params$p0) & (scen.params$Ytype == "bin") ] = TRUE
+remove[ !is.na(scen.params$p0) & (scen.params$Ytype == "cont-SMD") ] = TRUE
+remove[ is.na(scen.params$p0) & (scen.params$Ytype == "bin-OR") ] = TRUE
 scen.params = scen.params[!remove,]
 # sanity check:
 table(scen.params$p0, scen.params$Ytype, useNA = "ifany")

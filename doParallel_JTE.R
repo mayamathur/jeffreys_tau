@@ -193,27 +193,57 @@ if ( run.local == TRUE ) {
   
   # ~~ ****** Set Local Sim Params -----------------------------
   
+  # ### One scen ###
+  # scen.params = tidyr::expand_grid(
+  #   # full list (save):
+  #   #rep.methods = "REML ; ML ; DL ; PMM ; EB ; robu ; jeffreys",
+  #   rep.methods = "REML ; DL ; DL2 ; jeffreys",
+  #   
+  #   # *If you reorder the args, need to adjust wrangle_agg_local
+  #   ### args shared between sim environments
+  #   k.pub = c(50),  # intentionally out of order so that jobs with boundary choices with complete first
+  #  
+  #   #t2a = c(0.05^2, 0.1^2, 0.2^2, 0.5^2, 1),
+  #   t2a = 0.1,
+  # 
+  #   # same with Mu
+  #   Mu = c(2.3),
+  #   true.dist = c("norm"),
+  #   
+  #   muN = 50,
+  #   minN = 20,
+  #   Ytype = "bin-OR",
+  #   p0 = 0.1,
+  #  
+  #   # Stan control args
+  #   stan.maxtreedepth = 25,
+  #   stan.adapt_delta = 0.995,
+  #   
+  #   get.CIs = TRUE,
+  #   run.optimx = FALSE )
+  
+  ### Full set ###
   scen.params = tidyr::expand_grid(
     # full list (save):
-    #rep.methods = "REML ; ML ; DL ; PMM ; EB ; robu ; jeffreys",
-    rep.methods = "REML ; DL ; DL2 ; jeffreys",
+    rep.methods = "REML ; DL ; DL2 ; PM ; robu ; jeffreys",
     
     # *If you reorder the args, need to adjust wrangle_agg_local
     ### args shared between sim environments
-    k.pub = c(50),  # intentionally out of order so that jobs with boundary choices with complete first
-   
-    #t2a = c(0.05^2, 0.1^2, 0.2^2, 0.5^2, 1),
-    t2a = 0.1,
-
-    # same with Mu
-    Mu = c(2.3),
-    true.dist = c("norm"),
+    k.pub = c(100, 10,
+              2, 3, 5, 20),  # intentionally out of order so that jobs with most interesting choices with complete first
     
-    muN = 50,
-    minN = 20,
-    Ytype = "bin-OR",
-    p0 = 0.1,
-   
+    t2a = c(0.1^2,
+            0.01^2, 0.05^2, 0.2^2, 0.5^2),
+    
+    # same with Mu
+    Mu = c(0, 0.5, 1.1, 2.3), # for same as Langan's log-ORs
+    true.dist = c("norm", "expo"),
+    p0 = c(NA, 0.01, 0.05, 0.5),  # as in Langan
+    
+    Ytype = c("bin-OR", "cont-SMD"),
+    minN = c(40, 400, 2000),
+    muN = c(40, 220, 400, 3000),
+    
     # Stan control args
     stan.maxtreedepth = 25,
     stan.adapt_delta = 0.995,
@@ -221,7 +251,30 @@ if ( run.local == TRUE ) {
     get.CIs = TRUE,
     run.optimx = FALSE )
   
+  #### Remove unwanted combinations
+  # ... of Mu and Ytype
+  remove = (scen.params$Mu != 0.5) & (scen.params$Ytype == "cont-SMD")
+  scen.params = scen.params[!remove,]
+  # sanity check:
+  table(scen.params$Mu, scen.params$Ytype)
   
+  # ... of Ytype and p0
+  remove = rep(FALSE, nrow(scen.params))
+  remove[ !is.na(scen.params$p0) & (scen.params$Ytype == "cont-SMD") ] = TRUE
+  remove[ is.na(scen.params$p0) & (scen.params$Ytype == "bin-OR") ] = TRUE
+  scen.params = scen.params[!remove,]
+  # sanity check:
+  table(scen.params$p0, scen.params$Ytype, useNA = "ifany")
+  
+  
+  # ... of minN and muN
+  # Lagnan does have one other version, which is not uniform
+  keep = rep(FALSE, nrow(scen.params))
+  keep[ scen.params$minN == 40 & scen.params$muN %in% c(40, 220) ] = TRUE
+  keep[ scen.params$minN == 400 & scen.params$muN %in% c(400) ] = TRUE
+  keep[ scen.params$minN == 2000 & scen.params$muN %in% c(3000) ] = TRUE
+  scen.params = scen.params[keep,]
+  table(scen.params$minN, scen.params$muN)
   
   scen.params$scen = 1:nrow(scen.params)
   
