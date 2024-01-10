@@ -1115,17 +1115,13 @@ run_method_safe = function( method.label,
 # DATA SIMULATION ---------------------------------------------------------------
 
 
-# Simulate a meta-analysis in which some proportion of underlying studies (prior to publication)
-#  are hacked, following various hacking mechanisms. Each study makes multiple draws (hypothesis tests)
-#  until some stopping criterion based on Nmax and the hacking mechanism.
-
-# - Mu: overall mean for meta-analysis (SMD if Ytype = "cont"; log-RR if Ytype = "bin")
+# - Mu: overall mean for meta-analysis (SMD if Ytype = "cont-SMD"; log-RR if Ytype = "bin-RR"; log-OR if Ytype = "log-OR")
 # - t2a: across-study heterogeneity (NOT total heterogeneity)
-# Study parameters, assumed same for all studies:
-#  - true.sei.expr: quoted expression to evaluate to simulate a single study's standard error
-
+# - true.dist: "norm" or "expo"
+# - muN, minN: mean and lower limit of uniform dist from which to draw sample sizes
+# - Ytype: "cont-SMD" (SMD effect size), "bin-RR" (RR effect size), "bin-OR" (OR effect size)
+# - p0: P(Y=0 | X=0); only needed if Ytype is binary 
 sim_meta = function(k.pub,
-                    
                     Mu,  
                     t2a,  
                     true.dist,
@@ -1173,7 +1169,7 @@ if (FALSE) {
                # within-study parameters
                muN = 1000,
                minN = 1000,
-               Ytype = "cont",
+               Ytype = "cont-SMD",
                p0 = NA)
   
   # example: binary Y
@@ -1186,54 +1182,31 @@ if (FALSE) {
                # within-study parameters
                muN = 1000,
                minN = 1000,
-               Ytype = "bin",
+               Ytype = "bin-OR",
                p0 = 0.1)
   
   
   d = sim_meta(k.pub = 500,
                
-               Mu = -0.5,  
+               Mu = 0.5,  
                t2a = 0.1^2,  
                true.dist = "norm",
                
                # within-study parameters
                muN = 1000,
                minN = 1000,
-               Ytype = "bin",
-               p0 = 0.01)
+               Ytype = "bin-OR",
+               p0 = 0.3)
   
   mean(d$pY)
+  mean(d$pY0) # should match p0
 }
 
 
 
 # ~ Simulate a single study ----------------- 
 
-# Simulate study from potentially heterogeneous meta-analysis distribution;
-#  within-study draws have their own heterogeneous within-study distribution
-
-### Hacking types ###
-
-# - "no": Makes exactly Nmax results and treats the last one as the reported one,
-#     so the final result could be affirmative or nonaffirmative
-
-# - "affirm" (worst-case hacking): Makes draws until the first affirmative is obtained
-#    but if you reach Nmax, do NOT report any result at all. (Hack type "signif" is the 
-#    same but favors all significant results.)
-
-# - "affirm2": (NOT worst-case hacking): Similar to "affirm", but always reports the last draw,
-#    even if it was nonaffirm (no file drawer)
-
-# - "favor-best-affirm-wch" (worst-case hacking): Always makes Nmax draws. If you get any affirmatives,
-#    publish the one with the lowest p-value. If you don't get any affirmatives, don't publish anything.
-
-# NOTE: If you add args here, need to update quick_sim as well
-
-# If Nmax is small, rhoEmp (empirical autocorrelation of muin's) will be smaller
-#  than rho. That's okay because it reflects small-sample bias in autocorrelation
-# estimate itself, not a problem with the simulation code
-# For more about the small-sample bias: # https://www.jstor.org/stable/2332719?seq=1#metadata_info_tab_contents
-
+# see sim_meta for args
 sim_one_study = function( Mu,  # overall mean for meta-analysis
                           t2a,  # across-study heterogeneity
                           true.dist,
@@ -1242,22 +1215,22 @@ sim_one_study = function( Mu,  # overall mean for meta-analysis
                           muN,  
                           minN, 
                           
-                          sd.w = 1,  # within-study SD(Y|X)
+                          sd.w = 1,  # within-study SD(Y|X); only needed for cont outcome
                           
-                          Ytype,  # "cont" or "bin"
+                          Ytype,  
                           p0 = NULL # P(Y | X=0); only needed for binary outcome
 ) {  
   
-  
-  # # test only
-  # Nmax = 20
-  # Mu = 0.1
-  # t2a = 0.1
-  # m = 50
-  # t2w = .5
-  # se = 1
-  # hack = "favor-best-affirm-wch"
-  # rho=0
+  # for testing
+  if (FALSE){
+    true.dist = "expo"
+    Mu = 0.5
+    t2a = 0
+    muN = minN = 20000
+    Ytype = "bin-OR"
+    sd.w = 1
+    p0 = 0.3
+  }
   
   # ~~ Mean for this study set -------------------------------------------------
   
@@ -1284,7 +1257,7 @@ sim_one_study = function( Mu,  # overall mean for meta-analysis
   # ~~ Simulate individual subject data -------------------------------------------------
   
   # as in MRM helper code
-  if ( Ytype == "cont" ) {
+  if ( Ytype == "cont-SMD" ) {
     # group assignments
     X = c( rep( 0, N/2 ), rep( 1, N/2 ) )
     
@@ -1309,30 +1282,53 @@ sim_one_study = function( Mu,  # overall mean for meta-analysis
   
   
   # similar to Metasens helper code
-  if ( Ytype == "bin" ) {
+  if ( Ytype %in% c("bin-RR", "bin-OR") ) {
     
-    if ( is.null(p0) ) stop("Must specify p0 for Ytype = bin")
+    if ( is.null(p0) ) stop("Must specify p0 for binary Y")
     
     # group assignments
     X = c( rep( 0, N/2 ), rep( 1, N/2 ) )
     
     # generate binary Y
-    linpred = log(p0) + mui*X  # Mi is already on log scale
-    # exp here because log-RR model
-    Y = rbinom( size=1, n=N, prob=exp(linpred) )  
+    if (Ytype == "bin-RR") {
+      linpred = log(p0) + mui*X  # mui is already on log scale
+      # exp here because log-RR model
+      Y = rbinom( size=1, n=N, prob=exp(linpred) ) 
+      
+      # sanity check
+      if (FALSE){
+        coef( glm(Y ~ X, family=binomial(link = "log")) )[["X"]]; mui
+        mean(Y[X==0]); p0
+        mean(Y[X==1]); p0 * exp(mui)
+      }
+      
+    } else if (Ytype == "bin-OR") {
+      linpred = logit(p0) + mui*X 
+      Y = rbinom( size=1, n=N, prob=expit(linpred) ) 
+      
+      # sanity check
+      if (FALSE){
+        coef( glm(Y ~ X, family=binomial(link = "logit")) )[["X"]]; mui
+        mean(Y[X==0]); p0
+        mean(Y[X==1]); expit( logit(p0) + mui )
+      }
+    }
     
-    # sanity check: see whether unconfounded RR generated here is correct
-    #   mod = glm(Y ~ X, family=binomial)
-    #   exp(coef(mod)); exp(mui)
     
-    # calculate deaths and sample sizes in each group
-    n1 = sum(X)  # number with X=1
+    # calculate deaths (Y=1) and sample sizes in each group
+    n1 = sum(X)  # number deaths among X=1
     n0 = length(X) - sum(X)
     y1 = sum(Y[X==1])  # number of deaths in Tx group
     y0 = sum(Y[X==0])  # number of deaths in control group
     
     # calculate log-RR for this study using metafor (see Viechtbauer "Conducting...", pg 10)
-    ES = escalc( measure="RR", ai=y1, bi=n1-y1, ci=y0, di=n0-y0 )  # returns on log scale
+    if (Ytype == "bin-RR") {
+      ES = escalc( measure="RR", ai=y1, bi=n1-y1, ci=y0, di=n0-y0 )  # returns on log scale
+      
+    } else if (Ytype == "bin-OR") {
+      
+      ES = escalc( measure="OR", ai=y1, bi=n1-y1, ci=y0, di=n0-y0 )  # returns on log scale
+    }
     
     # overall P(Y=1)
     pY = mean(Y)
@@ -1413,6 +1409,12 @@ truncLogit <- function(p) {
   p[p==1] = 0.999
   log(p/(1-p))
 }
+
+
+logit <- function(p) {
+  log(p/(1-p))
+}
+
 
 expit = function(x) {
   exp(x) / (1 + exp(x))
