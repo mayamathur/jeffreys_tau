@@ -51,7 +51,7 @@ lapply( allPackages,
 
 scen.params = tidyr::expand_grid(
   # full list (save):
-  rep.methods = "REML ; DL ; PMM ; EB ; robu ; jeffreys",
+  rep.methods = "REML ; DL ; DL2 ; PM ; robu ; jeffreys",
   
   # *If you reorder the args, need to adjust wrangle_agg_local
   ### args shared between sim environments

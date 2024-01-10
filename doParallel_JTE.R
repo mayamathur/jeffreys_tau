@@ -196,7 +196,7 @@ if ( run.local == TRUE ) {
   scen.params = tidyr::expand_grid(
     # full list (save):
     #rep.methods = "REML ; ML ; DL ; PMM ; EB ; robu ; jeffreys",
-    rep.methods = "REML ; jeffreys",
+    rep.methods = "REML ; DL ; DL2 ; jeffreys",
     
     # *If you reorder the args, need to adjust wrangle_agg_local
     ### args shared between sim environments
@@ -321,21 +321,13 @@ doParallel.seconds = system.time({
     Mhat.start = p$Mu
     Shat.start = p$S
     
-    # in case we're not doing jeffreys-mcmc or it fails
-    Mhat.MaxLP = NA
-    Shat.MaxLP = NA
-    
-    Mhat.MAP = NA
-    Shat.MAP = NA
-    
-    
     # ~ Existing Methods ------------------------------
     
     # ~~ Metafor heterogeneity estimators ------------------------------
     
     # pg 282:
     # https://cran.r-project.org/web/packages/metafor/metafor.pdf
-    metafor.methods = all.methods[ all.methods %in% c("REML", "ML", "DL", "EB", "PMM", "HS", "SJ") ]
+    metafor.methods = all.methods[ all.methods %in% c("REML", "ML", "DL", "EB", "PM", "PMM", "HS", "SJ") ]
     
     
     if ( length(metafor.methods) > 0 ) {
@@ -374,13 +366,14 @@ doParallel.seconds = system.time({
                                              knha = TRUE )
                                   
                                   # second step, per Wolfgang
+                                  #bm
                                   mod = rma( yi = d$yi,
                                             vi = d$vi,
                                             method = "GENQ",
-                                            weights = 1 / (vi + m0$tau2),
+                                            weights = 1 / (d$vi + m0$tau2),
                                             knha = TRUE )
                                   
-                                  report_meta(mod, .mod.type = "metafor")
+                                  report_meta(mod, .mod.type = "rma")
                                 },
                                 .rep.res = rep.res )
     }
@@ -485,11 +478,6 @@ doParallel.seconds = system.time({
 
 # quick look
 #rs %>% dplyr::select(method, Shat, SLo, SHi, Mhat, MLo, MHi)
-
-
-# bm: will results look reasonable for binary outcome? will we match the scen.params?
-#  then try similar thing with different p0; make sure you can manipulate mean_pY :)
-
 
 
 table(rs$method)
