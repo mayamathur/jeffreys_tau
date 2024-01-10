@@ -360,6 +360,35 @@ doParallel.seconds = system.time({
     if (run.local == TRUE) srr(rep.res)
     
     
+    # ~~ DL2 (Two-Step DL) -------------------------------------------------
+    
+    # requires 2 calls to metafor, so not handled in the loop above
+    if ( "DL2" %in% all.methods ) {
+      rep.res = run_method_safe(method.label = c("DL2"),
+                                method.fn = function() {
+                                  
+                                  # first step
+                                  m0 = rma( yi = d$yi,
+                                             vi = d$vi,
+                                             method = "DL",
+                                             knha = TRUE )
+                                  
+                                  # second step, per Wolfgang
+                                  mod = rma( yi = d$yi,
+                                            vi = d$vi,
+                                            method = "GENQ",
+                                            weights = 1 / (vi + m0$tau2),
+                                            knha = TRUE )
+                                  
+                                  report_meta(mod, .mod.type = "metafor")
+                                },
+                                .rep.res = rep.res )
+    }
+    
+    
+    # NOTE: if doing run.local, this will break if you didn't run naive
+    if (run.local == TRUE) srr(rep.res)
+    
     # ~~ Robust Variance Estimation ------------------------------
     
     

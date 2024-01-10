@@ -140,6 +140,601 @@ estimate_jeffreys = function(.yi,
 }
 
 
+mw_est <- function(yi,  # the UNQUOTED name of the yi column in data, not the vector itself
+                   vi,  # similar
+                   data,
+                   lab,
+                   method = c("DL", "DL2"),
+                   ci = .95,
+                   Q.profile = FALSE,
+                   pi = FALSE,
+                   hksj = FALSE) {
+  
+  ## General Method-of-Moments Estimate for Tau-Squared (Eq. 6)
+  .tau2MM <- function(yi, vi, ai) {
+    yw <- sum(ai * yi) / sum(ai)
+    
+    tau2 <- (sum(ai * (yi - yw)^2) - (sum(ai * vi) - sum(ai^2 * vi) / sum(ai))) / (sum(ai) - sum(ai^2) / sum(ai))
+    
+    # Return only non-negative values
+    max(0, tau2)
+  }
+  
+  # Keep complete cases
+  data <- data %>%
+    select(c({{lab}}, {{ yi }}, {{ vi }})) %>%
+    filter_all(all_vars(!is.na(.)))
+  
+  # Extract variables
+  yi <- pull(data, {{ yi }})
+  vi <- pull(data, {{ vi }})
+  
+  # Calculate DL tau2
+  ai <- 1 / vi
+  tau2 <- .tau2MM(yi = yi, vi = vi, ai = ai)
+  
+  # Calculate DL2 if requested
+  if (method == "DL2") {
+    ai <- 1 / (vi + tau2)
+    tau2 <- .tau2MM(yi = yi, vi = vi, ai = ai)
+  }
+  
+  ## Calculate inverse variance weights
+  wi <- (1 / (vi + tau2)) # Eq. 2
+  
+  wy <- wi * yi
+  
+  mw <- sum(wy) / sum(wi) # Eq. 1
+  
+  # Get number of studies
+  k <- length(yi)
+  
+  # Degrees of freedom
+  df <- k - 1
+  
+  ### Heterogeneity
+  
+  ## Cochran's Q-statistic
+  
+  # Use DL inverse-variance weight (ai = 1 / vi)
+  ai <- 1 / vi
+  
+  # Calculate Q-statistic
+  Q <- sum(ai * ((yi - (sum(ai * yi) / sum(ai)))^2))
+  
+  # Calculate p-value
+  Q.p <- pchisq(Q, df = df, lower.tail = FALSE)
+  
+  z.cdf <- qnorm(1 - ((1 - ci) / 2))
+  
+  # Method used to calculate heterogeneity and confidence intervals
+  if (Q.profile) {
+    
+    ## Q-profile method to calculate heterogeneity and confidence 
+    ## intervals (Eq. 14)
+    
+    ## Calculate I-squared and H
+    
+    # a. Use DL inverse-variance weight (ai = 1 / vi)
+    ai <- 1 / vi
+    
+    # b. Calculate V
+    V <- (k - 1) * sum(ai) / (sum(ai)^2 - sum(ai^2))
+    
+    # c. Calculate I-squared
+    I.sq <- 100 * tau2 / (tau2 + V)
+    
+    # d. Calculate H-squared
+    H <- (tau2 + V) / V
+    
+    # Calculate confidence intervals if k > 2
+    if (k > 2) {
+      
+      ## Generalised Q-statistics bounds
+      Q.lb <- qchisq((1 - ci) / 2, df, lower = TRUE)
+      Q.ub <- qchisq((1 - ci) / 2, df, lower = FALSE)
+      
+      ## Lower confidence intervals
+      # Initialise values
+      tau2.tmp <- 0
+      F.tau2 <- 1
+      
+      while (F.tau2 > 0) {
+        
+        # i. calculate weight for tau2
+        W <- 1 / (vi + tau2.tmp)
+        
+        yW <- sum(yi * W) / sum(W)
+        
+        
+        # ii. Calculate delta tau2
+        F.tau2 <- sum(W * (yi - yW)^2) - Q.ub
+        F.tau2 <- max(F.tau2, 0)
+        
+        delta.tau2 <- F.tau2 / sum((W^2) * (yi - yW)^2)
+        
+        # iii. Next iterative step
+        tau2.tmp <- tau2.tmp + delta.tau2
+      }
+      
+      tau2.tmp <- max(0, tau2.tmp)
+      I.lower <- 100 * tau2.tmp / (tau2.tmp + V)
+      H.lower <- (tau2.tmp + V) / V
+      
+      ## Upper confidence intervals
+      # Initialise values
+      tau2.tmp <- 0
+      F.tau2 <- 1
+      
+      while (F.tau2 > 0) {
+        
+        # i. calculate weight for tau2
+        W <- 1 / (vi + tau2.tmp)
+        
+        yW <- sum(yi * W) / sum(W)
+        
+        # ii. Calculate delta tau2
+        F.tau2 <- sum(W * (yi - yW)^2) - Q.lb
+        F.tau2 <- max(F.tau2, 0)
+        
+        delta.tau2 <- F.tau2 / sum((W^2) * (yi - yW)^2)
+        
+        # iii. Next iterative step
+        tau2.tmp <- tau2.tmp + delta.tau2
+      }
+      
+      tau2.tmp <- max(0, tau2.tmp)
+      I.upper <- 100 * tau2.tmp / (tau2.tmp + V)
+      H.upper <- (tau2.tmp + V) / V
+    } else {
+      I.lower <- NA
+      I.upper <- NA
+      H.lower <- NA
+      H.upper <- NA
+      
+      pi.res <- NULL
+    }
+  } else {
+    
+    ## I-squared
+    I.sq <- max(0, 100 * ((Q - df) / Q))
+    
+    ## H
+    H <- sqrt(Q / df)
+    
+    # Calculate the SE of ln(H) aka B
+    if (k > 2) {
+      if (Q > k) {
+        B <- 0.5 * ((log(Q) - log(df)) / (sqrt(2 * Q) - sqrt(2 * df - 1)))
+      } else {
+        B <- sqrt(1 / ((2 * df - 1) * (1 - (1 / (3 * (df - 1)^2)))))
+      }
+      
+      # H confidence intervals
+      H.lower <- max(1, exp(log(H) - z.cdf * B))
+      H.upper <- exp(log(H) + z.cdf * B)
+      
+      # I-Squared
+      I.L <- exp(0.5 * log(Q / df) - (z.cdf * B))
+      I.U <- exp(0.5 * log(Q / df) + (z.cdf * B))
+      
+      I.lower <- max(0, 100 * ((I.L^2 - 1) / I.L^2))
+      I.upper <- max(0, 100 * ((I.U^2 - 1) / I.U^2))
+    } else {
+      I.lower <- NA
+      I.upper <- NA
+      
+      H.lower <- NA
+      H.upper <- NA
+      
+      pi.res <- NULL
+    }
+  }
+  
+  # Save all heterogeneity statistics in a list
+  het.test <- list(
+    Q = Q, Q.p = Q.p,
+    tau2 = tau2,
+    I.sq = I.sq, I.lb = I.lower, I.ub = I.upper,
+    H = H, H.lb = H.lower, H.ub = H.upper
+  )
+  
+  # HKSJ adjustment
+  if (hksj & k >= 3) {
+    
+    # Calculate HKSJ-adjusted standard error
+    sew <- sqrt(sum(wi * (yi - mw)^2) / (df * sum(wi)))
+    
+    # Calculate t-value
+    t <- mw / sew
+    
+    # Calculate p-value based on t-statistics and k - 1 df
+    t.p <- 2 * pt(-abs(t), df = k - 1)
+    
+    # Output test for summary effect size
+    mw.test <- list(t = t, p = t.p)
+    
+    # Confidence Intervals
+    mw.lower <- mw - sew * qt(1 - ((1 - ci) / 2), df = df)
+    mw.upper <- mw + sew * qt(1 - ((1 - ci) / 2), df = df)
+    
+    # Wald-type statistics
+  } else {
+    
+    # Calculate standard error
+    sew <- 1 / sqrt(sum(wi)) # Eq. 3
+    
+    # Calculate z-statistic and p-value
+    z <- mw / sew
+    z.p <- 2 * pnorm(-abs(z))
+    
+    # Confidence Intervals
+    mw.lower <- mw - z.cdf * sew
+    mw.upper <- mw + z.cdf * sew
+    
+    # Output test for summary effect size
+    mw.test <- list(z = z, p = z.p)
+  }
+  
+  # Prediction Interval (based on t-distribution)
+  if (all(k > 2, pi)) {
+    if (hksj) {
+      pi.lower <- mw - sqrt(tau2 + sew^2) * qt(1 - ((1 - ci) / 2), df = df)
+      pi.upper <- mw + sqrt(tau2 + sew^2) * qt(1 - ((1 - ci) / 2), df = df)
+    } else {
+      pi.lower <- mw - sqrt(tau2 + sew^2) * z.cdf
+      pi.upper <- mw + sqrt(tau2 + sew^2) * z.cdf
+    }
+    
+    # Output prediction interval
+    pi.res <- list(pi.lb = pi.lower, pi.ub = pi.upper)
+  } else {
+    pi.res <- NULL
+  }
+  # Print data set
+  cat(
+    "\n", "Data used for meta-analysis",
+    "\n",
+    "\n",
+    sep = ""
+  )
+  
+  print(data)
+  
+  cat(
+    "\n",
+    sep = ""
+  )
+  
+  # Output results as a list
+  return(
+    c(
+      method = method,
+      est = mw, se.est = sew,
+      mw.test, ci.lb = mw.lower, ci.ub = mw.upper,
+      het.test, pi.res
+    )
+  )
+}
+
+# example
+if ( FALSE ){
+  
+  d = data.frame(yi = c(0.693147180559945, -0.510825623765991, 0.405465108108165, 
+                        -0.693147180559945, -1.09861228866811, -2.19722457733622, -1.94591014905531, 
+                        0, 0.405465108108164, -1.38629436111989),
+                 vi = c(1.36666666666667, 0.483333333333333, 0.361111111111111, 0.675925925925926, 
+                        2.52380952380952, 2.13526570048309, 2.17460317460317, 1.92, 0.738095238095238, 
+                        1.16666666666667) )
+  
+  mw_est(yi = yi,
+         vi = vi,
+
+         data = d,
+         method = "DL2",
+         hksj = TRUE)
+  
+}
+
+
+
+
+
+
+
+estimate_DL2 = function(.yi,
+                             .sei,
+                             
+                             .Mu.start,
+                             .Tt.start,
+                             .stan.adapt_delta = 0.8,
+                             .stan.maxtreedepth = 10 ) {
+  
+  ## General Method-of-Moments Estimate for Tau-Squared (Eq. 6)
+  .tau2MM <- function(yi, vi, ai) {
+    yw <- sum(ai * yi) / sum(ai)
+    
+    tau2 <- (sum(ai * (yi - yw)^2) - (sum(ai * vi) - sum(ai^2 * vi) / sum(ai))) / (sum(ai) - sum(ai^2) / sum(ai))
+    
+    # Return only non-negative values
+    max(0, tau2)
+  }
+  
+  
+  # Calculate DL tau2
+  vi= .sei^2
+  ai <- 1 / vi
+  tau2_init <- .tau2MM(yi = .yi, vi = vi, ai = ai)
+  
+  # Calculate DL2
+  ai <- 1 / (vi + tau2_init)
+  tau2 <- .tau2MM(yi = .yi, vi = vi, ai = ai)
+  
+  ## Calculate inverse variance weights
+  wi <- (1 / (vi + tau2)) # Eq. 2
+  
+  wy <- wi * .yi
+  
+  mw <- sum(wy) / sum(wi) # Eq. 1
+  
+  # Get number of studies
+  k <- length(.yi)
+  
+  # Degrees of freedom
+  df <- k - 1
+  
+  ### Heterogeneity
+  
+  ## Cochran's Q-statistic
+  
+  # Use DL inverse-variance weight (ai = 1 / vi)
+  ai <- 1 / vi
+  
+  # Calculate Q-statistic
+  Q <- sum(ai * ((yi - (sum(ai * yi) / sum(ai)))^2))
+  
+  # Calculate p-value
+  Q.p <- pchisq(Q, df = df, lower.tail = FALSE)
+  
+  z.cdf <- qnorm(1 - ((1 - ci) / 2))
+  
+  # Method used to calculate heterogeneity and confidence intervals
+  if (Q.profile) {
+    
+    ## Q-profile method to calculate heterogeneity and confidence 
+    ## intervals (Eq. 14)
+    
+    ## Calculate I-squared and H
+    
+    # a. Use DL inverse-variance weight (ai = 1 / vi)
+    ai <- 1 / vi
+    
+    # b. Calculate V
+    V <- (k - 1) * sum(ai) / (sum(ai)^2 - sum(ai^2))
+    
+    # c. Calculate I-squared
+    I.sq <- 100 * tau2 / (tau2 + V)
+    
+    # d. Calculate H-squared
+    H <- (tau2 + V) / V
+    
+    # Calculate confidence intervals if k > 2
+    if (k > 2) {
+      
+      ## Generalised Q-statistics bounds
+      Q.lb <- qchisq((1 - ci) / 2, df, lower = TRUE)
+      Q.ub <- qchisq((1 - ci) / 2, df, lower = FALSE)
+      
+      ## Lower confidence intervals
+      # Initialise values
+      tau2.tmp <- 0
+      F.tau2 <- 1
+      
+      while (F.tau2 > 0) {
+        
+        # i. calculate weight for tau2
+        W <- 1 / (vi + tau2.tmp)
+        
+        yW <- sum(yi * W) / sum(W)
+        
+        
+        # ii. Calculate delta tau2
+        F.tau2 <- sum(W * (yi - yW)^2) - Q.ub
+        F.tau2 <- max(F.tau2, 0)
+        
+        delta.tau2 <- F.tau2 / sum((W^2) * (yi - yW)^2)
+        
+        # iii. Next iterative step
+        tau2.tmp <- tau2.tmp + delta.tau2
+      }
+      
+      tau2.tmp <- max(0, tau2.tmp)
+      I.lower <- 100 * tau2.tmp / (tau2.tmp + V)
+      H.lower <- (tau2.tmp + V) / V
+      
+      ## Upper confidence intervals
+      # Initialise values
+      tau2.tmp <- 0
+      F.tau2 <- 1
+      
+      while (F.tau2 > 0) {
+        
+        # i. calculate weight for tau2
+        W <- 1 / (vi + tau2.tmp)
+        
+        yW <- sum(yi * W) / sum(W)
+        
+        # ii. Calculate delta tau2
+        F.tau2 <- sum(W * (yi - yW)^2) - Q.lb
+        F.tau2 <- max(F.tau2, 0)
+        
+        delta.tau2 <- F.tau2 / sum((W^2) * (yi - yW)^2)
+        
+        # iii. Next iterative step
+        tau2.tmp <- tau2.tmp + delta.tau2
+      }
+      
+      tau2.tmp <- max(0, tau2.tmp)
+      I.upper <- 100 * tau2.tmp / (tau2.tmp + V)
+      H.upper <- (tau2.tmp + V) / V
+    } else {
+      I.lower <- NA
+      I.upper <- NA
+      H.lower <- NA
+      H.upper <- NA
+      
+      pi.res <- NULL
+    }
+  } else {
+    
+    ## I-squared
+    I.sq <- max(0, 100 * ((Q - df) / Q))
+    
+    ## H
+    H <- sqrt(Q / df)
+    
+    # Calculate the SE of ln(H) aka B
+    if (k > 2) {
+      if (Q > k) {
+        B <- 0.5 * ((log(Q) - log(df)) / (sqrt(2 * Q) - sqrt(2 * df - 1)))
+      } else {
+        B <- sqrt(1 / ((2 * df - 1) * (1 - (1 / (3 * (df - 1)^2)))))
+      }
+      
+      # H confidence intervals
+      H.lower <- max(1, exp(log(H) - z.cdf * B))
+      H.upper <- exp(log(H) + z.cdf * B)
+      
+      # I-Squared
+      I.L <- exp(0.5 * log(Q / df) - (z.cdf * B))
+      I.U <- exp(0.5 * log(Q / df) + (z.cdf * B))
+      
+      I.lower <- max(0, 100 * ((I.L^2 - 1) / I.L^2))
+      I.upper <- max(0, 100 * ((I.U^2 - 1) / I.U^2))
+    } else {
+      I.lower <- NA
+      I.upper <- NA
+      
+      H.lower <- NA
+      H.upper <- NA
+      
+      pi.res <- NULL
+    }
+  }
+  
+  # Save all heterogeneity statistics in a list
+  het.test <- list(
+    Q = Q, Q.p = Q.p,
+    tau2 = tau2,
+    I.sq = I.sq, I.lb = I.lower, I.ub = I.upper,
+    H = H, H.lb = H.lower, H.ub = H.upper
+  )
+  
+  # HKSJ adjustment
+  if (hksj & k >= 3) {
+    
+    # Calculate HKSJ-adjusted standard error
+    sew <- sqrt(sum(wi * (yi - mw)^2) / (df * sum(wi)))
+    
+    # Calculate t-value
+    t <- mw / sew
+    
+    # Calculate p-value based on t-statistics and k - 1 df
+    t.p <- 2 * pt(-abs(t), df = k - 1)
+    
+    # Output test for summary effect size
+    mw.test <- list(t = t, p = t.p)
+    
+    # Confidence Intervals
+    mw.lower <- mw - sew * qt(1 - ((1 - ci) / 2), df = df)
+    mw.upper <- mw + sew * qt(1 - ((1 - ci) / 2), df = df)
+    
+    # Wald-type statistics
+  } else {
+    
+    # Calculate standard error
+    sew <- 1 / sqrt(sum(wi)) # Eq. 3
+    
+    # Calculate z-statistic and p-value
+    z <- mw / sew
+    z.p <- 2 * pnorm(-abs(z))
+    
+    # Confidence Intervals
+    mw.lower <- mw - z.cdf * sew
+    mw.upper <- mw + z.cdf * sew
+    
+    # Output test for summary effect size
+    mw.test <- list(z = z, p = z.p)
+  }
+  
+  # Prediction Interval (based on t-distribution)
+  if (all(k > 2, pi)) {
+    if (hksj) {
+      pi.lower <- mw - sqrt(tau2 + sew^2) * qt(1 - ((1 - ci) / 2), df = df)
+      pi.upper <- mw + sqrt(tau2 + sew^2) * qt(1 - ((1 - ci) / 2), df = df)
+    } else {
+      pi.lower <- mw - sqrt(tau2 + sew^2) * z.cdf
+      pi.upper <- mw + sqrt(tau2 + sew^2) * z.cdf
+    }
+    
+    # Output prediction interval
+    pi.res <- list(pi.lb = pi.lower, pi.ub = pi.upper)
+  } else {
+    pi.res <- NULL
+  }
+  # Print data set
+  cat(
+    "\n", "Data used for meta-analysis",
+    "\n",
+    "\n",
+    sep = ""
+  )
+  
+  print(data)
+  
+  cat(
+    "\n",
+    sep = ""
+  )
+  
+  # Output results as a list
+  return(
+    c(
+      method = method,
+      est = mw, se.est = sew,
+      mw.test, ci.lb = mw.lower, ci.ub = mw.upper,
+      het.test, pi.res
+    )
+  )
+  
+  
+  # # the point estimates are length 2 (post means, then medians),
+  # #  but the inference is the same for each type of point estimate
+  # return( list( stats = data.frame( 
+  #   
+  #   Mhat = Mhat,
+  #   Shat = Shat,
+  #   
+  #   MhatSE = MhatSE,
+  #   ShatSE = ShatSE,
+  #   
+  #   # this will use same CI limits for all pt estimates
+  #   MLo = M.CI[1],
+  #   MHi = M.CI[2],
+  #   
+  #   SLo = S.CI[1],
+  #   SHi = S.CI[2],
+  #   
+  #   stan.warned = stan.warned,
+  #   stan.warning = stan.warning,
+  #   MhatRhat = postSumm["mu", "Rhat"],
+  #   ShatRhat = postSumm["tau", "Rhat"] ),
+  #   
+  #   post = post,
+  #   postSumm = postSumm ) )
+  
+}
+
 
 # nicely report a metafor or robumeta object with optional suffix to denote which model
 report_meta = function(.mod,
@@ -709,7 +1304,7 @@ sim_one_study = function( Mu,  # overall mean for meta-analysis
                  sd2i = sd( Y[X==0] ) ) 
     
     # only here to be consistent with binary Y case below
-    pY = NA
+    pY = pY1 = pY0 = NA
   }
   
   
@@ -741,6 +1336,8 @@ sim_one_study = function( Mu,  # overall mean for meta-analysis
     
     # overall P(Y=1)
     pY = mean(Y)
+    pY1 = mean(Y[X==1])
+    pY0 = mean(Y[X==0])
   }
   
   yi = ES$yi
@@ -752,7 +1349,9 @@ sim_one_study = function( Mu,  # overall mean for meta-analysis
                   vi = vi, 
                   sei = sei, 
                   N = N,
-                  pY = pY)
+                  pY = pY,
+                  pY1 = pY1,
+                  pY0 = pY0 )
   
   return(d)
   
@@ -806,6 +1405,23 @@ srr = function(rep.res) {
 }
 
 # SMALL GENERIC HELPERS ---------------------
+
+# take the logit of a probability, but truncate
+#  to avoid infinities
+truncLogit <- function(p) {
+  p[p==0] = 0.001
+  p[p==1] = 0.999
+  log(p/(1-p))
+}
+
+expit = function(x) {
+  exp(x) / (1 + exp(x))
+}
+
+# calculate I^2 from t^2 and N
+I2 = function(t2, N) {
+  t2 / (t2 + 4/N)
+}
 
 # quick mean with NAs removed
 meanNA = function(x){
