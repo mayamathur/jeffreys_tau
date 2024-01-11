@@ -3,10 +3,9 @@
 
 # run this interactively in ml load R or via:
 #   sbatch -p qsu,owners,normal /home/groups/manishad/JTE/job_stitch.sbatch
-# scontrol show job 33834701
+# scontrol show job 39315829
 # look at its out file:
-# cd /home/groups/manishad/JTE
-# cd /home/users/mmathur
+# cd /home/groups/manishad/JTE/rmfiles
 # less rm_stitch.out
 
 # for non-huge simulations, can often run this script interactively in a higher-memory
@@ -24,7 +23,6 @@
 # args = commandArgs(trailingOnly = TRUE)
 # start.num = as.numeric( args[1] )  # starting results number to stitch
 # stop.num = as.numeric( args[2] )  # stopping results number to stitch
-
 
 
 path = "/home/groups/manishad/JTE"
@@ -68,6 +66,7 @@ tables <- lapply( keepers, function(x) {
   } )
 
 
+cat("\n\nFinished reading in tables")
 
 # sanity check: do all files have the same names?
 # if not, could be because some jobs were killed early so didn't get doParallelTime
@@ -81,6 +80,8 @@ allNames = lapply( tables, names )
 # bind_rows works even if datasets have different names
 #  will fill in NAs
 s <- do.call(bind_rows, tables)
+
+cat("\n\nFinished s <- do.call")
 
 names(s) = names( read.csv(keepers[1], header= TRUE) )
 
@@ -147,99 +148,96 @@ if (FALSE) {
     system( paste("sbatch -p qsu,owners,normal /home/groups/manishad/JTE/sbatch_files/", i, ".sbatch", sep="") )
   }
   
-  
-
-  
 }
-
-
-
 
 
 
 
 # ~ Optional: Quick Summary ---------------------------
 
-
-table(s$rep.name)
-
-# reps per scen
-# should be equal to reps.per.scen / reps.in.doParallel
-s %>% group_by(scen.name, method) %>%
-  summarise(n())
-
-as.data.frame( s %>% group_by(method, scen.name, k.pub) %>%
-                  summarise(n()) )
-
-
-# summarize sim params that have run so far
-library(tableone)
-vars = c("k.pub", "t2a", "Mu", "true.dist", "p0", "Ytype", "minN", "muN")
-CreateTableOne( dat = s,
-                vars = vars,
-                factorVars = vars )
-
-
-#### Look at sanity checks for binary Y
-# increase width of console print area for df viewing joy
-options("width"=200)
-
-t = s %>%
-  filter(method == "REML") %>%
-  filter(Ytype == "bin-OR") %>%
-  group_by(scen.name, Mu, p0) %>%
-
-  summarise( reps = n(),
-
-             MhatBias = meanNA(Mhat - Mu),
-             sancheck_mean_pY0 = meanNA(sancheck_mean_pY0),
-             sancheck_mean_pY = meanNA(sancheck_mean_pY)
-             
-  ) %>%
-  #filter(reps > 1000) %>%
-  mutate_if(is.numeric, function(x) round(x,2))
-as.data.frame(t)
-
-
-#sum(s$k.pub == 10 & s$t2a == 0.2^2 & s$Mu == 0)
-
-
-
-t = s %>% group_by(method) %>%
-  #filter(k.pub == 10 & t2a == 0.04 & Mu == 0) %>%  # jeffreys tau coverage is fine
-  #filter(k.pub == 10 & t2a == 1 & Mu == 0) %>%  # jeffreys tau coverage is fine
-  #filter(k.pub == 10 & t2a == 0 & Mu == 0) %>%  # @ALL METHODS HAVE 0 COVERAGE HERE WHEN TAU = 0 - WHY?
-  #filter(t2a > 0) %>%
-  #filter(t2a > 0 & Mu == 0.5) %>%
-  #filter(k.pub == 10 & true.dist == "norm" & true.sei.expr == "0.02 + rexp(n = 1, rate = 3)") %>%  # **this is an interesting case where mine clearly wins
+if (FALSE) {
+  table(s$rep.name)
   
-  summarise( reps = n(),
-             EstFail = mean(is.na(Mhat)),
-             #Mhat = meanNA(Mhat),
-             
-             ShatBias = meanNA(Shat - sqrt(t2a)),
-             ShatCover = meanNA(SLo <= sqrt(t2a) & SHi >= sqrt(t2a)),
-             ShatWidth = meanNA(SHi - SLo),
-             ShatMSE = meanNA( ( Shat - sqrt(t2a) )^2 ),
-             # SLo = meanNA(SLo),
-             # SHi = meanNA(SHi),
-             # Shat = meanNA(Shat),
-             ShatNA = mean(is.na(Shat)),
-             
-             MhatBias = meanNA(Mhat - Mu),
-             MhatCover = meanNA(MLo <= Mu & MHi >= Mu),
-             MhatWidth = meanNA(MHi - MLo),
-             MhatMSE = meanNA( ( Mhat - Mu )^2 ),
-             # MLo = meanNA(MLo),
-             # MHi = meanNA(MHi),
-             # Shat = meanNA(Shat),
-             MhatNA = mean(is.na(Mhat))
-             #MhatRhatGt1.05 = mean(MhatRhat>1.05),
-             #MhatRhatGt1.02 = mean(MhatRhat>1.02)
-  ) %>%
-  #filter(reps > 1000) %>%
-  mutate_if(is.numeric, function(x) round(x,2))
-as.data.frame(t)
+  # reps per scen
+  # should be equal to reps.per.scen / reps.in.doParallel
+  s %>% group_by(scen.name, method) %>%
+    summarise(n())
+  
+  as.data.frame( s %>% group_by(method, scen.name, k.pub) %>%
+                   summarise(n()) )
+  
+  
+  # summarize sim params that have run so far
+  library(tableone)
+  vars = c("k.pub", "t2a", "Mu", "true.dist", "p0", "Ytype", "minN", "muN")
+  CreateTableOne( dat = s,
+                  vars = vars,
+                  factorVars = vars )
+  
+  
+  #### Look at sanity checks for binary Y
+  # increase width of console print area for df viewing joy
+  options("width"=200)
+  
+  t = s %>%
+    filter(method == "REML") %>%
+    filter(Ytype == "bin-OR") %>%
+    group_by(scen.name, Mu, p0) %>%
+    
+    summarise( reps = n(),
+               
+               MhatBias = meanNA(Mhat - Mu),
+               sancheck_mean_pY0 = meanNA(sancheck_mean_pY0),
+               sancheck_mean_pY = meanNA(sancheck_mean_pY)
+               
+    ) %>%
+    #filter(reps > 1000) %>%
+    mutate_if(is.numeric, function(x) round(x,2))
+  as.data.frame(t)
+  
+  
+  #sum(s$k.pub == 10 & s$t2a == 0.2^2 & s$Mu == 0)
+  
+  
+  
+  t = s %>% group_by(method) %>%
+    #filter(k.pub == 10 & t2a == 0.04 & Mu == 0) %>%  # jeffreys tau coverage is fine
+    #filter(k.pub == 10 & t2a == 1 & Mu == 0) %>%  # jeffreys tau coverage is fine
+    #filter(k.pub == 10 & t2a == 0 & Mu == 0) %>%  # @ALL METHODS HAVE 0 COVERAGE HERE WHEN TAU = 0 - WHY?
+    #filter(t2a > 0) %>%
+    #filter(t2a > 0 & Mu == 0.5) %>%
+    #filter(k.pub == 10 & true.dist == "norm" & true.sei.expr == "0.02 + rexp(n = 1, rate = 3)") %>%  # **this is an interesting case where mine clearly wins
+    
+    summarise( reps = n(),
+               EstFail = mean(is.na(Mhat)),
+               #Mhat = meanNA(Mhat),
+               
+               ShatBias = meanNA(Shat - sqrt(t2a)),
+               ShatCover = meanNA(SLo <= sqrt(t2a) & SHi >= sqrt(t2a)),
+               ShatWidth = meanNA(SHi - SLo),
+               ShatMSE = meanNA( ( Shat - sqrt(t2a) )^2 ),
+               # SLo = meanNA(SLo),
+               # SHi = meanNA(SHi),
+               # Shat = meanNA(Shat),
+               ShatNA = mean(is.na(Shat)),
+               
+               MhatBias = meanNA(Mhat - Mu),
+               MhatCover = meanNA(MLo <= Mu & MHi >= Mu),
+               MhatWidth = meanNA(MHi - MLo),
+               MhatMSE = meanNA( ( Mhat - Mu )^2 ),
+               # MLo = meanNA(MLo),
+               # MHi = meanNA(MHi),
+               # Shat = meanNA(Shat),
+               MhatNA = mean(is.na(Mhat))
+               #MhatRhatGt1.05 = mean(MhatRhat>1.05),
+               #MhatRhatGt1.02 = mean(MhatRhat>1.02)
+    ) %>%
+    #filter(reps > 1000) %>%
+    mutate_if(is.numeric, function(x) round(x,2))
+  as.data.frame(t)
+  
+}
+
 
 
 
@@ -260,19 +258,6 @@ fwrite(agg, "agg.csv")
 
 cat("\n\n nrow(agg) =", nrow(agg))
 cat("\n nuni(agg$scen.name) =", nuni(agg$scen.name) )
-
-
-
-
-
-# look again at failures
-t = agg %>% group_by(k.pub.nonaffirm, method) %>%
-  summarise( mean(MhatEstFail),
-             mean(MhatCIFail),
-             mean(MhatTestReject)
-             #meanNA(OptimxNAgreeOfConvergersMhatWinner)
-             )
-as.data.frame(t)
 
 
 
