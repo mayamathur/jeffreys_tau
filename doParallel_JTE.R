@@ -163,7 +163,7 @@ if (run.local == FALSE) {
   # simulation reps to run within this job
   # **this need to match n.reps.in.doParallel in the genSbatch script
   # ***** Set cluster sim reps  -------------------------------------------------
-  if ( interactive.cluster.run == FALSE ) sim.reps = 1000  # when running all methods except robma
+  if ( interactive.cluster.run == FALSE ) sim.reps = 500  # when running all methods except robma
   #if ( interactive.cluster.run == FALSE ) sim.reps = 10  # when running robma only
   
   #if ( interactive.cluster.run == TRUE ) sim.reps = 50 
@@ -609,7 +609,7 @@ if ( run.local == TRUE ) {
                MLo = meanNA(MLo),
                MHi = meanNA(MHi),
                
-               #sancheck_mean_yi = meanNA(sancheck_mean_yi),
+               sancheck_mean_yi = meanNA(sancheck_mean_yi),
                sancheck_mean_pY0 = meanNA(sancheck_mean_pY0),
                sancheck_mean_pY1 = meanNA(sancheck_mean_pY1),
                

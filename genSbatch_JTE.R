@@ -59,7 +59,7 @@ scen.params = tidyr::expand_grid(
   # same with Mu
   Mu = c(0, 0.5, 1.1, 2.3), # for same as Langan's log-ORs
   true.dist = c("norm", "expo"),
-  p0 = c(NA, 0.01, 0.05, 0.1, 0.5),  # as in Langan
+  p0 = c(NA, 0.05, 0.1, 0.5),  
   
   Ytype = c("bin-OR", "cont-SMD"),
   minN = c(40, 400, 2000),
@@ -132,9 +132,9 @@ scen.params = fread("scen_params.csv")
 
 
 # number of sbatches to generate (i.e., iterations within each scenario)
-n.reps.per.scen = 1000  
+n.reps.per.scen = 500  
 # ~ *** set sim.reps  -------------------------------------------------
-n.reps.in.doParallel = 1000
+n.reps.in.doParallel = 500
 ( n.files = ( n.reps.per.scen / n.reps.in.doParallel ) * n.scen )
 
 
