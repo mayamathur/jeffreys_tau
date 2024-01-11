@@ -135,8 +135,14 @@ agg = wrangle_agg_local(aggo)
 setwd(data.dir); fwrite(agg, "agg.csv")
 
 
+# ALTERNATIVE: READ IN AGG DATA FROM CLUSTER -------------------------------------------------
 
+setwd(data.dir)
+aggo = fread("agg.csv")
 
+# add fancy variables for plotting, etc.
+agg = wrangle_agg_local(aggo)
+setwd(data.dir); fwrite(agg, "agg.csv")
 
 
 

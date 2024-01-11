@@ -88,10 +88,6 @@ source("analyze_sims_helper_JTE.R")
 Ynames = c("ShatAbsBias", "ShatCover", "ShatRMSE", "ShatWidth",
            "MhatAbsBias", "MhatCover", "MhatRMSE", "MhatWidth")
 
-param.vars = c("true.dist", "true.sei.expr", "k.pub", "Mu", "t2a")
-
-
-
 
 # ~~ Get agg data -------------------------
 
@@ -111,6 +107,11 @@ table(agg$method.pretty)
 # look at number of actual sim reps
 table(agg$sim.reps.actual)
 
+
+# summarize scen params
+CreateTableOne( dat = agg,
+                vars = param.vars.manip2,
+                factorVars = param.vars.manip2 )
 
 
 # ~~ List variable names -------------------------
@@ -145,6 +146,7 @@ t = aggs %>% group_by(method) %>%
 
 View(t)
 
+
 # PLOTS -------------------------------------------------
 
 .true.dist = "norm"
@@ -152,8 +154,6 @@ View(t)
 .Mu = 0.5
 .estimate = "Shat"
 .local.results.dir = results.dir
-
-
 
 
 sim_plot_multiple_outcomes(.agg = agg,
@@ -193,44 +193,37 @@ View(t)
 
 # ******** WINNER TABLES -------------------------
 
-make_both_winner_tables(.agg = agg)
+
+# create the base dataset from which to filter all winner tables
+agg2 = agg %>% filter(k.pub == 10 & Ytype == "bin-OR" & p0 > 0.05)
+agg2 = agg %>% filter(k.pub == 10 & Ytype == "cont-SMD")
+#agg2 = agg %>% filter(k.pub == 100 & Ytype == "bin-OR" & p0 > 0.05)
+
+dim(agg2)
+# summarize scen params
+CreateTableOne( dat = agg2,
+                vars = param.vars.manip2,
+                factorVars = param.vars.manip2 )
+
+
+
+make_both_winner_tables(.agg = agg2)
 
 # small metas
-make_both_winner_tables(.agg = agg %>% filter(k.pub <= 20))
-make_both_winner_tables(.agg = agg %>% filter(k.pub == 5))
-
-# **exclude the very high and possible unreasonable t2a values
-make_both_winner_tables(.agg = agg %>% filter(k.pub <= 20 & t2a<1))
-make_both_winner_tables(.agg = agg %>% filter(k.pub == 5 & t2a<1))
-
-#make_both_winner_tables(.agg = agg %>% filter(k.pub <= 20 & sqrt(t2a)==0.05))
-#make_both_winner_tables(.agg = agg %>% filter(k.pub <= 20 & t2a<1))
+make_both_winner_tables(.agg = agg2 %>% filter(k.pub <= 20))
+make_both_winner_tables(.agg = agg2 %>% filter(k.pub == 5))
 
 # t2a
-make_both_winner_tables(.agg = agg %>% filter(t2a == 0.0025 & k.pub < 20))
-make_both_winner_tables(.agg = agg %>% filter(t2a == 1 & k.pub < 20))
+make_both_winner_tables(.agg = agg2 %>% filter(t2a == 0.0001))  # very bad for jeffreys
+make_both_winner_tables(.agg = agg2 %>% filter(t2a == 0.01))
+make_both_winner_tables(.agg = agg2 %>% filter(t2a == 0.04)) # good for Jeffreys
 
 
 
 # ** stratified by distribution
-make_both_winner_tables(.agg = agg %>% filter(k.pub <= 20 & t2a<1 & true.dist == "norm"))
-make_both_winner_tables(.agg = agg %>% filter(k.pub == 5 & t2a<1  & true.dist == "norm"))
+make_both_winner_tables(.agg = agg2 %>% filter(true.dist == "norm"))
+make_both_winner_tables(.agg = agg2 %>% filter(true.dist == "expo"))
 
-make_both_winner_tables(.agg = agg %>% filter(k.pub <= 20 & t2a<1 & true.dist == "expo"))
-make_both_winner_tables(.agg = agg %>% filter(k.pub == 5 & t2a<1  & true.dist == "expo"))
-
-
-
-# ** stratified by distribution; restrict to the most realistic sei distribution
-temp = agg %>% filter(t2a<1 & true.sei.expr == "0.02 + rexp(n = 1, rate = 3)" & true.dist == "norm")
-make_both_winner_tables(.agg = temp %>% filter(k.pub <= 20))
-make_both_winner_tables(.agg = temp %>% filter(k.pub == 5))
-
-temp = agg %>% filter(t2a<1 & true.sei.expr == "0.02 + rexp(n = 1, rate = 3)" & true.dist == "expo")
-make_both_winner_tables(.agg = temp %>% filter(k.pub <= 20))
-make_both_winner_tables(.agg = temp %>% filter(k.pub == 5))
-
-#*really interesting that expo distribution doesn't particularly hurt jeffreys performance; still arguably wins
 
 
 
