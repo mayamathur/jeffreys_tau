@@ -193,6 +193,12 @@ if ( run.local == TRUE ) {
   
   # ~~ ****** Set Local Sim Params -----------------------------
   
+  ### One scen - 29 ###
+  scen.params = structure(list(rep.methods = "REML ; DL ; DL2 ; PM ; robu ; jeffreys", 
+                               k.pub = 100L, t2a = 0.01, Mu = 0.5, true.dist = "norm", p0 = 0.01, 
+                               Ytype = "bin-OR", minN = 400, muN = 400, stan.maxtreedepth = 25L, 
+                               stan.adapt_delta = 0.995, get.CIs = TRUE, run.optimx = FALSE), row.names = 29L, class = "data.frame")
+  
   # ### One scen ###
   # scen.params = tidyr::expand_grid(
   #   # full list (save):
@@ -504,7 +510,7 @@ doParallel.seconds = system.time({
     if (run.local == TRUE) srr(rep.res)
     
     
-    # ~ Add Scen Params and Sanity Checks
+    # ~ Add Scen Params and Sanity Checks  -------------------------------------------------
     
     # add in scenario parameters
     # do NOT use rbind here; bind_cols accommodates possibility that some methods' rep.res
@@ -520,6 +526,12 @@ doParallel.seconds = system.time({
     rep.res$sancheck_mean_pY0 = mean(d$pY0)
     rep.res$sancheck_mean_pY1 = mean(d$pY1)
     rep.res$sancheck_mean_pY = mean(d$pY)
+    
+    rep.res$sancheck_mean_nY0 = mean(d$nY0)
+    rep.res$sancheck_mean_nY0_theory = mean(d$nY0_theory)
+    rep.res$sancheck_mean_nY1 = mean(d$nY1)
+    rep.res$sancheck_mean_nY1_theory = mean(d$nY1_theory)
+
     rep.res$sancheck_mean_N = mean(d$N)
 
     rep.res
@@ -606,7 +618,7 @@ if ( run.local == TRUE ) {
   
   
   # scenario diagnostics for scenario
-  keepers = namesWith("sancheck.", rs)
+  keepers = namesWith("sancheck_", rs)
   agg.checks = rs %>% summarise_at( keepers,
                                     function(x) round( mean(x), 2) )
   

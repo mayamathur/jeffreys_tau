@@ -63,16 +63,11 @@ names = names( read.csv(keepers[1] ) )
 # read in and rbind the keepers
 tables <- lapply( keepers, function(x) {
   y = read.csv(x, header = TRUE)
-  y[[ "true.sei.expr" ]] = as.character(y[[ "true.sei.expr" ]] )  # only needed if true.sei.expr is just a number, because it turns into a double for certain datasets and then can't be concatenated with character ones
+  # y[[ "true.sei.expr" ]] = as.character(y[[ "true.sei.expr" ]] )  # only needed if true.sei.expr is just a number, because it turns into a double for certain datasets and then can't be concatenated with character ones
   y
   } )
 
 
-# DEBUGGING
-tables <- lapply( keepers[1], function(x) {
-  read.csv(x, header = TRUE)
-  x[[ "true.sei.expr" ]] = as.character(x[[ "true.sei.expr" ]] )  # only needed
-} )
 
 # sanity check: do all files have the same names?
 # if not, could be because some jobs were killed early so didn't get doParallelTime
@@ -177,11 +172,38 @@ as.data.frame( s %>% group_by(method, scen.name, k.pub) %>%
                   summarise(n()) )
 
 
+# summarize sim params that have run so far
+library(tableone)
+vars = c("k.pub", "t2a", "Mu", "true.dist", "p0", "Ytype", "minN", "muN")
+CreateTableOne( dat = s,
+                vars = vars,
+                factorVars = vars )
 
 
-#### General summary
+#### Look at sanity checks for binary Y
 # increase width of console print area for df viewing joy
 options("width"=200)
+
+t = s %>%
+  filter(method == "REML") %>%
+  filter(Ytype == "bin-OR") %>%
+  group_by(scen.name, Mu, p0) %>%
+
+  summarise( reps = n(),
+
+             MhatBias = meanNA(Mhat - Mu),
+             sancheck_mean_pY0 = meanNA(sancheck_mean_pY0),
+             sancheck_mean_pY = meanNA(sancheck_mean_pY)
+             
+  ) %>%
+  #filter(reps > 1000) %>%
+  mutate_if(is.numeric, function(x) round(x,2))
+as.data.frame(t)
+
+
+#sum(s$k.pub == 10 & s$t2a == 0.2^2 & s$Mu == 0)
+
+
 
 t = s %>% group_by(method) %>%
   #filter(k.pub == 10 & t2a == 0.04 & Mu == 0) %>%  # jeffreys tau coverage is fine
@@ -203,7 +225,7 @@ t = s %>% group_by(method) %>%
              # SHi = meanNA(SHi),
              # Shat = meanNA(Shat),
              ShatNA = mean(is.na(Shat)),
-
+             
              MhatBias = meanNA(Mhat - Mu),
              MhatCover = meanNA(MLo <= Mu & MHi >= Mu),
              MhatWidth = meanNA(MHi - MLo),
@@ -219,8 +241,6 @@ t = s %>% group_by(method) %>%
   mutate_if(is.numeric, function(x) round(x,2))
 as.data.frame(t)
 
-
-#sum(s$k.pub == 10 & s$t2a == 0.2^2 & s$Mu == 0)
 
 
 # MAKE AGG DATA ----------------------------------------------

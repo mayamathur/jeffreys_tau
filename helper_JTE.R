@@ -1224,12 +1224,12 @@ sim_one_study = function( Mu,  # overall mean for meta-analysis
   # for testing
   if (FALSE){
     true.dist = "expo"
-    Mu = 2.3
+    Mu = 0.5
     t2a = 0
-    muN = minN = 20000
+    muN = minN = 40
     Ytype = "bin-OR"
     sd.w = 1
-    p0 = 0.5
+    p0 = 0.01
   }
   
   # ~~ Mean for this study set -------------------------------------------------
@@ -1261,7 +1261,7 @@ sim_one_study = function( Mu,  # overall mean for meta-analysis
     # group assignments
     X = c( rep( 0, N/2 ), rep( 1, N/2 ) )
     
-    # generate continuous Y
+    ### Continuous Y ###
     # 2-group study of raw mean difference with means 0 and Mi in each group
     # and same SD
     Y = c( rnorm( n = N/2, mean = 0, sd = sd.w ),
@@ -1277,7 +1277,7 @@ sim_one_study = function( Mu,  # overall mean for meta-analysis
                  sd2i = sd( Y[X==0] ) ) 
     
     # only here to be consistent with binary Y case below
-    pY = pY1 = pY0 = NA
+    pY = pY1 = pY0 = nY1 = nY1_theory = nY0 = nY0_theory = NA
   }
   
   
@@ -1289,16 +1289,20 @@ sim_one_study = function( Mu,  # overall mean for meta-analysis
     # group assignments
     X = c( rep( 0, N/2 ), rep( 1, N/2 ) )
     
-    # generate binary Y
+    ### Binary Y; odds ratio ###
     if (Ytype == "bin-RR") {
       
       # check that args are ok
       if ( p0 * exp(mui) > 1 ) stop("Theoretical P(Y=1 | X=1) > 1. Adjust p0 or Mu.")
-      if ( p0 * exp(mui) < 1 ) stop("Theoretical P(Y=1 | X=1) < 1. Adjust p0 or Mu.")
+      if ( p0 * exp(mui) < 0 ) stop("Theoretical P(Y=1 | X=1) < 0. Adjust p0 or Mu.")
       
       linpred = log(p0) + mui*X  # mui is already on log scale
       # exp here because log-RR model
       Y = rbinom( size=1, n=N, prob=exp(linpred) ) 
+      
+      # sanity check to be returned
+      nY0_theory = p0 * (muN/2)
+      nY1_theory = p0 * exp(mui) * (muN/2)
       
       # sanity check
       if (FALSE){
@@ -1306,7 +1310,8 @@ sim_one_study = function( Mu,  # overall mean for meta-analysis
         mean(Y[X==0]); p0
         mean(Y[X==1]); p0 * exp(mui)
       }
-      
+    
+    ### Binary Y; risk ratio ###
     } else if (Ytype == "bin-OR") {
       
       # no need to check that args are ok as above, since expit in [0,1]
@@ -1314,6 +1319,10 @@ sim_one_study = function( Mu,  # overall mean for meta-analysis
       linpred = logit(p0) + mui*X 
       Y = rbinom( size=1, n=N, prob=expit(linpred) ) 
       
+      # sanity check to be returned
+      nY0_theory = p0 * (muN/2)
+      nY1_theory = expit( logit(p0) + mui ) * (muN/2)
+
       # sanity check
       if (FALSE){
         coef( glm(Y ~ X, family=binomial(link = "logit")) )[["X"]]; mui
@@ -1338,10 +1347,12 @@ sim_one_study = function( Mu,  # overall mean for meta-analysis
       ES = escalc( measure="OR", ai=y1, bi=n1-y1, ci=y0, di=n0-y0 )  # returns on log scale
     }
     
-    # overall P(Y=1)
+    # summary stats
     pY = mean(Y)
     pY1 = mean(Y[X==1])
     pY0 = mean(Y[X==0])
+    nY1 = y1
+    nY0 = y0
   }
   
   yi = ES$yi
@@ -1353,9 +1364,16 @@ sim_one_study = function( Mu,  # overall mean for meta-analysis
                   vi = vi, 
                   sei = sei, 
                   N = N,
+                  
                   pY = pY,
                   pY1 = pY1,
-                  pY0 = pY0 )
+                  pY0 = pY0,
+                  
+                  nY1 = nY1,
+                  nY1_theory = nY1_theory,
+                  
+                  nY0 = nY0,
+                  nY0_theory = nY0_theory)
   
   return(d)
   
