@@ -1152,7 +1152,8 @@ sim_meta = function(k.pub,
   }
   
   # add more info to dataset
-  .dat$mean_pY = mean(.dat$pY, na.rm = TRUE)
+  .dat$mean_pY = meanNA(.dat$pY)
+  .dat$mean_yi = meanNA(.dat$yi)
   
   return(.dat)
 }
@@ -1347,7 +1348,7 @@ sim_one_study = function( Mu,  # overall mean for meta-analysis
       ES = escalc( measure="OR", ai=y1, bi=n1-y1, ci=y0, di=n0-y0 )  # returns on log scale
     }
     
-    # summary stats
+    # sanity checks: summary stats
     pY = mean(Y)
     pY1 = mean(Y[X==1])
     pY0 = mean(Y[X==0])
@@ -1359,7 +1360,7 @@ sim_one_study = function( Mu,  # overall mean for meta-analysis
   vi = ES$vi
   sei = sqrt(vi)
   
-  # ~~ Meta-analytic dataset  -------------------------------------------------
+  # ~~ One row for meta-analytic dataset  -------------------------------------------------
   d = data.frame( yi = yi, 
                   vi = vi, 
                   sei = sei, 

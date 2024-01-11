@@ -117,6 +117,9 @@ s = fread("stitched.csv")
 aggo = make_agg_data(s,
                      expected.sim.reps = 1000) 
 
+aggo = make_agg_data(s[1:20000,],
+                     expected.sim.reps = 1000) 
+
 
 # sanity check:
 # should have 1 row per scen-method combo

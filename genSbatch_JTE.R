@@ -44,7 +44,6 @@ lapply( allPackages,
 
 
 ### 2024-01-10 ###
-
 scen.params = tidyr::expand_grid(
   # full list (save):
   rep.methods = "REML ; DL ; DL2 ; PM ; robu ; jeffreys",
@@ -60,7 +59,7 @@ scen.params = tidyr::expand_grid(
   # same with Mu
   Mu = c(0, 0.5, 1.1, 2.3), # for same as Langan's log-ORs
   true.dist = c("norm", "expo"),
-  p0 = c(NA, 0.01, 0.05, 0.5),  # as in Langan
+  p0 = c(NA, 0.01, 0.05, 0.1, 0.5),  # as in Langan
   
   Ytype = c("bin-OR", "cont-SMD"),
   minN = c(40, 400, 2000),
@@ -101,6 +100,9 @@ keep[ scen.params$minN == 400 & scen.params$muN %in% c(400) ] = TRUE
 keep[ scen.params$minN == 2000 & scen.params$muN %in% c(3000) ] = TRUE
 scen.params = scen.params[keep,]
 table(scen.params$minN, scen.params$muN)
+
+
+
 
 
 # add scen numbers

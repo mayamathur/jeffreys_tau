@@ -14,12 +14,15 @@ make_agg_data = function( .s,
                           expected.sim.reps = NA ){
   
   # # TEST ONLY
-  # .s = s
-  # .averagefn = "median",
-  # badCoverageCutoff = 0.85,
-  # expected.sim.reps = NA
-  
-  
+  if (FALSE) {
+    #.s = s
+    .s = s[1:5000,]
+    .averagefn = "median"
+    badCoverageCutoff = 0.85
+    expected.sim.reps = NA
+  }
+
+
   # make unique scenario variable, defined as scen.name AND method
   if ( !"unique.scen" %in% names(.s) ) .s$unique.scen = paste(.s$scen.name, .s$method)
   
@@ -79,53 +82,21 @@ make_agg_data = function( .s,
   )
   
   
-  # scen.params = tidyr::expand_grid(
-  #   # full list (save):
-  #   rep.methods = "REML ; ML ; DL ; PMM ; EB ; robu ; jeffreys",
-  #   
-  #   # *If you reorder the args, need to adjust wrangle_agg_local
-  #   ### args shared between sim environments
-  #   k.pub = c(5, 10, 15, 20, 100),  # intentionally out of order so that jobs with boundary choices with complete first
-  #   hack = c("affirm"),
-  #   prob.hacked = c(0),
-  #   # important: if sim.env = stefan, these t2 args are ONLY used for setting start values
-  #   #   and for checking bias of Shat, so set them to have the correct t2a
-  #   #   not clear what t2w should be given the way stefan implements hacking
-  #   t2a = c(0.05^2, 0.1^2, 0.2^2, 0.5^2, 1),
-  #   t2w = c(0),
-  #   # same with Mu
-  #   Mu = c(0, 0.5),
-  #   true.dist = c("expo", "norm"),
-  #   
-  #   Nmax = 1,
-  #   m = 50,
-  #   true.sei.expr = c("0.02 + rexp(n = 1, rate = 3)",  # original setting close to empirical distribution
-  #                     "0.02 + rexp(n = 1, rate = 1)", # larger SEs overall
-  #                     "0.3"), # all the same, and close to mean of the first option  
-  #   rho = c(0),
-  #   
-  #   # Stan control args
-  #   stan.maxtreedepth = 25,
-  #   stan.adapt_delta = 0.995,
-  #   
-  #   get.CIs = TRUE,
-  #   run.optimx = FALSE )
-  
   # variables that define the scenarios
   param.vars = c("unique.scen",  
                  "method",
                  
-                 "Nmax",
+                 "k.pub",
                  "Mu",
                  "t2a",
-                 "t2w",
+
                  "true.dist",
-                 "m",
-                 "true.sei.expr",
-                 "hack",
-                 "rho",
-                 "k.pub",
-                 "prob.hacked",
+
+                 "p0",
+                 "Ytype",
+                 "minN",
+                 "muN",
+
                  "stan.adapt_delta",
                  "stan.maxtreedepth")
 
@@ -147,8 +118,8 @@ make_agg_data = function( .s,
   
   #names(.s)[ !names(.s) %in% param.vars ]  # look at names of vars that need categorizing
   
-  .s$V = .s$t2a + .s$t2w
-  .s$S = sqrt(.s$t2a + .s$t2w)
+  .s$V = .s$t2a
+  .s$S = sqrt(.s$t2a)
   
   
   toDrop = c("rep.methods",
