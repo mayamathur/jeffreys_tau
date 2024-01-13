@@ -334,6 +334,18 @@ make_both_winner_tables(.agg = agg2 %>% filter(N.pretty == "N = 400"))
 make_both_winner_tables(.agg = agg2 %>% filter( N.pretty == "N ~ U(40, 400)" ))
 
 
+# 2024-01-13 - PULL OUT A PROBLEM SCENARIO -------------------------------------------------
+
+x = agg2 %>% filter(t2a == 0.0001 & ShatCover == 0)
+unique(x$scen.name)
+
+x2 = agg %>% filter(scen.name==105); View(x2)
+
+# scen params only
+x3 = x2[1, 1:11] 
+library(constructive)
+construct( as.data.frame(x3) )
+
 
 
 # SANITY CHECK ON WINNER TABLES: QUICK AND SIMPLE SUBSET ANALYSIS -------------------------------------------------

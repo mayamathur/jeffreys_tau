@@ -193,11 +193,21 @@ if ( run.local == TRUE ) {
   
   # ~~ ****** Set Local Sim Params -----------------------------
   
-  ### One scen - 29 ###
-  scen.params = structure(list(rep.methods = "REML ; DL ; DL2 ; PM ; robu ; jeffreys", 
-                               k.pub = 100L, t2a = 0.01, Mu = 0.5, true.dist = "norm", p0 = 0.01, 
-                               Ytype = "bin-OR", minN = 400, muN = 400, stan.maxtreedepth = 25L, 
-                               stan.adapt_delta = 0.995, get.CIs = TRUE, run.optimx = FALSE), row.names = 29L, class = "data.frame")
+  ### One scen - 105 ###
+  # this is one where Shat behavior was horrible for Jeffreys, but reasonable for other methods
+  scen.params = data.frame(
+    k.pub = 100L,
+    t2a = 0.0001,
+    Mu = 0,
+    true.dist = "norm",
+    p0 = 0.05,
+    Ytype = "bin-OR",
+    minN = 40L,
+    muN = 40L,
+    stan.maxtreedepth = 25L,
+    stan.adapt_delta = 0.995,
+    rep.methods = "REML ; DL ; DL2 ; jeffreys"
+  )
   
   # ### One scen ###
   # scen.params = tidyr::expand_grid(

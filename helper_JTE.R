@@ -1127,8 +1127,7 @@ sim_meta = function(k.pub,
                     true.dist,
                     
                     # within-study parameters
-                    muN,
-                    minN,
+                    N.expr,
                     Ytype,
                     p0) {
   
@@ -1213,8 +1212,7 @@ sim_one_study = function( Mu,  # overall mean for meta-analysis
                           true.dist,
                           
                           # within-study sample size parameters
-                          muN,  
-                          minN, 
+                          N.expr, 
                           
                           sd.w = 1,  # within-study SD(Y|X); only needed for cont outcome
                           
@@ -1252,8 +1250,10 @@ sim_one_study = function( Mu,  # overall mean for meta-analysis
   }
   
   # simulate total N for this study
-  if ( muN < minN ) stop("Should not have muN < minN")
-  N = round( runif( n = 1, min = minN, max = minN + 2*( muN - minN ) ) ) # draw from uniform centered on muN
+  #if ( muN < minN ) stop("Should not have muN < minN")
+  #N = round( runif( n = 1, min = minN, max = minN + 2*( muN - minN ) ) ) # draw from uniform centered on muN
+  N = eval( parse( text = N.expr ) )
+
   
   # ~~ Simulate individual subject data -------------------------------------------------
   
