@@ -51,8 +51,6 @@ select = dplyr::select
 # no sci notation
 options(scipen=999)
 
-stitch.from.scratch = TRUE
-
 # control which results should be redone and/or overwritten
 # but note that not all fns respect this setting
 overwrite.res = TRUE
@@ -108,20 +106,21 @@ table(agg$method.pretty)
 table(agg$sim.reps.actual)
 
 
+# initialize global variables that describe estimate and outcome names, etc.
+# this must be after calling wrangle_agg_local
+init_var_names()
+
+
 # summarize scen params
 CreateTableOne( dat = agg,
                 vars = param.vars.manip2,
                 factorVars = param.vars.manip2 )
 
 
-# ~~ List variable names -------------------------
-
-# initialize global variables that describe estimate and outcome names, etc.
-# this must be after calling wrangle_agg_local
-init_var_names()
-
 
 # ~~ Make data subsets -------------------------
+
+agg_save = agg  # in case you want to subset
 
 # realistically small metas only
 aggs = agg %>% filter( k.pub <= 20 )
@@ -132,8 +131,6 @@ aggs = agg %>% filter( k.pub <= 20 )
 
 summary(aggs$MhatEstConverge)
 summary(aggs$MhatCIFail)
-
-aggs %>% group_by(method)
 
 
 # convergence rates
@@ -147,7 +144,66 @@ t = aggs %>% group_by(method) %>%
 View(t)
 
 
+
+# SANITY CHECKS ON DATA GENERATION -------------------------
+
+
+# ~ Individual studies should be unbiased  -------------------------------------------------
+
+# look for scens where even the individual studies are biased for Mu
+#  e.g., because of very rare binary Y with small N
+summary( abs(agg$sancheck_mean_yi - agg$Mu) )
+
+ind = which( abs(agg$sancheck_mean_yi - agg$Mu) > 0.1 )
+length(ind)/nrow(agg)  # percent of scens
+
+# summarize scen params for these ones
+CreateTableOne( dat = agg[ind,],
+                vars = param.vars.manip2,
+                factorVars = param.vars.manip2 )
+
+table(agg[ind,"N.pretty"] )
+# not surprisingly, the bad scens are exclusively binary Y, and almost exclusively ones with N=40
+#  though spread across a variety of p0 values
+
+
+# now with a more stringent threshold for bias in yi
+ind = which( abs(agg$sancheck_mean_yi - agg$Mu) > 0.05 )
+ind
+length(ind)/nrow(agg)  # percent of scens
+
+# summarize scen params for these ones
+CreateTableOne( dat = agg[ind,],
+                vars = param.vars.manip2,
+                factorVars = param.vars.manip2 )
+
+table(agg[ind,"N.pretty"] )
+# not surprisingly, the bad scens are exclusively binary Y, and almost exclusively ones with N=40
+#  though spread across a variety of p0 values
+
+
+#***exclude these scens going forward
+agg = agg[-ind,]
+CreateTableOne( dat = agg,
+                vars = param.vars.manip2,
+                factorVars = param.vars.manip2,
+                strata = "Ytype")
+
+# ~ Other sanity checks -------------------------------------------------
+
+
+namesWith(pattern = "sancheck_", agg)
+
+summary( abs( agg$sancheck_mean_pY0 - agg$p0 ) )
+
+summary( abs( agg$sancheck_mean_nY0 - agg$sancheck_mean_nY0_theory) )
+summary( abs( agg$sancheck_mean_nY1 - agg$sancheck_mean_nY1_theory) )
+
+
 # PLOTS -------------------------------------------------
+
+
+#bm: edit this fn to aggregate over vars not used in facetting
 
 .true.dist = "norm"
 .true.sei.expr = "0.02 + rexp(n = 1, rate = 3)"
@@ -169,7 +225,118 @@ sim_plot_multiple_outcomes(.agg = agg,
 
 
 
-# QUICK AND SIMPLE SUBSET ANALYSIS -------------------------------------------------
+
+
+# AUTO-FIND INTERESTING SCENS  -------------------------------------------------
+
+# scens with meaningful differences across methods in AbsBias, RMSE, or Cover for Mhat or Shat
+# among those, label the winning method? or assign points for winning each of these?
+
+# basically no meaningful differences in: 
+
+# t = agg %>% group_by(scen.name) %>%
+#   summarise( MhatAbsBiasSD = sd(MhatAbsBias, na.rm = TRUE),
+#              MhatAbsBiasSD = sd(MhatAbsBias, na.rm = TRUE))
+
+# alternate: range instead of SD
+t = agg %>% group_by(scen.name) %>%
+  summarise( MhatAbsBiasRange = diff( range(MhatAbsBias, na.rm = TRUE) ),
+             MhatCoverRange = diff( range(MhatCover, na.rm = TRUE) ),
+             MhatRMSERange = diff( range(MhatRMSE, na.rm = TRUE) ),
+             
+             ShatAbsBiasRange = diff( range(ShatAbsBias, na.rm = TRUE) ),
+             ShatCoverRange = diff( range(ShatCover, na.rm = TRUE) ),
+             ShatRMSERange = diff( range(ShatRMSE, na.rm = TRUE) ) )
+
+summary(t$MhatAbsBiasRange)
+summary(t$MhatCoverRange)
+summary(t$MhatRMSERange)
+
+summary(t$ShatAbsBiasRange)
+summary(t$ShatCoverRange)
+summary(t$ShatRMSERange)
+
+# *much more variability on Shat performance metrics than on Mu
+
+# mark scens as important if methods vary on any of these characteristics
+t$scen_important_Mhat = t$MhatCoverRange > 0.1 | t$MhatRMSERange > 0.25
+t$scen_important_Shat = t$ShatAbsBiasRange > 0.1 | t$ShatCoverRange > 0.1 | t$ShatRMSERange > 0.25
+t$scen_important = t$scen_important_Mhat | t$scen_important_Shat
+
+mean(t$scen_important_Mhat)
+mean(t$scen_important_Shat)
+mean(t$scen_important_Mhat | t$scen_important_Shat)  # the Mhat important ones are mostly a subset of the Shat important ones
+
+important_scens = t$scen.name[ t$scen_important_Mhat | t$scen_important_Shat ]
+
+
+
+# experiment with how to auto-choose the winner
+t2 = agg %>% filter(scen.name == 30) 
+
+( x = make_winner_table_col(.agg = agg %>% filter(scen.name == 29),
+                            yName = "MhatCover",
+                            methods = unique(agg$method) ) )
+
+( x = make_winner_table(.agg = agg %>% filter(scen.name == 29),
+                        summarise.fun.name = "median") )
+
+# **add the importance vars to agg
+agg = left_join(x = agg,
+                y = t %>% select(scen.name, scen_important),
+                by = "scen.name")
+
+#bm: in t, have a variable for which subset of the 6 variables were important
+# e.g., MhatAbsBias and ShatCover
+# then 
+# does this make sense??
+
+
+# ******** WINNER TABLES -------------------------
+
+# create the base dataset from which to filter all winner tables
+#agg2 = agg %>% filter(true.dist == "norm")
+#agg2=agg
+#agg2 = agg %>% filter(k.pub == 10 & Ytype == "bin-OR" & p0 > 0.05)
+#agg2 = agg %>% filter(k.pub == 10 & Ytype == "cont-SMD")
+agg2 = agg %>% filter(scen_important == TRUE)  # ***in all important scens, jeffreys does badly for Shat because of small t2 values
+agg2 = agg %>% filter(scen_important == TRUE & t2a > 0.0001)  # ***but with this restriction, jeffreys improves
+agg2 = agg %>% filter(scen_important == TRUE & t2a > 0.0025)  # ***but with this restriction, jeffreys improves
+
+agg2 = agg %>% filter(scen_important == TRUE & t2a > 0.0001 & k.pub < 100)  # ***interesting
+
+dim(agg2)
+# summarize scen params
+CreateTableOne( dat = agg2,
+                vars = param.vars.manip2,
+                factorVars = param.vars.manip2 )
+
+
+
+make_both_winner_tables(.agg = agg2)
+
+# small metas
+make_both_winner_tables(.agg = agg2 %>% filter(k.pub <= 20))
+make_both_winner_tables(.agg = agg2 %>% filter(k.pub == 5))
+
+# t2a: definitely matters
+make_both_winner_tables(.agg = agg2 %>% filter(t2a == 0.0001))  # very bad for jeffreys
+make_both_winner_tables(.agg = agg2 %>% filter(t2a == 0.01))
+make_both_winner_tables(.agg = agg2 %>% filter(t2a == 0.04)) # good for Jeffreys
+
+
+# ** stratified by distribution
+make_both_winner_tables(.agg = agg2 %>% filter(true.dist == "norm"))
+make_both_winner_tables(.agg = agg2 %>% filter(true.dist == "expo"))
+
+# effect of having equal sample sizes vs. uniform
+make_both_winner_tables(.agg = agg2 %>% filter(N.pretty == "N = 400"))
+make_both_winner_tables(.agg = agg2 %>% filter( N.pretty == "N ~ U(40, 400)" ))
+
+
+
+
+# SANITY CHECK ON WINNER TABLES: QUICK AND SIMPLE SUBSET ANALYSIS -------------------------------------------------
 
 
 t = aggo %>%
@@ -191,48 +358,11 @@ t = aggo %>%
 
 View(t)
 
-# ******** WINNER TABLES -------------------------
-
-
-# create the base dataset from which to filter all winner tables
-agg2 = agg %>% filter(k.pub == 10 & Ytype == "bin-OR" & p0 > 0.05)
-agg2 = agg %>% filter(k.pub == 10 & Ytype == "cont-SMD")
-#agg2 = agg %>% filter(k.pub == 100 & Ytype == "bin-OR" & p0 > 0.05)
-
-dim(agg2)
-# summarize scen params
-CreateTableOne( dat = agg2,
-                vars = param.vars.manip2,
-                factorVars = param.vars.manip2 )
-
-
-
-make_both_winner_tables(.agg = agg2)
-
-# small metas
-make_both_winner_tables(.agg = agg2 %>% filter(k.pub <= 20))
-make_both_winner_tables(.agg = agg2 %>% filter(k.pub == 5))
-
-# t2a
-make_both_winner_tables(.agg = agg2 %>% filter(t2a == 0.0001))  # very bad for jeffreys
-make_both_winner_tables(.agg = agg2 %>% filter(t2a == 0.01))
-make_both_winner_tables(.agg = agg2 %>% filter(t2a == 0.04)) # good for Jeffreys
-
-
-
-# ** stratified by distribution
-make_both_winner_tables(.agg = agg2 %>% filter(true.dist == "norm"))
-make_both_winner_tables(.agg = agg2 %>% filter(true.dist == "expo"))
-
-
-
-
-# PLOTS -------------------------------------------------
 
 
 # EXPLORE PREDICTORS OF PERFORMANCE  -------------------------------------------------
 
-# not sure how useful this is
+# not sure how useful this is since what we really care about is relative performance
 
 
 
@@ -246,67 +376,17 @@ make_both_winner_tables(.agg = agg2 %>% filter(true.dist == "expo"))
 
 regressions.from.scratch = TRUE
 
-
-
-
-performance_regressions = function(.agg,
-                                   Ynames = Ynames,
-                                   covariates = param.vars ) {
-  
-  
-  for (i in Ynames) {
-    
-    # # TEST
-    # .agg = agg %>% filter(method == "jeffreys-pmed")
-    # Ynames = Ynames
-    # covariates = param.vars
-    # i = "ShatCover"
-    
-    string = paste( i, "~", paste(covariates, collapse = "+"), sep="" )
-    mod = lm( eval(parse(text=string)),
-              data = .agg )
-    
-    coefs = coef(mod)[-1]
-    
-    pvals = summary(mod)$coefficients[,"Pr(>|t|)"]
-    pvals = pvals[-1]  # remove intercept
-    
-    # which vars are good vs. bad for the outcome?
-    # flip coeff signs so that positive means it improves the outcome
-    if ( grepl(pattern = "AbsBias", x = i) | grepl(pattern = "Width", x = i) | grepl(pattern = "RMSE", x = i) ) coefs = -coefs
-    good = names( coefs[ coefs > 0 & pvals < 0.01 ] )
-    bad = names( coefs[ coefs < 0 & pvals < 0.01 ] )
-    
-    good = paste(good, collapse = ", ")
-    bad = paste(bad, collapse = ", ")
-    
-    newRow = data.frame( outcome = i,
-                         good = good, 
-                         bad = bad )
-    
-    if (i==Ynames[1]) res = newRow else res = rbind(res, newRow)
-    
-    cat( paste("\n\n*******************", toupper(i), " PREDICTORS*******************\n" ) )
-    print(summary(mod))
-    
-  }  # end loop over outcomes
-  
-  
-  # look at results
-  res
-  
-  # clean up string formatting
-  # res2 = res %>% mutate_at( vars(good, bad), my_recode )
-  
-}
+# remove p0 because causes error "contrasts can be applied only to factors with 2 or more levels" in lm
+#  because p0 doesn't vary conditional on Ytype = cont
+param.vars.manip3 = drop_vec_elements(param.vars.manip2, "p0")
 
 
 ( t1 = performance_regressions(.agg = agg %>% filter(method == "jeffreys-max-lp-iterate"),
                                Ynames = Ynames,
-                               covariates = param.vars.manip2) )
+                               covariates = param.vars.manip3 ) )
 
 
 ( t2 = performance_regressions(.agg = agg %>% filter(method == "EB"),
                                Ynames = Ynames,
-                               covariates = param.vars.manip2) )
+                               covariates = param.vars.manip3) )
 

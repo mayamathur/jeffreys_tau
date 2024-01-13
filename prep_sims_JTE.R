@@ -44,6 +44,8 @@ select = dplyr::select
 # no sci notation
 options(scipen=999)
 
+stitch.from.scratch = FALSE
+
 
 # ~~ Set directories -------------------------
 code.dir = here()
@@ -109,36 +111,44 @@ source("analyze_sims_helper_JTE.R")
 # } # end loop over data.dir.suffixes
 
 
-setwd(data.dir)
-s = fread("stitched.csv")
-
-# MAKE AGG DATA -------------------------------------------------
-
-aggo = make_agg_data(s,
-                     expected.sim.reps = 1000) 
-
-aggo = make_agg_data(s[1:20000,],
-                     expected.sim.reps = 1000) 
 
 
-# sanity check:
-# should have 1 row per scen-method combo
-n.scens = 300
-n.methods = nuni(aggo$method)
-expect_equal( sum( n.scens * n.methods ),
-              nrow(aggo) )
-setwd(data.dir); fwrite(aggo, "agg.csv")
+# STITCH FROM SCRATCH -------------------------------------------------
 
-
-# add fancy variables for plotting, etc.
-agg = wrangle_agg_local(aggo)
-setwd(data.dir); fwrite(agg, "agg.csv")
+if ( stitch.from.scratch == TRUE ) {
+  setwd(data.dir)
+  s = fread("stitched.csv")
+  
+  aggo = make_agg_data(s,
+                       expected.sim.reps = 1000) 
+  
+  aggo = make_agg_data(s[1:20000,],
+                       expected.sim.reps = 1000) 
+  
+  
+  # sanity check:
+  # should have 1 row per scen-method combo
+  n.scens = 300
+  n.methods = nuni(aggo$method)
+  expect_equal( sum( n.scens * n.methods ),
+                nrow(aggo) )
+  setwd(data.dir); fwrite(aggo, "agg.csv")
+  
+  
+  # add fancy variables for plotting, etc.
+  agg = wrangle_agg_local(aggo)
+  setwd(data.dir); fwrite(agg, "agg.csv")
+  
+}
 
 
 # ALTERNATIVE: READ IN AGG DATA FROM CLUSTER -------------------------------------------------
 
 setwd(data.dir)
-aggo = fread("agg.csv")
+aggo = fread("aggo.csv")
+# check when the dataset was last modified to make sure we're working with correct version
+file.info("aggo.csv")$mtime
+dim(aggo)
 
 # add fancy variables for plotting, etc.
 agg = wrangle_agg_local(aggo)

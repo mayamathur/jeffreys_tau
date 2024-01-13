@@ -314,8 +314,15 @@ wrangle_agg_local = function(agg) {
   agg$method.pretty = agg$method # temporarily not relabeling them
   table(agg$method, agg$method.pretty)
   
-  ##### Specific to Sim Env #####
+  if ( "minN" %in% names(agg) ){
+    agg$N.pretty = NA
+    agg$N.pretty[ agg$minN == 40 & agg$muN == 40 ] = "N = 40"
+    agg$N.pretty[ agg$minN == 40 & agg$muN == 220 ] = "N ~ U(40, 400)"
+    agg$N.pretty[ agg$minN == 400 & agg$muN == 400 ] = "N = 400"
+    agg$N.pretty[ agg$minN == 2000 & agg$muN == 3000 ] = "N ~ U(2000, 3000)"
+  }
   
+
   if ( "true.sei.expr" %in% names(agg) ){
     agg$true.sei.expr = as.factor(agg$true.sei.expr)
     
@@ -1054,8 +1061,60 @@ sim_plot_multiple_outcomes = function(.agg,
   return(plotListSupp)
 } 
 
+# PROJECT-SPECIFIC HELPERS ----------------------------------
 
-# PROJECT-SPECIFIC SMALL HELPERS ----------------------------------
+
+
+performance_regressions = function(.agg,
+                                   Ynames = Ynames,
+                                   covariates = param.vars.manip.2 ) {
+  
+  for (i in Ynames) {
+    
+    # # TEST
+    # .agg = agg %>% filter(method == "jeffreys-pmed")
+    # Ynames = Ynames
+    # covariates = param.vars
+    # i = "ShatCover"
+    
+    string = paste( i, "~", paste(covariates, collapse = "+"), sep="" )
+    mod = lm( eval(parse(text=string)),
+              data = .agg )
+    
+    coefs = coef(mod)[-1]
+    
+    pvals = summary(mod)$coefficients[,"Pr(>|t|)"]
+    pvals = pvals[-1]  # remove intercept
+    
+    # which vars are good vs. bad for the outcome?
+    # flip coeff signs so that positive means it improves the outcome
+    if ( grepl(pattern = "AbsBias", x = i) | grepl(pattern = "Width", x = i) | grepl(pattern = "RMSE", x = i) ) coefs = -coefs
+    good = names( coefs[ coefs > 0 & pvals < 0.01 ] )
+    bad = names( coefs[ coefs < 0 & pvals < 0.01 ] )
+    
+    good = paste(good, collapse = ", ")
+    bad = paste(bad, collapse = ", ")
+    
+    newRow = data.frame( outcome = i,
+                         good = good, 
+                         bad = bad )
+    
+    if (i==Ynames[1]) res = newRow else res = rbind(res, newRow)
+    
+    cat( paste("\n\n*******************", toupper(i), " PREDICTORS*******************\n" ) )
+    print(summary(mod))
+    
+  }  # end loop over outcomes
+  
+  
+  # look at results
+  res
+  
+  # clean up string formatting
+  # res2 = res %>% mutate_at( vars(good, bad), my_recode )
+  
+}
+
 
 # initialize global variables that describe estimate and outcome names, etc.
 init_var_names = function() {
@@ -1094,6 +1153,12 @@ init_var_names = function() {
   
   
   ( param.vars.manip2 <<- drop_vec_elements(param.vars.manip, "method") )
+  
+  # replace with pretty version
+  if ( all( c("minN", "muN") %in% param.vars.manip2) ){
+    param.vars.manip2 <<- drop_vec_elements(param.vars.manip2, c("minN", "muN"))
+    param.vars.manip2 <<- c(param.vars.manip2, "N.pretty")
+  }
   
   cat( paste("\n\nManipulated parameter vars: ",
              paste(param.vars.manip2, collapse= ", ") ) )

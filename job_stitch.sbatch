@@ -38,5 +38,5 @@
 #now run normal batch commands
 
 ml load v8
-ml load R/4.1.2
+ml load R/4.2.0
 R -f /home/groups/manishad/JTE/stitch_on_sherlock_JTE.R

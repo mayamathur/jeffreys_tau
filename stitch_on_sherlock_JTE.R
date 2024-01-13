@@ -3,10 +3,12 @@
 
 # run this interactively in ml load R or via:
 #   sbatch -p qsu,owners,normal /home/groups/manishad/JTE/job_stitch.sbatch
-# scontrol show job 39315829
+# sacct --name=job_stitch
 # look at its out file:
 # cd /home/groups/manishad/JTE/rmfiles
 # less rm_stitch.out
+# less rm_stitch.err
+# shift-g to jump to bottom of files
 
 # for non-huge simulations, can often run this script interactively in a higher-memory
 #  Sherlock session:
@@ -254,7 +256,7 @@ source("analyze_sims_helper_JTE.R")
 agg = make_agg_data(s)
 
 setwd(.results.stitched.write.path)
-fwrite(agg, "agg.csv")
+fwrite(agg, "aggo.csv")
 
 cat("\n\n nrow(agg) =", nrow(agg))
 cat("\n nuni(agg$scen.name) =", nuni(agg$scen.name) )
