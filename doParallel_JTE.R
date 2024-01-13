@@ -202,9 +202,7 @@ if ( run.local == TRUE ) {
     true.dist = "norm",
     p0 = 0.05,
     Ytype = "bin-OR",
-    minN = 40L,
-    muN = 40L,
-    stan.maxtreedepth = 25L,
+    N.expr = "40",
     stan.adapt_delta = 0.995,
     rep.methods = "REML ; DL ; DL2 ; jeffreys"
   )
@@ -367,8 +365,7 @@ doParallel.seconds = system.time({
                   t2a = p$t2a,
                   true.dist = p$true.dist,
                   
-                  muN = p$muN,
-                  minN = p$minN,
+                  N.expr = p$N.expr,
                   Ytype = p$Ytype,
                   p0 = p$p0,
                   

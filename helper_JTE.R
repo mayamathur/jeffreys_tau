@@ -1167,8 +1167,9 @@ if (FALSE) {
                true.dist = "norm",
                
                # within-study parameters
-               muN = 1000,
-               minN = 1000,
+               # muN = 1000,
+               # minN = 1000,
+               N.expr = "round( runif(n = 1, min = 40, max = 400) )",
                Ytype = "cont-SMD",
                p0 = NA)
   
@@ -1253,7 +1254,7 @@ sim_one_study = function( Mu,  # overall mean for meta-analysis
   #if ( muN < minN ) stop("Should not have muN < minN")
   #N = round( runif( n = 1, min = minN, max = minN + 2*( muN - minN ) ) ) # draw from uniform centered on muN
   N = eval( parse( text = N.expr ) )
-
+  muN = N  #@TEMP FOR USING N.EXPR INSTEAD OF MUN, MINN (needed for sanchecks)
   
   # ~~ Simulate individual subject data -------------------------------------------------
   
