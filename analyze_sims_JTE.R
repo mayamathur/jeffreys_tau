@@ -39,6 +39,7 @@ library(truncnorm)
 library(tmvtnorm)
 library(RColorBrewer)
 library(sjmisc)
+library(tableone)
 
 # prevent masking
 select = dplyr::select
@@ -269,6 +270,10 @@ mean(t$scen_important_Mhat | t$scen_important_Shat)  # the Mhat important ones a
 
 important_scens = t$scen.name[ t$scen_important_Mhat | t$scen_important_Shat ]
 
+# **add the importance vars to agg
+agg = left_join(x = agg,
+                y = t %>% select(scen.name, scen_important),
+                by = "scen.name")
 
 
 # experiment with how to auto-choose the winner
@@ -281,10 +286,7 @@ t2 = agg %>% filter(scen.name == 30)
 ( x = make_winner_table(.agg = agg %>% filter(scen.name == 29),
                         summarise.fun.name = "median") )
 
-# **add the importance vars to agg
-agg = left_join(x = agg,
-                y = t %>% select(scen.name, scen_important),
-                by = "scen.name")
+
 
 #bm: in t, have a variable for which subset of the 6 variables were important
 # e.g., MhatAbsBias and ShatCover
@@ -297,27 +299,38 @@ agg = left_join(x = agg,
 # create the base dataset from which to filter all winner tables
 #agg2 = agg %>% filter(true.dist == "norm")
 #agg2=agg
+#agg2=agg %>% filter(t2a > 0.0001)
 #agg2 = agg %>% filter(k.pub == 10 & Ytype == "bin-OR" & p0 > 0.05)
 #agg2 = agg %>% filter(k.pub == 10 & Ytype == "cont-SMD")
-agg2 = agg %>% filter(scen_important == TRUE)  # ***in all important scens, jeffreys does badly for Shat because of small t2 values
-agg2 = agg %>% filter(scen_important == TRUE & t2a > 0.0001)  # ***but with this restriction, jeffreys improves
-agg2 = agg %>% filter(scen_important == TRUE & t2a > 0.0025)  # ***but with this restriction, jeffreys improves
 
-agg2 = agg %>% filter(scen_important == TRUE & t2a > 0.0001 & k.pub < 100)  # ***interesting
+# agg2 = agg %>% filter(scen_important == TRUE)  # ***in all important scens, jeffreys does badly for Shat because of small t2 values
+agg2 = agg %>% filter(scen_important == TRUE & t2a > 0.0001)  # ***but with this restriction, jeffreys improves
+# agg2 = agg %>% filter(scen_important == TRUE & t2a > 0.0025)  # ***but with this restriction, jeffreys improves
+# 
+# agg2 = agg %>% filter(scen_important == TRUE & t2a > 0.0001 & k.pub < 100)  # ***interesting
 
 dim(agg2)
 # summarize scen params
-CreateTableOne( dat = agg2,
+CreateTableOne( dat = agg2[ !duplicated(agg2$scen.name) ],
                 vars = param.vars.manip2,
-                factorVars = param.vars.manip2 )
+                factorVars = param.vars.manip2,
+                strata = "Ytype")
 
 
 
 make_both_winner_tables(.agg = agg2)
 
+#*ours wins in these scens
+# bm: look at which scens have run
+# but mostly shows k = 2 and k = 100 only
+make_both_winner_tables(.agg = agg2 %>% filter(Ytype == "cont-SMD") )
+# without the unrealistic sei distributions
+make_both_winner_tables(.agg = agg2 %>% filter(Ytype == "cont-SMD" &
+                                                 N.pretty %in% c("N ~ U(2000, 3000)", "N ~ U(40, 400)") ) )
+
 # small metas
 make_both_winner_tables(.agg = agg2 %>% filter(k.pub <= 20))
-make_both_winner_tables(.agg = agg2 %>% filter(k.pub == 5))
+make_both_winner_tables(.agg = agg2 %>% filter(k.pub == 2))
 
 # t2a: definitely matters
 make_both_winner_tables(.agg = agg2 %>% filter(t2a == 0.0001))  # very bad for jeffreys

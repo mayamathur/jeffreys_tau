@@ -73,8 +73,7 @@ estimate_jeffreys = function(.yi,
   
   cat( paste("\n estimate_jeffreys flag 3: about to call postSumm") )
   postSumm = summary(post)$summary
-  
-  #bm
+  if (is.null(postSumm)) stop("In stan, postSumm is null")
   
   # pull out best iterate to pass to MAP optimization later
   ext = rstan::extract(post) # a vector of all post-WU iterates across all chains
@@ -1174,30 +1173,15 @@ if (FALSE) {
                p0 = NA)
   
   # example: binary Y
-  d = sim_meta(k.pub = 10,
-               
-               Mu = 0.5,  
-               t2a = 0.1^2,  
-               true.dist = "norm",
-               
-               # within-study parameters
-               muN = 1000,
-               minN = 1000,
-               Ytype = "bin-OR",
-               p0 = 0.1)
-  
-  
-  d = sim_meta(k.pub = 500,
-               
-               Mu = 0.5,  
-               t2a = 0.1^2,  
-               true.dist = "norm",
-               
-               # within-study parameters
-               muN = 1000,
-               minN = 1000,
-               Ytype = "bin-OR",
-               p0 = 0.3)
+  # evil scen 105
+  d = sim_meta(  k.pub = 100,
+                 t2a = 0.0001,
+                 Mu = 0,
+                 true.dist = "norm",
+                 p0 = 0.05,
+                 Ytype = "bin-OR",
+                 N.expr = "40" )
+  hist(d$sei)
   
   mean(d$pY)
   mean(d$pY0) # should match p0

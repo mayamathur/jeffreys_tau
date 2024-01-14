@@ -24,6 +24,7 @@ rm( list = ls() )
 
 # are we running locally?
 run.local = FALSE
+# run.local = TRUE
 
 # should we set scen params interactively on cluster?
 interactive.cluster.run = FALSE
@@ -114,8 +115,6 @@ if (run.local == FALSE) {
     path = "/home/groups/manishad/JTE"
     setwd(path)
     source("helper_JTE.R")
-    source("stefan_phackR_fns.R")
-    
     
     scen.params = tidyr::expand_grid(
       # full list (save):
@@ -188,22 +187,51 @@ if ( run.local == TRUE ) {
   code.dir = here()
   setwd(code.dir)
   source("helper_JTE.R")
-  source("stefan_phackR_fns.R")
   
   
   # ~~ ****** Set Local Sim Params -----------------------------
   
   ### One scen - 105 ###
-  # this is one where Shat behavior was horrible for Jeffreys, but reasonable for other methods
+  # # this is one where Shat behavior was horrible for Jeffreys, but reasonable for other methods
+  # scen.params = data.frame(
+  #   k.pub = 100,
+  #   t2a = 0.0001,
+  #   Mu = 0,
+  #   true.dist = "norm",
+  #   p0 = 0.05,
+  #   Ytype = "bin-OR",
+  #   N.expr = "40",
+  #   stan.adapt_delta = 0.995,
+  #   stan.maxtreedepth = 25,
+  #   rep.methods = "REML ; DL ; DL2 ; jeffreys"
+  # )
+  
+  # same, but change dist of SEs
+  # definitely improves jeffreys compared to above, but lower limit is still 0.01, so bad coverage (28%)
   scen.params = data.frame(
-    k.pub = 100L,
+    k.pub = 100,
     t2a = 0.0001,
     Mu = 0,
     true.dist = "norm",
     p0 = 0.05,
     Ytype = "bin-OR",
-    N.expr = "40",
+    N.expr = "round( runif(n=1, min=40, max = 4000) )",
     stan.adapt_delta = 0.995,
+   stan.maxtreedepth = 25,
+    rep.methods = "REML ; DL ; DL2 ; jeffreys"
+  )
+  
+  # same, but slightly larger t2a
+  scen.params = data.frame(
+    k.pub = 100,
+    t2a = 0.001,
+    Mu = 0,
+    true.dist = "norm",
+    p0 = 0.05,
+    Ytype = "bin-OR",
+    N.expr = "round( runif(n=1, min=40, max = 4000) )",
+    stan.adapt_delta = 0.995,
+    stan.maxtreedepth = 25,
     rep.methods = "REML ; DL ; DL2 ; jeffreys"
   )
   
@@ -384,7 +412,7 @@ doParallel.seconds = system.time({
     #  will correctly recognize it as having 0 rows
     rep.res = data.frame()
     
-    # ~ Start Values ------------------------------
+    # # ~ Start Values ------------------------------
     Mhat.start = p$Mu
     Shat.start = p$S
     
@@ -475,24 +503,7 @@ doParallel.seconds = system.time({
     # ~~ ***** Jeffreys ------------------------------
     
     if ( "jeffreys" %in% all.methods ) {
-      # # temp for refreshing code
-      # path = "/home/groups/manishad/JTE"
-      # setwd(path)
-      # source("helper_JTE.R")
-      # source("init_stan_model_JTE.R")
-      # 
-      # 
-      # #TEMP
-      # estimate_jeffreys_mcmc_RTMA(.yi = dpn$yi,
-      #                             .sei = sqrt(dpn$vi),
-      #                             .tcrit = dpn$tcrit,
-      #                             .Mu.start = Mhat.start,
-      #                             # can't handle start value of 0:
-      #                             .Tt.start = max(0.01, Shat.start),
-      #                             .stan.adapt_delta = p$stan.adapt_delta,
-      #                             .stan.maxtreedepth = p$stan.maxtreedepth)
-      
-      # this one has two labels in method arg because a single call to estimate_jeffreys_mcmc
+      # this one has multiple labels in method arg because a single call to estimate_jeffreys_mcmc
       #  returns 2 lines of output, one for posterior mean and one for posterior median
       # order of labels in method arg needs to match return structure of estimate_jeffreys_mcmc
       rep.res = run_method_safe(method.label = c("jeffreys-pmean",
@@ -597,7 +608,7 @@ if ( run.local == TRUE ) {
                Shat = meanNA(Shat),
                ShatMSE = meanNA( (Shat - tau)^2 ),
                ShatBias = meanNA(Shat - tau),
-               ShatEmpSE = sd( Shat, na.rm = TRUE ),
+               ShatSE = meanNA(ShatSE),
                #ShatMn = meanNA(Shat),
                
                ShatCover = meanNA(SLo <= tau & SHi >= tau),
@@ -632,6 +643,8 @@ if ( run.local == TRUE ) {
                                           function(x) round(x,2) ) )
   
   agg
+  
+  #BM: SHATSE IS VERY TINY. SO EVEN WALD IS UNLIKELY TO WORK HERE.
   
   
   # scenario diagnostics for scenario
