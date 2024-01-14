@@ -1442,6 +1442,11 @@ meanNA = function(x){
   mean(x, na.rm = TRUE)
 }
 
+# quick mean with NAs removed
+medianNA = function(x){
+  median(x, na.rm = TRUE)
+}
+
 
 # check CI coverage
 covers = function( truth, lo, hi ) {

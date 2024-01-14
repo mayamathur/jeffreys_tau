@@ -57,7 +57,7 @@ scen.params = tidyr::expand_grid(
           0.01^2, 0.05^2, 0.2^2, 0.5^2),
 
   # same with Mu
-  Mu = c(0, 0.5, 1.1, 2.3), # for same as Langan's log-ORs
+  Mu = c(0, 0.5, 1.1, 2.3), # same as Langan's log-ORs
   true.dist = c("norm", "expo"),
   p0 = c(NA, 0.05, 0.1, 0.5),  
   

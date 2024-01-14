@@ -96,7 +96,7 @@ agg = fread( "agg.csv")
 # check when the dataset was last modified to make sure we're working with correct version
 file.info("agg.csv")$mtime
 
-dim(agg)
+dim(agg) / nuni(agg$method)
 
 
 # drop any "NA" methods (i.e., ones that didn't get labeled in wrangle_agg_local)
@@ -107,6 +107,7 @@ table(agg$method.pretty)
 table(agg$sim.reps.actual)
 
 
+
 # initialize global variables that describe estimate and outcome names, etc.
 # this must be after calling wrangle_agg_local
 init_var_names()
@@ -115,32 +116,50 @@ init_var_names()
 # summarize scen params
 CreateTableOne( dat = agg,
                 vars = param.vars.manip2,
-                factorVars = param.vars.manip2 )
+                factorVars = param.vars.manip2,
+                strata = "Ytype" )
+
+
+# ~~ Check runtimes of sbatch files -------------------------
+
+# mean runtimes within scenarios - HOURS
+summary(agg$doParallelSeconds/60^2) 
+
+# 95th quantile of runtime within scens - HOURS
+summary(agg$doParallelSecondsQ95/60^2) 
 
 
 
 # ~~ Make data subsets -------------------------
 
-agg_save = agg  # in case you want to subset
-
-# realistically small metas only
-aggs = agg %>% filter( k.pub <= 20 )
+# agg_save = agg  # in case you want to subset
+# 
+# # realistically small metas only
+# aggs = agg %>% filter( k.pub <= 20 )
 
 
 
 # ~~ Convergence stats by method -------------------------
 
-summary(aggs$MhatEstConverge)
-summary(aggs$MhatCIFail)
+summary(agg$MhatEstFail)
+summary(agg$MhatCIFail)
 
+summary(agg$ShatEstFail)
+summary( agg$ShatCIFail[ agg$method != "robu" ] ) # robu doesn't even try to provide inference
 
 # convergence rates
-t = aggs %>% group_by(method) %>%
+t = agg %>% group_by(method) %>%
   summarise( mean(1-MhatEstFail), 
              min(1-MhatEstFail),
              
              mean(1-MhatCIFail),
-             min(1-MhatCIFail) )
+             min(1-MhatCIFail),
+             
+             mean(1-ShatEstFail), 
+             min(1-ShatEstFail),
+             
+             mean(1-ShatCIFail),
+             min(1-ShatCIFail) )
 
 View(t)
 
@@ -161,7 +180,7 @@ length(ind)/nrow(agg)  # percent of scens
 # summarize scen params for these ones
 CreateTableOne( dat = agg[ind,],
                 vars = param.vars.manip2,
-                factorVars = param.vars.manip2 )
+                factorVars = param.vars.manip2)
 
 table(agg[ind,"N.pretty"] )
 # not surprisingly, the bad scens are exclusively binary Y, and almost exclusively ones with N=40
@@ -196,7 +215,6 @@ CreateTableOne( dat = agg,
 namesWith(pattern = "sancheck_", agg)
 
 summary( abs( agg$sancheck_mean_pY0 - agg$p0 ) )
-
 summary( abs( agg$sancheck_mean_nY0 - agg$sancheck_mean_nY0_theory) )
 summary( abs( agg$sancheck_mean_nY1 - agg$sancheck_mean_nY1_theory) )
 
@@ -296,55 +314,69 @@ t2 = agg %>% filter(scen.name == 30)
 
 # ******** WINNER TABLES -------------------------
 
-# create the base dataset from which to filter all winner tables
-#agg2 = agg %>% filter(true.dist == "norm")
-#agg2=agg
-#agg2=agg %>% filter(t2a > 0.0001)
-#agg2 = agg %>% filter(k.pub == 10 & Ytype == "bin-OR" & p0 > 0.05)
-#agg2 = agg %>% filter(k.pub == 10 & Ytype == "cont-SMD")
 
-# agg2 = agg %>% filter(scen_important == TRUE)  # ***in all important scens, jeffreys does badly for Shat because of small t2 values
-agg2 = agg %>% filter(scen_important == TRUE & t2a > 0.0001)  # ***but with this restriction, jeffreys improves
-# agg2 = agg %>% filter(scen_important == TRUE & t2a > 0.0025)  # ***but with this restriction, jeffreys improves
-# 
-# agg2 = agg %>% filter(scen_important == TRUE & t2a > 0.0001 & k.pub < 100)  # ***interesting
+.Ytype = "cont-SMD"
+#.Ytype = "bin-OR"
+
+# create the base dataset from which to filter all winner tables
+agg2 = agg %>% filter( scen_important == TRUE & Ytype == .Ytype )
+#agg2 = agg %>% filter( scen_important == TRUE & Ytype == .Ytype & t2a > 0.0001 )
+#agg2 = agg %>% filter( Ytype == .Ytype & t2a > 0.0001 )
+
 
 dim(agg2)
 # summarize scen params
 CreateTableOne( dat = agg2[ !duplicated(agg2$scen.name) ],
                 vars = param.vars.manip2,
-                factorVars = param.vars.manip2,
-                strata = "Ytype")
+                factorVars = param.vars.manip2 )
 
 
-
+# overall
 make_both_winner_tables(.agg = agg2)
+# what's going on with Mhat coverage here?
+t = agg2 %>% group_by(method, Mu) %>%
+  summarise( medianNA(MhatCover),
+             medianNA(MhatWidth),
+             medianNA(Mhat),
+             meanNA(MLo), 
+             meanNA(MHi) ) %>%
+  mutate_if(is.numeric, function(x) round(x,2))
 
-#*ours wins in these scens
-# bm: look at which scens have run
-# but mostly shows k = 2 and k = 100 only
-make_both_winner_tables(.agg = agg2 %>% filter(Ytype == "cont-SMD") )
-# without the unrealistic sei distributions
-make_both_winner_tables(.agg = agg2 %>% filter(Ytype == "cont-SMD" &
-                                                 N.pretty %in% c("N ~ U(2000, 3000)", "N ~ U(40, 400)") ) )
+View(t)
+
+# power
+# wow, huge difference in power
+make_both_winner_tables(.agg = agg2 %>% filter(Mu > 0),
+                        .yNames = "MhatTestReject" )
+# false-positive rate
+make_both_winner_tables(.agg = agg2 %>% filter(Mu == 0),
+                        .yNames = "MhatTestReject" )
+
 
 # small metas
 make_both_winner_tables(.agg = agg2 %>% filter(k.pub <= 20))
 make_both_winner_tables(.agg = agg2 %>% filter(k.pub == 2))
+make_both_winner_tables(.agg = agg2 %>% filter(k.pub == 100))
 
 # t2a: definitely matters
-make_both_winner_tables(.agg = agg2 %>% filter(t2a == 0.0001))  # very bad for jeffreys
+make_both_winner_tables(.agg = agg2 %>% filter(t2a == 0.0001))  # very bad for jeffreys (esp. Shat Cover)
+make_both_winner_tables(.agg = agg2 %>% filter(t2a > 0.0001))  # good for jeffreys
 make_both_winner_tables(.agg = agg2 %>% filter(t2a == 0.01))
 make_both_winner_tables(.agg = agg2 %>% filter(t2a == 0.04)) # good for Jeffreys
 
 
-# ** stratified by distribution
+# stratified by distribution
+# makes little difference for all methods
 make_both_winner_tables(.agg = agg2 %>% filter(true.dist == "norm"))
 make_both_winner_tables(.agg = agg2 %>% filter(true.dist == "expo"))
 
 # effect of having equal sample sizes vs. uniform
+make_both_winner_tables(.agg = agg2 %>% filter(N.pretty == "N = 40"))
 make_both_winner_tables(.agg = agg2 %>% filter(N.pretty == "N = 400"))
 make_both_winner_tables(.agg = agg2 %>% filter( N.pretty == "N ~ U(40, 400)" ))
+make_both_winner_tables(.agg = agg2 %>% filter( N.pretty == "N ~ U(2000, 3000)" ))
+
+
 
 
 # 2024-01-13 - PULL OUT A PROBLEM SCENARIO -------------------------------------------------

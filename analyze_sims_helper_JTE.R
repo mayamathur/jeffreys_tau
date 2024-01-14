@@ -387,7 +387,7 @@ make_winner_table_col = function(.agg,
   }
   
   
-  higherBetterYNames = c("MhatEstConverge", "ShatEstConverge")
+  higherBetterYNames = c("MhatEstConverge", "ShatEstConverge", "MhatTestReject")
   
   lowerBetterYNames = c("MhatAbsBias", "MhatRMSE", "MhatWidth",
                         "ShatAbsBias", "ShatRMSE", "ShatWidth")
