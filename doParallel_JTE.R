@@ -661,8 +661,6 @@ if ( run.local == TRUE ) {
   
   agg
   
-  #BM: SHATSE IS VERY TINY. SO EVEN WALD IS UNLIKELY TO WORK HERE.
-  
   
   # scenario diagnostics for scenario
   keepers = namesWith("sancheck_", rs)
