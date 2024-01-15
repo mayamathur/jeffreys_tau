@@ -1,26 +1,7 @@
 
-# IMPORTANT NOTES -----------------------------
+# PRELIMINARIES -----------------------------
 
-# Important things to remember: 
-#
-# - The returned Vhat is an estimate of T2 + t2w, *not* T2 itself
-
-# Debugging help:
-# 
-# - The jobs may fail before fitting modAll with no apparent errors if 
-#   k is too large for rma.mv. In that case, try setting p$k < 500 for modAll
-#  and modPub small to prevent those models from being fit. 
-
-
-# for interactive Sherlock:
-# path = "/home/groups/manishad/JTE"
-# setwd(path)
-# source("doParallel_JTE.R")
-
-
-# because Sherlock 2.0 restores previous workspace
 rm( list = ls() )
-
 
 # are we running locally?
 run.local = FALSE
