@@ -1700,7 +1700,7 @@ sbatch_not_run = function(.results.singles.path,
   sbatch.nums = as.numeric( unlist( lapply( strsplit( keepers, split = "_"), FUN = function(x) x[5] ) ) )
   
   # check for missed jobs before the max one
-  if ( is.na(.max.sbatch.num) ) .max.sbatch.num = max(sbatch.nums)
+  if ( is.na(.max.sbatch.num) ) .max.sbatch.num = max(sbatch.nums, na.rm = TRUE)
   all.nums = 1 : .max.sbatch.num
   missed.nums = all.nums[ !all.nums %in% sbatch.nums ]
   

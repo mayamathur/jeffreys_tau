@@ -185,7 +185,7 @@ n.files
 # 2024-01-10: 3120
 path = "/home/groups/manishad/JTE"
 setwd( paste(path, "/sbatch_files", sep="") )
-for (i in 1001:2000) {
+for (i in 3001:3120) {
   system( paste("sbatch -p qsu,owners,normal /home/groups/manishad/JTE/sbatch_files/", i, ".sbatch", sep="") )
 }
 
@@ -201,7 +201,7 @@ source("helper_JTE.R")
 missed.nums = sbatch_not_run( "/home/groups/manishad/JTE/long_results",
                               "/home/groups/manishad/JTE/long_results",
                               .name.prefix = "long_results",
-                              .max.sbatch.num = 2000 )
+                              .max.sbatch.num = 3000 )
 
 setwd( paste(path, "/sbatch_files", sep="") )
 for (i in missed.nums[1:1000]) {
