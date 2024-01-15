@@ -38,7 +38,7 @@ lapply( allPackages,
 # - I think a similar thing will be true with the Rhats if you omit jeffreys-mcmc?
 
 
-### 2024-01-10 ###
+### 2024-01-15 ###
 scen.params = tidyr::expand_grid(
   # full list (save):
   rep.methods = "REML ; DL ; DL2 ; PM ; robu ; jeffreys",
@@ -56,8 +56,11 @@ scen.params = tidyr::expand_grid(
   p0 = c(NA, 0.05, 0.1, 0.5),  
   
   Ytype = c("cont-SMD", "bin-OR"),
-  minN = c(40, 400, 2000),
-  muN = c(40, 220, 400, 3000),
+  
+  N.expr = c( "40",
+              "round( runif(n=1, min=40, max = 400) )",
+              "400",
+              "round( runif(n=1, min=2000, max = 4000) )" ),
   
   # Stan control args
   stan.maxtreedepth = 25,
@@ -84,18 +87,6 @@ remove[ is.na(scen.params$p0) & (scen.params$Ytype == "bin-OR") ] = TRUE
 scen.params = scen.params[!remove,]
 # sanity check:
 table(scen.params$p0, scen.params$Ytype, useNA = "ifany")
-
-
-# ... of minN and muN
-# Lagnan does have one other version, which is not uniform
-keep = rep(FALSE, nrow(scen.params))
-keep[ scen.params$minN == 40 & scen.params$muN %in% c(40, 220) ] = TRUE
-keep[ scen.params$minN == 400 & scen.params$muN %in% c(400) ] = TRUE
-keep[ scen.params$minN == 2000 & scen.params$muN %in% c(3000) ] = TRUE
-scen.params = scen.params[keep,]
-table(scen.params$minN, scen.params$muN)
-
-
 
 
 
@@ -176,10 +167,10 @@ n.files
 #     sbatch -p qsu,owners,normal /home/groups/manishad/JTE/sbatch_files/1.sbatch
 
 
-# 2024-01-10: 3120
+# 2024-01-15: 2496
 path = "/home/groups/manishad/JTE"
 setwd( paste(path, "/sbatch_files", sep="") )
-for (i in 3001:3120) {
+for (i in 1:1000) {
   system( paste("sbatch -p qsu,owners,normal /home/groups/manishad/JTE/sbatch_files/", i, ".sbatch", sep="") )
 }
 
