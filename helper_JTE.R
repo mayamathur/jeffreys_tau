@@ -779,108 +779,41 @@ report_meta = function(.mod,
 
 
 
-# HELPERS FOR ABOVE ESTIMATION METHODS ----------------------------
+# FNS FOR FUTURE R PACKAGE ----------------------------
 
+# structured as in phacking pkg
 
-
-# Fisher info when taking derivatives wrt mu and tau
-# This fn ONLY handles nonaffirm results, but could easily be adapted to handle
-#  affirms by changing tcrit.
-# important: note that in this fn, critical value is on t/z scale, NOT raw scale
-#  vs. in E_fisher_TNE, .b is on raw scale
-E_fisher_RTMA = function( .sei, .Mu, .Tt, .tcrit = qnorm(0.975) ) {
+get_lprior <- function(mu, tau, sei) {
+  e_fisher_i <- function(se) {
+    si <- sqrt(tau ^ 2 + se ^ 2)
+    
+    kmm <- -si ^ (-2)
+    kms <- 0
+    kss <- -2 * tau ^ 2 * si ^ (-4)
+    
+    matrix(c(-kmm, -kms, -kms, -kss), nrow = 2, ncol = 2)
+  }
   
-  Efish.list = lapply( X = as.list(.sei),
-                       FUN = function(.s) {
-                         
-                         # for this observation
-                         sei = .s
-                         mu = .Mu
-                         tau = .Tt
-                         tcrit = .tcrit  # currently assumed to be a scalar
-                         if ( length(tcrit) > 1 ) tcrit = tcrit[1] #OBVIOUSLY NEEDS TO BE GENERALIZED
-                         
-                         fishinfo = matrix( NA, nrow = 2, ncol = 2 )
-                         
-                         # from body of R's get_D11_num:
-                         e2 = sei^2 + tau^2
-                         e3 = sqrt(e2)
-                         e5 = sei * tcrit - mu
-                         e6 = e5/e3
-                         e7 = dnorm(e6, 0, 1)
-                         # Stan version:
-                         # e7 = exp( normal_lpdf(e6 | 0, 1) )
-                         e8 = pnorm(e6)
-                         #e8 = exp( normal_lcdf(e6 | 0, 1 ) )
-                         kmm = -(1/e2 - (e5/(e2 * e8) + e7 * e3/(e8 * e3)^2) * e7/e3)
-                         
-                         # from body of R's get_D12_num:
-                         e2 = sei^2 + tau^2
-                         e3 = sqrt(e2)
-                         e5 = sei * tcrit - mu
-                         # e6 is scaled critical value:
-                         e6 = e5/e3
-                         e7 = pnorm(e6)
-                         # e7 = exp( normal_lcdf(e6 | 0, 1 ) )
-                         e8 = e2^2
-                         e9 = dnorm(e6, 0, 1)
-                         #e9 = exp( normal_lpdf(e6 | 0, 1) )
-                         
-                         # my own expectation of .yi - .mu:
-                         expectation1 = -sqrt(sei^2 + tau^2) * e9/e7
-                         kms = -(tau * (((e7/e3 - e5 * e9/e2)/(e7 * e3)^2 - e5^2/(e8 *
-                                                                                    e7 * e3)) * e9 + 2 * ((expectation1)/e8)))
-                         
-                         
-                         # from body of R's get_D22_num:
-                         e1 = tau^2
-                         e3 = sei^2 + e1
-                         e5 = sei * tcrit - mu
-                         e6 = sqrt(e3)
-                         # e7 is scaled crit value:
-                         e7 = e5/e6
-                         e8 = pnorm(e7)
-                         # e8 = exp( normal_lcdf(e7 | 0, 1 ) )
-                         e9 = dnorm(e7, 0, 1)
-                         # e9 = exp( normal_lpdf(e7 | 0, 1 ) )
-                         e10 = e5 * e9
-                         e11 = e8 * e6
-                         e13 = e10/e11
-                         # *replace this one with its expectation:
-                         # e15 = (.yi - .mu)^2/e3
-                         # expectation of (.yi - .mu)^2:
-                         expectation2 = (sei^2 + tau^2)*(1 - e7 * e9/e8)
-                         e15 = (expectation2)/e3
-                         
-                         kss = (e13 + e15 - (e1 * (e5 * ((e8/e6 - e10/e3)/e11^2 -
-                                                           e5^2/(e3^2 * e8 * e6)) * e9 + 2 * ((e13 + 2 * e15 -
-                                                                                                 1)/e3)) + 1))/e3
-                         
-                         
-                         fishinfo[1,1] = -kmm
-                         fishinfo[1,2] = -kms
-                         fishinfo[2,1] = -kms
-                         fishinfo[2,2] = -kss
-                         
-                         return(fishinfo)
-                         
-                         
-                       })
-  
-  # add all the matrices entrywise
-  # https://stackoverflow.com/questions/11641701/sum-a-list-of-matrices
-  Efish.all = Reduce('+', Efish.list) 
-  
-  # cat("\nFirst observation Efish:")
-  # print(Efish.list[[1]])
-  
-  return(Efish.all)
+  e_fisher <- purrr::map(sei, e_fisher_i) |> purrr::reduce(`+`)
+  log(sqrt(det(e_fisher)))
 }
 
+get_nll <- function(mu, tau, yi, sei) {
+  si <- sqrt(tau ^ 2 + sei ^ 2)
+  sum(log(si * sqrt(2 * pi)) + 0.5 * si ^ (-2) * (yi - mu) ^ 2)
+}
 
-lprior = function(.sei, .Mu, .Tt, .tcrit) {
-  Efish = E_fisher_RTMA( .sei = .sei, .Mu = .Mu, .Tt = .Tt, .tcrit = .tcrit )
-  log( sqrt( det(Efish) ) )
+nlpost <- function(mu, tau, yi, sei) {
+  joint_nll <- get_nll(mu, tau, yi, sei) # negative log-likelihood
+  joint_lprior <- get_lprior(mu, tau, sei) # log-prior
+  joint_nll - joint_lprior # log-posterior
+}
+
+mle_params <- function(mu_start, tau_start, yi, sei) {
+  nlpost_fun <- function(mu, tau) nlpost(mu, tau, yi, sei)
+  stats4::mle(minuslogl = nlpost_fun,
+              start = list(mu = mu_start, tau = tau_start),
+              method = "Nelder-Mead")
 }
 
 
