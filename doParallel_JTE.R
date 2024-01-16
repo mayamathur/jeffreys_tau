@@ -187,20 +187,20 @@ if ( run.local == TRUE ) {
   #   rep.methods = "REML ; DL ; DL2 ; jeffreys"
   # )
   
-  # same, but change dist of SEs
-  # definitely improves jeffreys compared to above, but lower limit is still 0.01, so bad coverage (28%)
-  scen.params = data.frame(
-    k.pub = 100,
-    t2a = 0.0001,
-    Mu = 0,
-    true.dist = "norm",
-    p0 = 0.05,
-    Ytype = "bin-OR",
-    N.expr = "round( runif(n=1, min=40, max = 4000) )",
-    stan.adapt_delta = 0.995,
-   stan.maxtreedepth = 25,
-    rep.methods = "REML ; DL ; DL2 ; jeffreys"
-  )
+  # # same, but change dist of SEs
+  # # definitely improves jeffreys compared to above, but lower limit is still 0.01, so bad coverage (28%)
+  # scen.params = data.frame(
+  #   k.pub = 100,
+  #   t2a = 0.0001,
+  #   Mu = 0,
+  #   true.dist = "norm",
+  #   p0 = 0.05,
+  #   Ytype = "bin-OR",
+  #   N.expr = "round( runif(n=1, min=40, max = 4000) )",
+  #   stan.adapt_delta = 0.995,
+  #  stan.maxtreedepth = 25,
+  #   rep.methods = "REML ; DL ; DL2 ; jeffreys"
+  # )
   
   # # same, but slightly larger t2a
   # scen.params = data.frame(
@@ -246,58 +246,67 @@ if ( run.local == TRUE ) {
   #   run.optimx = FALSE )
   
   # ### Full set ###
-  # scen.params = tidyr::expand_grid(
-  #   # full list (save):
-  #   rep.methods = "REML ; DL ; DL2 ; PM ; robu ; jeffreys",
-  #   
-  #   # *If you reorder the args, need to adjust wrangle_agg_local
-  #   ### args shared between sim environments
-  #   k.pub = c(100, 10,
-  #             2, 3, 5, 20),  # intentionally out of order so that jobs with most interesting choices with complete first
-  #   
-  #   t2a = c(0.1^2,
-  #           0.01^2, 0.05^2, 0.2^2, 0.5^2),
-  #   
-  #   # same with Mu
-  #   Mu = c(0, 0.5, 1.1, 2.3), # for same as Langan's log-ORs
-  #   true.dist = c("norm", "expo"),
-  #   p0 = c(NA, 0.01, 0.05, 0.5),  # as in Langan
-  #   
-  #   Ytype = c("bin-OR", "cont-SMD"),
-  #   minN = c(40, 400, 2000),
-  #   muN = c(40, 220, 400, 3000),
-  #   
-  #   # Stan control args
-  #   stan.maxtreedepth = 25,
-  #   stan.adapt_delta = 0.995,
-  #   
-  #   get.CIs = TRUE,
-  #   run.optimx = FALSE )
-  # 
-  # #### Remove unwanted combinations
-  # # ... of Mu and Ytype
-  # remove = (scen.params$Mu != 0.5) & (scen.params$Ytype == "cont-SMD")
-  # scen.params = scen.params[!remove,]
-  # # sanity check:
-  # table(scen.params$Mu, scen.params$Ytype)
-  # 
-  # # ... of Ytype and p0
-  # remove = rep(FALSE, nrow(scen.params))
-  # remove[ !is.na(scen.params$p0) & (scen.params$Ytype == "cont-SMD") ] = TRUE
-  # remove[ is.na(scen.params$p0) & (scen.params$Ytype == "bin-OR") ] = TRUE
-  # scen.params = scen.params[!remove,]
-  # # sanity check:
-  # table(scen.params$p0, scen.params$Ytype, useNA = "ifany")
-  # 
-  # 
-  # # ... of minN and muN
-  # # Lagnan does have one other version, which is not uniform
-  # keep = rep(FALSE, nrow(scen.params))
-  # keep[ scen.params$minN == 40 & scen.params$muN %in% c(40, 220) ] = TRUE
-  # keep[ scen.params$minN == 400 & scen.params$muN %in% c(400) ] = TRUE
-  # keep[ scen.params$minN == 2000 & scen.params$muN %in% c(3000) ] = TRUE
-  # scen.params = scen.params[keep,]
-  # table(scen.params$minN, scen.params$muN)
+  ### 2024-01-15 ###
+  scen.params = tidyr::expand_grid(
+    # full list (save):
+    rep.methods = "REML ; DL ; DL2 ; PM ; robu ; jeffreys",
+    
+    # *If you reorder the args, need to adjust wrangle_agg_local
+    ### args shared between sim environments
+    k.pub = c(10,
+              2, 3, 5, 20, 100),  # intentionally out of order so that jobs with most interesting choices with complete first
+    
+    t2a = c(0.1^2, 0.05^2, 0.2^2, 0.5^2),
+    
+    # same with Mu
+    Mu = c(0, 0.5, 1.1, 2.3), # same as Langan's log-ORs
+    true.dist = c("norm", "expo"),
+    p0 = c(NA, 0.05, 0.1, 0.5),  
+    
+    Ytype = c("cont-SMD", "bin-OR"),
+    
+    N.expr = c( "40",
+                "round( runif(n=1, min=40, max = 400) )",
+                "400",
+                "round( runif(n=1, min=2000, max = 4000) )" ),
+    
+    # Stan control args
+    stan.maxtreedepth = 25,
+    stan.adapt_delta = 0.995,
+    
+    get.CIs = TRUE,
+    run.optimx = FALSE )
+  
+  table(scen.params$p0, useNA = "ifany")
+  
+  
+  #### Remove unwanted combinations
+  
+  # ... of Mu and Ytype
+  remove = (scen.params$Mu != 0.5) & (scen.params$Ytype == "cont-SMD")
+  scen.params = scen.params[!remove,]
+  # sanity check:
+  table(scen.params$Mu, scen.params$Ytype)
+  
+  # ... of Ytype and p0
+  remove = rep(FALSE, nrow(scen.params))
+  remove[ !is.na(scen.params$p0) & (scen.params$Ytype == "cont-SMD") ] = TRUE
+  remove[ is.na(scen.params$p0) & (scen.params$Ytype == "bin-OR") ] = TRUE
+  scen.params = scen.params[!remove,]
+  # sanity check:
+  table(scen.params$p0, scen.params$Ytype, useNA = "ifany")
+  
+  
+  
+  # add scen numbers
+  start.at = 1
+  scen.params = scen.params %>% add_column( scen = start.at : ( nrow(scen.params) + (start.at - 1) ),
+                                            .before = 1 )
+  
+  
+  ( n.scen = nrow(scen.params) )
+  # look at it
+  head( as.data.frame(scen.params) )
   ### end of full sim params
   
   scen.params$scen = 1:nrow(scen.params)

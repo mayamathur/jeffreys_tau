@@ -170,7 +170,7 @@ n.files
 # 2024-01-15: 2496
 path = "/home/groups/manishad/JTE"
 setwd( paste(path, "/sbatch_files", sep="") )
-for (i in 1:1000) {
+for (i in 1001:2000) {
   system( paste("sbatch -p qsu,owners,normal /home/groups/manishad/JTE/sbatch_files/", i, ".sbatch", sep="") )
 }
 
@@ -192,3 +192,6 @@ setwd( paste(path, "/sbatch_files", sep="") )
 for (i in missed.nums[1:1000]) {
   system( paste("sbatch -p qsu,owners,normal /home/groups/manishad/JTE/sbatch_files/", i, ".sbatch", sep="") )
 }
+
+
+

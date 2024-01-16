@@ -74,6 +74,7 @@ make_agg_data = function( .s,
     "MhatRhatGt1.05",
     "MhatRhatGt1.10",
     "MhatRhatMax",
+    "OptimConverged",
     
     "ShatRhatGt1.01",
     "ShatRhatGt1.05",
@@ -94,8 +95,7 @@ make_agg_data = function( .s,
 
                  "p0",
                  "Ytype",
-                 "minN",
-                 "muN",
+                 "N.expr",
 
                  "stan.adapt_delta",
                  "stan.maxtreedepth")
