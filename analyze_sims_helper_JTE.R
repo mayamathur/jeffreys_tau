@@ -357,9 +357,11 @@ make_winner_table_col = function(.agg,
                                              "EB",
                                              "robu", 
                                           
-                                             "jeffreys-pmean",
-                                             "jeffreys-pmed",
-                                             "jeffreys-max-lp-iterate"),
+                                             # "jeffreys-pmean",
+                                             # "jeffreys-pmed",
+                                             # "jeffreys-max-lp-iterate",
+                                             "jeffreys-pmode"
+                                             ),
                                  summarise.fun.name = "median",
                                  digits = 2) {
   
@@ -544,20 +546,21 @@ make_winner_table = function( .agg,
 # makes both winner tables (medians and worst 10th pctiles)
 make_both_winner_tables = function( .agg,
                                     .yNames = c("MhatAbsBias", "MhatRMSE", "MhatCover", "MhatWidth",
-                                                "ShatAbsBias", "ShatRMSE", "ShatCover", "ShatWidth") ){
+                                                "ShatAbsBias", "ShatRMSE", "ShatCover", "ShatWidth"),
+                                    summarise.fun.name = "mean",  # "mean" or "median"
+                                    show.worst10th = FALSE
+                                    ){
   
   make_winner_table( .agg = .agg,
                      .yNames = .yNames,
-                     summarise.fun.name = "median")
-  
-  # make_winner_table( .agg = .agg,
-  #                    .yNames = .yNames,
-  #                    summarise.fun.name = "mean")
-  
-  make_winner_table( .agg = .agg,
-                     .yNames = .yNames,
-                     summarise.fun.name = "worst10th")
-  
+                     summarise.fun.name = summarise.fun.name)
+
+  if ( show.worst10th == TRUE ) {
+    make_winner_table( .agg = .agg,
+                       .yNames = .yNames,
+                       summarise.fun.name = "worst10th")
+  }
+
 }
 
 
@@ -1197,9 +1200,11 @@ medNA_pctiles = function(x){
 
 
 
-names_with = function(.dat, .pattern) {
-  names(.dat)[ grepl(pattern = .pattern, x = names(.dat) ) ]
+# get names of dataframe containing a string
+namesWith = function(pattern, dat){
+  names(dat)[ grepl(pattern = pattern, x = names(dat) ) ]
 }
+
 
 
 # one or both dirs can be NA

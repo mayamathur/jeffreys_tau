@@ -182,7 +182,7 @@ CreateTableOne( dat = agg[ind,],
                 vars = param.vars.manip2,
                 factorVars = param.vars.manip2)
 
-table(agg[ind,"N.pretty"] )
+table(agg[ind,"N.expr"] )
 # not surprisingly, the bad scens are exclusively binary Y, and almost exclusively ones with N=40
 #  though spread across a variety of p0 values
 
@@ -197,7 +197,7 @@ CreateTableOne( dat = agg[ind,],
                 vars = param.vars.manip2,
                 factorVars = param.vars.manip2 )
 
-table(agg[ind,"N.pretty"] )
+table(agg[ind,"N.expr"] )
 # not surprisingly, the bad scens are exclusively binary Y, and almost exclusively ones with N=40
 #  though spread across a variety of p0 values
 
@@ -217,32 +217,6 @@ namesWith(pattern = "sancheck_", agg)
 summary( abs( agg$sancheck_mean_pY0 - agg$p0 ) )
 summary( abs( agg$sancheck_mean_nY0 - agg$sancheck_mean_nY0_theory) )
 summary( abs( agg$sancheck_mean_nY1 - agg$sancheck_mean_nY1_theory) )
-
-
-# PLOTS -------------------------------------------------
-
-
-#bm: edit this fn to aggregate over vars not used in facetting
-
-.true.dist = "norm"
-.true.sei.expr = "0.02 + rexp(n = 1, rate = 3)"
-.Mu = 0.5
-.estimate = "Shat"
-.local.results.dir = results.dir
-
-
-sim_plot_multiple_outcomes(.agg = agg,
-                           
-                           .true.dist = .true.dist,
-                           .true.sei.expr = .true.sei.expr,
-                           .Mu = .Mu,
-                           .estimate = .estimate, 
-                           
-                           .y.breaks = NULL,
-                           .ggtitle = "",
-                           .local.results.dir = .local.results.dir)
-
-
 
 
 
@@ -294,34 +268,14 @@ agg = left_join(x = agg,
                 by = "scen.name")
 
 
-# experiment with how to auto-choose the winner
-t2 = agg %>% filter(scen.name == 30) 
-
-( x = make_winner_table_col(.agg = agg %>% filter(scen.name == 29),
-                            yName = "MhatCover",
-                            methods = unique(agg$method) ) )
-
-( x = make_winner_table(.agg = agg %>% filter(scen.name == 29),
-                        summarise.fun.name = "median") )
-
-
-
-#bm: in t, have a variable for which subset of the 6 variables were important
-# e.g., MhatAbsBias and ShatCover
-# then 
-# does this make sense??
-
-
 # ******** WINNER TABLES -------------------------
-
 
 .Ytype = "cont-SMD"
 #.Ytype = "bin-OR"
 
 # create the base dataset from which to filter all winner tables
 agg2 = agg %>% filter( scen_important == TRUE & Ytype == .Ytype )
-#agg2 = agg %>% filter( scen_important == TRUE & Ytype == .Ytype & t2a > 0.0001 )
-#agg2 = agg %>% filter( Ytype == .Ytype & t2a > 0.0001 )
+#agg2 = agg %>% filter( Ytype == .Ytype )
 
 
 dim(agg2)
@@ -331,20 +285,59 @@ CreateTableOne( dat = agg2[ !duplicated(agg2$scen.name) ],
                 factorVars = param.vars.manip2 )
 
 
-# overall
+# ~ Overall  -------------------------------------------------
+
 make_both_winner_tables(.agg = agg2)
-# what's going on with Mhat coverage here?
-t = agg2 %>% group_by(method, Mu) %>%
-  summarise( medianNA(MhatCover),
-             medianNA(MhatWidth),
-             medianNA(Mhat),
-             meanNA(MLo), 
-             meanNA(MHi) ) %>%
-  mutate_if(is.numeric, function(x) round(x,2))
+
+
+# investigate the surprising finding that Jeffreys slightly over-covers, yet its CI is much narrower
+# wide form wrt methods:
+w = pivot_wider(agg, names_from = method, values_from = MhatCover)
+
+
+wide_agg <- pivot_wider(agg,
+                        names_from = method,
+                        values_from = c(MhatCover, MhatWidth, MhatBias, MhatAbsBias,
+                                        MLo, MHi),
+                        names_sep = "_",
+                        id_cols = all_of( c( "scen.name", param.vars.manip2 ) ) )
+
+expect_equal( nrow(wide_agg), nuni(agg$scen.name) )
+# View( wide_agg %>% select(`MhatCover_jeffreys-pmode`, `MhatCover_REML`) )
+
+
+# scens where Jeffreys over-covered but was narrower than REML:
+scens = wide_agg$scen.name[ wide_agg$`MhatCover_jeffreys-pmode` > 0.95 & 
+                      wide_agg$`MhatCover_REML` < 0.95 & 
+                      wide_agg$`MhatWidth_jeffreys-pmode` < wide_agg$`MhatWidth_REML` ]
+
+t = wide_agg %>% select( all_of( c( "scen.name", param.vars.manip2 ) ),
+                     `MhatCover_jeffreys-pmode`, 
+                     `MhatCover_REML`,
+                     
+                     `MhatWidth_jeffreys-pmode`, 
+                     `MhatWidth_REML`,
+                     
+                     `MhatBias_jeffreys-pmode`, 
+                     `MhatBias_REML`,
+                     
+                     `MhatAbsBias_jeffreys-pmode`, 
+                     `MhatAbsBias_REML`,
+                     
+                     `MLo_jeffreys-pmode`, 
+                     `MLo_REML`,
+                     
+                     `MHi_jeffreys-pmode`, 
+                     `MHi_REML`) %>%
+  filter(scen.name %in% scens) %>%
+  #filter(scen.name == 1072)
 
 View(t)
 
-# power
+# scen 1072 is striking
+
+
+# ~ Power  -------------------------------------------------
 # wow, huge difference in power
 make_both_winner_tables(.agg = agg2 %>% filter(Mu > 0),
                         .yNames = "MhatTestReject" )
@@ -353,24 +346,23 @@ make_both_winner_tables(.agg = agg2 %>% filter(Mu == 0),
                         .yNames = "MhatTestReject" )
 
 
-# small metas
+# ~ Small metas  -------------------------------------------------
 make_both_winner_tables(.agg = agg2 %>% filter(k.pub <= 20))
 make_both_winner_tables(.agg = agg2 %>% filter(k.pub == 2))
 make_both_winner_tables(.agg = agg2 %>% filter(k.pub == 100))
 
-# t2a: definitely matters
-make_both_winner_tables(.agg = agg2 %>% filter(t2a == 0.0001))  # very bad for jeffreys (esp. Shat Cover)
-make_both_winner_tables(.agg = agg2 %>% filter(t2a > 0.0001))  # good for jeffreys
+# ~ Tau^2  -------------------------------------------------
+make_both_winner_tables(.agg = agg2 %>% filter(t2a == 0.0025))
 make_both_winner_tables(.agg = agg2 %>% filter(t2a == 0.01))
 make_both_winner_tables(.agg = agg2 %>% filter(t2a == 0.04)) # good for Jeffreys
 
 
-# stratified by distribution
+# ~ True effect distribution  -------------------------------------------------
 # makes little difference for all methods
 make_both_winner_tables(.agg = agg2 %>% filter(true.dist == "norm"))
 make_both_winner_tables(.agg = agg2 %>% filter(true.dist == "expo"))
 
-# effect of having equal sample sizes vs. uniform
+# ~ N.expr  -------------------------------------------------
 make_both_winner_tables(.agg = agg2 %>% filter(N.pretty == "N = 40"))
 make_both_winner_tables(.agg = agg2 %>% filter(N.pretty == "N = 400"))
 make_both_winner_tables(.agg = agg2 %>% filter( N.pretty == "N ~ U(40, 400)" ))
@@ -392,6 +384,28 @@ library(constructive)
 construct( as.data.frame(x3) )
 
 
+# PLOTS -------------------------------------------------
+
+
+#bm: edit this fn to aggregate over vars not used in facetting
+
+.true.dist = "norm"
+.true.sei.expr = "0.02 + rexp(n = 1, rate = 3)"
+.Mu = 0.5
+.estimate = "Shat"
+.local.results.dir = results.dir
+
+
+sim_plot_multiple_outcomes(.agg = agg,
+                           
+                           .true.dist = .true.dist,
+                           .true.sei.expr = .true.sei.expr,
+                           .Mu = .Mu,
+                           .estimate = .estimate, 
+                           
+                           .y.breaks = NULL,
+                           .ggtitle = "",
+                           .local.results.dir = .local.results.dir)
 
 # SANITY CHECK ON WINNER TABLES: QUICK AND SIMPLE SUBSET ANALYSIS -------------------------------------------------
 

@@ -148,7 +148,7 @@ setwd(data.dir)
 aggo = fread("aggo.csv")
 # check when the dataset was last modified to make sure we're working with correct version
 file.info("aggo.csv")$mtime
-dim(aggo) / nuni(aggo$method)  # number of scens that are done
+nrow(aggo) / nuni(aggo$method)  # number of scens that are done
 
 # add fancy variables for plotting, etc.
 agg = wrangle_agg_local(aggo)
