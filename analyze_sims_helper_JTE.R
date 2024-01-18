@@ -568,6 +568,159 @@ make_both_winner_tables = function( .agg,
 
 # PLOTTING FNS -------------------------------------------------------------
 
+
+prior_plot_one_k = function(.k,
+
+                            N.expr = c( "40",
+                                        "400",
+                                        "round( runif(n=1, min=40, max = 400) )",
+                                        "round( runif(n=1, min=2000, max = 4000) )" ),
+                            
+                            # values that map onto each value of N.expr
+                            N.pretty = c("N = 40",
+                                         "N = 400",
+                                         "N ~ U(40, 400)",
+                                         "N ~ U(2000, 3000)") 
+                        
+                              
+                              ) {
+  
+  # test only
+  if (FALSE) {
+    .k = 10
+    N.expr = c( "40",
+                "400",
+                "round( runif(n=1, min=40, max = 400) )",
+                "round( runif(n=1, min=2000, max = 4000) )" )
+    
+    N.pretty = c("N = 40",
+                 "N = 400",
+                 "N ~ U(40, 400)",
+                 "N ~ U(2000, 3000)") 
+  }
+  
+  ### Simulate a dataset for this k; only SEs will be used
+  sei = list()
+  
+  for ( i in 1:length(N.expr) ) {
+    
+    # first 3 params should not matter for sei distribution (for continuous Y):
+    d = sim_meta( 
+      Mu = 0,
+      t2a = 0,
+      true.dist = "norm",
+      
+      N.expr = N.expr[i],
+      Ytype = "cont-SMD",
+      p0 = NA,
+      
+      k.pub = .k)
+    
+    sei[[i]] = d$sei
+  }
+  
+  expect_equal( length(sei[[1]]), .k )
+  
+  # # sanity check
+  # hist(sei[[1]])
+  # hist(sei[[2]])
+  # hist(sei[[3]])
+  # hist(sei[[4]])
+  
+  ### Make plotting dataframe with prior evaluated for various parameters
+  # prior is independent of .mu, so just choose one
+  tau_vec = c( seq(0, 0.1, 0.001), seq(0.1, 0.25, 0.01), seq(0.25, 1, 0.05) )
+  dp2 = expand_grid( .mu = 0,
+                     .tau = tau_vec,
+                     .sei = c("sei[[1]]", "sei[[2]]", "sei[[3]]", "sei[[4]]") )
+  
+  dp2 = dp2 %>% rowwise() %>%
+    mutate( prior.val = get_lprior(mu = .mu,
+                                   tau = .tau,
+                                   sei = eval( parse( text = .sei ) ) )  )
+  
+  # sanity check
+  temp1 = dp2 %>% filter( .mu == 0, .tau == 0.05, .sei == "sei[[3]]" ) %>% select(prior.val)
+  temp2 = get_lprior(mu = 0,
+                     tau = 0.05,
+                     sei = sei[[3]] )
+  expect_equal( as.numeric(temp1), temp2)
+  
+  
+  ### Prettify plotting dataframe
+  
+  dp2$N.pretty = NA
+  dp2$N.pretty[ dp2$.sei == "sei[[1]]" ] = N.pretty[1]
+  dp2$N.pretty[ dp2$.sei == "sei[[2]]" ] = N.pretty[2]
+  dp2$N.pretty[ dp2$.sei == "sei[[3]]" ] = N.pretty[3]
+  dp2$N.pretty[ dp2$.sei == "sei[[4]]" ] = N.pretty[4]
+  table(dp2$.sei, dp2$N.pretty)
+  
+  # force ordering of legend variable
+  correct.order = N.pretty
+  
+  dp2$N.pretty = factor(dp2$N.pretty, levels = correct.order)
+  levels(dp2$N.pretty)
+  
+  ### Points that maximize each curve
+  dp2 = dp2 %>% group_by(N.pretty) %>%
+    mutate( is.max = ifelse( prior.val == max(prior.val), TRUE, FALSE ) )
+  max.points = dp2 %>% filter(is.max == TRUE)
+  
+  
+  ### Make plot
+  
+  # in same order as N.pretty
+  my.colors = c("#E39584",
+                "#F2340E",
+                "#0E96F0",
+                "#0F5A8C")
+
+  plot = ggplot( data = dp2, 
+                 aes(x = .tau,
+                     y = prior.val,
+                     color = N.pretty ) ) +
+    
+    geom_line(size = 1.1) +
+    
+    geom_point( data = max.points, 
+                aes(x = .tau,
+                    y = prior.val,
+                    color = N.pretty ),
+                size = 3) +
+    
+    xlab( bquote(tau) ) +
+    ylab( "Log prior" ) +
+    
+    geom_vline( xintercept = 0, lty = 2 ) +
+    
+    scale_x_continuous(breaks = seq( min(dp2$.tau), max(dp2$.tau), 0.1),
+                        limits = c( min(dp2$.tau), max(dp2$.tau) ) ) +
+    
+    # scale_y_continuous(breaks = seq( min(dp$log.prior), max(dp$log.prior), 0.25),
+    #                    limits = c( min(dp$.tau), max(dp$.tau) ) ) +
+    
+    scale_color_manual(values = my.colors, 
+                       name = "") +
+    
+    theme_bw(base_size = 16) +
+    ggtitle( paste("k = ", .k) ) +
+  
+  theme(text = element_text(face = "bold"),
+        axis.title = element_text(size=20),
+        legend.position = "bottom" )
+  
+  
+  ### Return
+  return( list(k = .k,
+               sei_list = sei,
+               d = dp2,
+               plot = plot) )
+  
+}
+
+
+
 # make a plot with 3 variables: x-axis, y-axis, facets, and colors
 # facet vars allowed be null
 quick_5var_agg_plot = function(.Xname,

@@ -2,9 +2,6 @@
 
 # NOTES ----------------------------------------------------
 
-# Only results from sim.env = stefan are in paper per reviewers' comments.
-#  Analyses with sim.env = mathur retained here for completeness.
-
 
 # PRELIMINARIES ----------------------------------------------------
 
@@ -82,6 +79,7 @@ overleaf.dir.figs = results.dir
 
 setwd(code.dir)
 source("analyze_sims_helper_JTE.R")
+source("helper_JTE.R")  # for lprior(), etc.
 
 
 Ynames = c("ShatAbsBias", "ShatCover", "ShatRMSE", "ShatWidth",
@@ -386,7 +384,7 @@ construct( as.data.frame(x3) )
 
 # PLOTS -------------------------------------------------
 
-
+# ~ Line plots of multiple outcomes  -------------------------------------------------
 #bm: edit this fn to aggregate over vars not used in facetting
 
 .true.dist = "norm"
