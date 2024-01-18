@@ -272,8 +272,8 @@ agg = left_join(x = agg,
 #.Ytype = "bin-OR"
 
 # create the base dataset from which to filter all winner tables
-agg2 = agg %>% filter( scen_important == TRUE & Ytype == .Ytype )
-#agg2 = agg %>% filter( Ytype == .Ytype )
+#agg2 = agg %>% filter( scen_important == TRUE & Ytype == .Ytype )
+agg2 = agg %>% filter( Ytype == .Ytype )
 
 
 dim(agg2)
