@@ -73,7 +73,9 @@ setwd(results.dir)
 # this is an absolute path because it must live in Dropbox, outside the project directory, in order to sync with Overleaf
 # to reproduce results, just set this to any directory on your local machine
 # results will be written to a csv file in that location
-overleaf.dir.figs = results.dir
+overleaf.dir.figs = "/Users/mmathur/Dropbox/Apps/Overleaf/JTE (Jeffreys tau estimation) Overleaf/R_objects/figures"
+# test it
+setwd(overleaf.dir.figs)
 
 
 setwd(code.dir)
@@ -110,7 +112,12 @@ pl[[4]]
 # save just one of them
 plot = pl[[3]] + ggtitle("")
 
-setwd(overleaf.dir.figs)
+my_ggsave(name = "prior_plot.pdf",
+          .plot = plot,
+          .width = 10,
+          .height = 6,
+          .results.dir = results.dir,
+          .overleaf.dir = overleaf.dir.figs)
 
 
 # # CONTOUR PLOT - not super useful -------------------------------------------------
