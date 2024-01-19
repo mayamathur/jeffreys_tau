@@ -471,14 +471,23 @@ make_winner_table_col = function(.agg,
     .t$Y_sort = .t$Y_disp
   }
   
-  browser()
+
   
-  # sort best to worst
-  .t = .t %>% arrange( desc(Y_sort) )
+  # check if all methods were tied, subject to rounding
+  # if so, simplify the output
+  if ( nuni(.t$Y_disp) == 1 ) {
+    
+    .t$method.pretty = c( "All", rep( NA, nrow(.t) - 1 ) )
+    .t$Y_disp = c( .t$Y_disp[1], rep( NA, nrow(.t) - 1 ) )
+    
+  } else {
+    # sort best to worst
+    .t = .t %>% arrange( desc(Y_sort) )
+  }
+  
   
   # remove unneeded col
   .t = .t %>% select(-Y_sort)
-  
   
   names(.t) = c(yName, summarise.fun.name)
   .t
