@@ -288,7 +288,7 @@ CreateTableOne( dat = agg2[ !duplicated(agg2$scen.name) ],
 make_both_winner_tables(.agg = agg2)
 
 
-# investigate the surprising finding that Jeffreys slightly over-covers, yet its CI is much narrower
+# for binary Y, investigate the surprising finding that Jeffreys slightly over-covers, yet its CI is much narrower
 # wide form wrt methods:
 w = pivot_wider(agg, names_from = method, values_from = MhatCover)
 

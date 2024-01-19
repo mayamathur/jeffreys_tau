@@ -109,8 +109,13 @@ pl[[2]]
 pl[[3]]
 pl[[4]]
 
-# save just one of them
-plot = pl[[3]] + ggtitle("")
+
+
+# save just one of them, since k doesn't really matter
+# rescale y-axis
+current.y.lims = layer_scales(pl[[3]])$y$range$range
+plot = pl[[3]] + ggtitle("") + 
+  scale_y_continuous( limits = c(0, current.y.lims[2] ) )
 
 my_ggsave(name = "prior_plot.pdf",
           .plot = plot,

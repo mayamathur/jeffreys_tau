@@ -141,7 +141,7 @@ if (FALSE) {
   missed.nums = sbatch_not_run( "/home/groups/manishad/JTE/long_results",
                                 "/home/groups/manishad/JTE/overall_stitched",
                                 .name.prefix = "long_results",
-                                .max.sbatch.num = 1000 )
+                                .max.sbatch.num = 2496 )
   
   
   
