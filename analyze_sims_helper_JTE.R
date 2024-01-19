@@ -324,6 +324,14 @@ wrangle_agg_local = function(agg) {
     agg$N.pretty[ agg$minN == 2000 & agg$muN == 3000 ] = "N ~ U(2000, 3000)"
   }
   
+  if ( "N.expr" %in% names(agg) ){
+    agg$N.pretty = NA
+    agg$N.pretty[ agg$N.expr == "40" ] = "N = 40"
+    agg$N.pretty[ agg$N.expr == "round( runif(n=1, min=2000, max = 4000) )" ] = "N ~ U(2000, 4000)"
+    agg$N.pretty[ agg$N.expr == "400" ] = "N = 400"
+    agg$N.pretty[ agg$N.expr == "round( runif(n=1, min=40, max = 400) )" ] = "N ~ U(40, 400)"
+  }
+  
 
   if ( "true.sei.expr" %in% names(agg) ){
     agg$true.sei.expr = as.factor(agg$true.sei.expr)
@@ -339,6 +347,7 @@ wrangle_agg_local = function(agg) {
     print( table(agg$true.sei.expr, agg$true.sei.expr.pretty ) )
   }
   
+
   agg$MhatEstConverge = 1 - agg$MhatEstFail
 
   return(agg)
@@ -484,7 +493,6 @@ make_winner_table_col = function(.agg,
     # sort best to worst
     .t = .t %>% arrange( desc(Y_sort) )
   }
-  
   
   # remove unneeded col
   .t = .t %>% select(-Y_sort)

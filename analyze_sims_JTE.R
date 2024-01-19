@@ -354,29 +354,58 @@ View(t)
 
 # ~ k  -------------------------------------------------
 
-#**SUPP TABLES
-
+#**SUPP TABLES S1 - S4
 # very small metas
 make_both_winner_tables(.agg = agg %>% filter( Ytype == "cont-SMD", k.pub == 100))
 make_both_winner_tables(.agg = agg %>% filter( Ytype == "bin-OR", k.pub == 100))
 
 
 # ~ Tau^2  -------------------------------------------------
-make_both_winner_tables(.agg = agg2 %>% filter(t2a == 0.0025))
-make_both_winner_tables(.agg = agg2 %>% filter(t2a == 0.01))
-make_both_winner_tables(.agg = agg2 %>% filter(t2a == 0.04)) # good for Jeffreys
+
+#**SUPP TABLES S5 - S10
+make_both_winner_tables(.agg = agg2 %>% filter(Ytype == "cont-SMD", t2a <= 0.01))
+make_both_winner_tables(.agg = agg2 %>% filter(Ytype == "cont-SMD", t2a > 0.01))
+
+make_both_winner_tables(.agg = agg2 %>% filter(Ytype == "bin-OR", t2a <= 0.01))
+make_both_winner_tables(.agg = agg2 %>% filter(Ytype == "bin-OR", t2a > 0.01))
+
+
+
+# individual values
+# make_both_winner_tables(.agg = agg2 %>% filter(t2a == 0.0025))
+# make_both_winner_tables(.agg = agg2 %>% filter(t2a == 0.01))
+# make_both_winner_tables(.agg = agg2 %>% filter(t2a == 0.04)) 
 
 
 # ~ True effect distribution  -------------------------------------------------
 # makes little difference for all methods
-make_both_winner_tables(.agg = agg2 %>% filter(true.dist == "norm"))
-make_both_winner_tables(.agg = agg2 %>% filter(true.dist == "expo"))
+make_both_winner_tables(.agg = agg2 %>% filter(Ytype == "cont-SMD", true.dist == "norm"))
+make_both_winner_tables(.agg = agg2 %>% filter(Ytype == "cont-SMD", true.dist == "expo"))
+
+make_both_winner_tables(.agg = agg2 %>% filter(Ytype == "bin-OR", true.dist == "norm"))
+make_both_winner_tables(.agg = agg2 %>% filter(Ytype == "bin-OR", true.dist == "expo"))
+
+# # what about high-t2a scens? that's where I'd expect dist to matter more
+# make_both_winner_tables(.agg = agg2 %>% filter(Ytype == "cont-SMD", true.dist == "norm", t2a == 0.25))
+# make_both_winner_tables(.agg = agg2 %>% filter(Ytype == "cont-SMD", true.dist == "expo", t2a == 0.25))
+# 
+# make_both_winner_tables(.agg = agg2 %>% filter(Ytype == "bin-OR", true.dist == "norm", t2a == 0.25))
+# make_both_winner_tables(.agg = agg2 %>% filter(Ytype == "bin-OR", true.dist == "expo", t2a == 0.25))
 
 # ~ N.expr  -------------------------------------------------
-make_both_winner_tables(.agg = agg2 %>% filter(N.pretty == "N = 40"))
-make_both_winner_tables(.agg = agg2 %>% filter(N.pretty == "N = 400"))
-make_both_winner_tables(.agg = agg2 %>% filter( N.pretty == "N ~ U(40, 400)" ))
-make_both_winner_tables(.agg = agg2 %>% filter( N.pretty == "N ~ U(2000, 3000)" ))
+
+make_both_winner_tables(.agg = agg2 %>% filter(Ytype == "cont-SMD", N.pretty %in% c("N ~ U(40, 400)", "N ~ U(2000, 4000)") ))
+make_both_winner_tables(.agg = agg2 %>% filter(Ytype == "cont-SMD", N.pretty %in% c("N = 40", "N = 400") ))
+
+make_both_winner_tables(.agg = agg2 %>% filter(Ytype == "bin-OR", N.pretty %in% c("N ~ U(40, 400)", "N ~ U(2000, 4000)") ))
+make_both_winner_tables(.agg = agg2 %>% filter(Ytype == "bin-OR", N.pretty %in% c("N = 40", "N = 400") ))
+
+
+# # individual values
+# make_both_winner_tables(.agg = agg2 %>% filter(N.pretty == "N = 40"))
+# make_both_winner_tables(.agg = agg2 %>% filter(N.pretty == "N = 400"))
+# make_both_winner_tables(.agg = agg2 %>% filter( N.pretty == "N ~ U(40, 400)" ))
+# make_both_winner_tables(.agg = agg2 %>% filter( N.pretty == "N ~ U(2000, 4000)" ))
 
 
 
