@@ -10,8 +10,6 @@ allPackages = c("here",
                 "magrittr",
                 "dplyr",
                 "data.table",
-                # "fribidi",  # new dependency of tidyverse
-                # "tidyverse", # these two can't be installed for some reason??
                 "tidyr",
                 "tibble",
                 "testthat",
@@ -38,32 +36,31 @@ lapply( allPackages,
 #  then you'll need to comment out Optim variables from the analysis.vars in make_agg_data and 
 #  also from mutate in there
 # - I think a similar thing will be true with the Rhats if you omit jeffreys-mcmc?
-# - Usually good to run naive because it affects start values for subsequent methods (i.e., prevents
-#   the start values from being the true ones)
 
 
-
-### 2024-01-10 ###
+### 2024-01-15 ###
 scen.params = tidyr::expand_grid(
   # full list (save):
   rep.methods = "REML ; DL ; DL2 ; PM ; robu ; jeffreys",
   
   # *If you reorder the args, need to adjust wrangle_agg_local
   ### args shared between sim environments
-  k.pub = c(100, 10,
-            2, 3, 5, 20),  # intentionally out of order so that jobs with most interesting choices with complete first
+  k.pub = c(10,
+            2, 3, 5, 20, 100),  # intentionally out of order so that jobs with most interesting choices with complete first
  
-  t2a = c(0.1^2,
-          0.01^2, 0.05^2, 0.2^2, 0.5^2),
+  t2a = c(0.1^2, 0.05^2, 0.2^2, 0.5^2),
 
   # same with Mu
   Mu = c(0, 0.5, 1.1, 2.3), # same as Langan's log-ORs
   true.dist = c("norm", "expo"),
   p0 = c(NA, 0.05, 0.1, 0.5),  
   
-  Ytype = c("bin-OR", "cont-SMD"),
-  minN = c(40, 400, 2000),
-  muN = c(40, 220, 400, 3000),
+  Ytype = c("cont-SMD", "bin-OR"),
+  
+  N.expr = c( "40",
+              "round( runif(n=1, min=40, max = 400) )",
+              "400",
+              "round( runif(n=1, min=2000, max = 4000) )" ),
   
   # Stan control args
   stan.maxtreedepth = 25,
@@ -90,18 +87,6 @@ remove[ is.na(scen.params$p0) & (scen.params$Ytype == "bin-OR") ] = TRUE
 scen.params = scen.params[!remove,]
 # sanity check:
 table(scen.params$p0, scen.params$Ytype, useNA = "ifany")
-
-
-# ... of minN and muN
-# Lagnan does have one other version, which is not uniform
-keep = rep(FALSE, nrow(scen.params))
-keep[ scen.params$minN == 40 & scen.params$muN %in% c(40, 220) ] = TRUE
-keep[ scen.params$minN == 400 & scen.params$muN %in% c(400) ] = TRUE
-keep[ scen.params$minN == 2000 & scen.params$muN %in% c(3000) ] = TRUE
-scen.params = scen.params[keep,]
-table(scen.params$minN, scen.params$muN)
-
-
 
 
 
@@ -160,7 +145,7 @@ sbatch_params <- data.frame(jobname,
                             # how to specify job times: https://www.sherlock.stanford.edu/docs/advanced-topics/job-management/#job-submission-limits
                             # days-hh:mm:ss
                             #jobtime = "1-00:00:00",  # 1 day
-                            jobtime = "03:00:00",
+                            jobtime = "05:00:00",
                             quality = "normal",
                             node_number = 1,
                             mem_per_node = 64000,
@@ -182,10 +167,10 @@ n.files
 #     sbatch -p qsu,owners,normal /home/groups/manishad/JTE/sbatch_files/1.sbatch
 
 
-# 2024-01-10: 3120
+# 2024-01-15: 2496
 path = "/home/groups/manishad/JTE"
 setwd( paste(path, "/sbatch_files", sep="") )
-for (i in 3001:3120) {
+for (i in 2001:2496) {
   system( paste("sbatch -p qsu,owners,normal /home/groups/manishad/JTE/sbatch_files/", i, ".sbatch", sep="") )
 }
 
@@ -207,3 +192,6 @@ setwd( paste(path, "/sbatch_files", sep="") )
 for (i in missed.nums[1:1000]) {
   system( paste("sbatch -p qsu,owners,normal /home/groups/manishad/JTE/sbatch_files/", i, ".sbatch", sep="") )
 }
+
+
+

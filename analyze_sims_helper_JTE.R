@@ -74,6 +74,7 @@ make_agg_data = function( .s,
     "MhatRhatGt1.05",
     "MhatRhatGt1.10",
     "MhatRhatMax",
+    "OptimConverged",
     
     "ShatRhatGt1.01",
     "ShatRhatGt1.05",
@@ -94,8 +95,7 @@ make_agg_data = function( .s,
 
                  "p0",
                  "Ytype",
-                 "minN",
-                 "muN",
+                 "N.expr",
 
                  "stan.adapt_delta",
                  "stan.maxtreedepth")
@@ -312,6 +312,8 @@ wrangle_agg_local = function(agg) {
   
   # label methods more intelligently for use in plots
   agg$method.pretty = agg$method # temporarily not relabeling them
+  agg$method.pretty[ agg$method == "robu" ] = "RVE"
+  agg$method.pretty[ agg$method == "jeffreys-pmode" ] = "Jeffreys"
   table(agg$method, agg$method.pretty)
   
   if ( "minN" %in% names(agg) ){
@@ -351,15 +353,19 @@ wrangle_agg_local = function(agg) {
 make_winner_table_col = function(.agg,
                                  yName,
                                  methods = c("DL",
+                                             "DL2",
                                              "ML",
                                              "PMM",
                                              "REML",
                                              "EB",
+                                             "PM",
                                              "robu", 
                                           
-                                             "jeffreys-pmean",
-                                             "jeffreys-pmed",
-                                             "jeffreys-max-lp-iterate"),
+                                             # "jeffreys-pmean",
+                                             # "jeffreys-pmed",
+                                             # "jeffreys-max-lp-iterate",
+                                             "jeffreys-pmode"
+                                             ),
                                  summarise.fun.name = "median",
                                  digits = 2) {
   
@@ -394,6 +400,9 @@ make_winner_table_col = function(.agg,
   
   # Y_disp is what will be DISPLAYED in the table (e.g., retaining signs)
   .agg$Y_disp = .agg[[yName]]
+  
+  # for power, should only look at scens under HA
+  if ( yName == "MhatTestReject" ) .agg = .agg %>% filter(Mu > 0)
   
   ##### Summarize Y_disp #####
   if ( summarise.fun.name == "mean" ) {
@@ -456,9 +465,13 @@ make_winner_table_col = function(.agg,
     .t$Y_sort = -abs(.t$Y_disp)
   }
   if ( yName %in% c("MhatCover", "ShatCover") ) {
-    .t$Y_sort = -abs(.t$Y_disp - 0.95)
+    # to sort such that being farther from 0.95 is always worse (so 0.97 is worse than 0.94)
+    #.t$Y_sort = -abs(.t$Y_disp - 0.95)
+    # to sort such that higher coverage always wins, even over-coverage
+    .t$Y_sort = .t$Y_disp
   }
   
+  browser()
   
   # sort best to worst
   .t = .t %>% arrange( desc(Y_sort) )
@@ -490,16 +503,11 @@ bias_worst10th = function(x) {
 #bias_worst10th(x = rnorm(100))
 
 
-# display: "xtable" or "dataframe"
+# display: "xtable" or "dataframe", or both
 make_winner_table = function( .agg,
-                              .yNames = c("MhatBias",
-                                          "MhatAbsBias",
-                                          "MhatRMSE", 
-                                          "MhatCover",
-                                          "MhatWidth" ),
-                              #"MhatEstConverge"),
+                              .yNames,
                               summarise.fun.name,
-                              display = "dataframe"
+                              display = c("dataframe", "xtable")
                               #display = "xtable"
 ){
   
@@ -510,6 +518,7 @@ make_winner_table = function( .agg,
     stop( paste( "\nThe following .yNames aren't in .agg: ", not_here) )
   } 
   
+ #browser()
   for ( .yName in .yNames ){
     newCol = make_winner_table_col(.agg = .agg,
                                    yName = .yName,
@@ -527,15 +536,15 @@ make_winner_table = function( .agg,
   
   cat("\n\n")
   
+  if ("dataframe" %in% display) {
+    print( data.frame(t.all) )
+  }
   
-  
-  if (display == "xtable") {
+  if ("xtable" %in% display) {
     print( xtable( data.frame(t.all) ), include.rownames = FALSE )
   }
   
-  if (display == "dataframe") {
-    print( data.frame(t.all) )
-  }
+
   
   #return(t.all)
   
@@ -543,27 +552,191 @@ make_winner_table = function( .agg,
 
 # makes both winner tables (medians and worst 10th pctiles)
 make_both_winner_tables = function( .agg,
-                                    .yNames = c("MhatAbsBias", "MhatRMSE", "MhatCover", "MhatWidth",
-                                                "ShatAbsBias", "ShatRMSE", "ShatCover", "ShatWidth") ){
+                                    .yNames = c("MhatBias", "MhatAbsBias", "MhatRMSE", "MhatCover", "MhatWidth", "MhatTestReject",
+                                                "ShatBias", "ShatAbsBias", "ShatRMSE", "ShatCover", "ShatWidth"),
+                                    summarise.fun.name = "mean",  # "mean" or "median"
+                                    show.worst10th = FALSE
+                                    ){
   
-  make_winner_table( .agg = .agg,
-                     .yNames = .yNames,
-                     summarise.fun.name = "median")
-  
+  # # to show all yNames in one table
   # make_winner_table( .agg = .agg,
   #                    .yNames = .yNames,
-  #                    summarise.fun.name = "mean")
+  #                    summarise.fun.name = summarise.fun.name)
   
+  # to split by Mhat and Shat
   make_winner_table( .agg = .agg,
-                     .yNames = .yNames,
-                     summarise.fun.name = "worst10th")
+                     .yNames = stringsWith(pattern = "Mhat", .yNames),
+                     summarise.fun.name = summarise.fun.name)
+  make_winner_table( .agg = .agg,
+                     .yNames = stringsWith(pattern = "Shat", .yNames),
+                     summarise.fun.name = summarise.fun.name)
   
+
+  if ( show.worst10th == TRUE ) {
+    make_winner_table( .agg = .agg,
+                       .yNames = .yNames,
+                       summarise.fun.name = "worst10th")
+  }
+
 }
 
 
 
 
 # PLOTTING FNS -------------------------------------------------------------
+
+
+prior_plot_one_k = function(.k,
+
+                            N.expr = c( "40",
+                                        "400",
+                                        "round( runif(n=1, min=40, max = 400) )",
+                                        "round( runif(n=1, min=2000, max = 4000) )" ),
+                            
+                            # values that map onto each value of N.expr
+                            N.pretty = c("N = 40",
+                                         "N = 400",
+                                         "N ~ U(40, 400)",
+                                         "N ~ U(2000, 3000)") 
+                        
+                              
+                              ) {
+  
+  # test only
+  if (FALSE) {
+    .k = 10
+    N.expr = c( "40",
+                "400",
+                "round( runif(n=1, min=40, max = 400) )",
+                "round( runif(n=1, min=2000, max = 4000) )" )
+    
+    N.pretty = c("N = 40",
+                 "N = 400",
+                 "N ~ U(40, 400)",
+                 "N ~ U(2000, 3000)") 
+  }
+  
+  ### Simulate a dataset for this k; only SEs will be used
+  sei = list()
+  
+  for ( i in 1:length(N.expr) ) {
+    
+    # first 3 params should not matter for sei distribution (for continuous Y):
+    d = sim_meta( 
+      Mu = 0,
+      t2a = 0,
+      true.dist = "norm",
+      
+      N.expr = N.expr[i],
+      Ytype = "cont-SMD",
+      p0 = NA,
+      
+      k.pub = .k)
+    
+    sei[[i]] = d$sei
+  }
+  
+  expect_equal( length(sei[[1]]), .k )
+  
+  # # sanity check
+  # hist(sei[[1]])
+  # hist(sei[[2]])
+  # hist(sei[[3]])
+  # hist(sei[[4]])
+  
+  ### Make plotting dataframe with prior evaluated for various parameters
+  # prior is independent of .mu, so just choose one
+  tau_vec = c( seq(0, 0.1, 0.001), seq(0.1, 0.25, 0.01), seq(0.25, 1, 0.05) )
+  dp2 = expand_grid( .mu = 0,
+                     .tau = tau_vec,
+                     .sei = c("sei[[1]]", "sei[[2]]", "sei[[3]]", "sei[[4]]") )
+  
+  dp2 = dp2 %>% rowwise() %>%
+    mutate( prior.val = get_lprior(mu = .mu,
+                                   tau = .tau,
+                                   sei = eval( parse( text = .sei ) ) )  )
+  
+  # sanity check
+  temp1 = dp2 %>% filter( .mu == 0, .tau == 0.05, .sei == "sei[[3]]" ) %>% select(prior.val)
+  temp2 = get_lprior(mu = 0,
+                     tau = 0.05,
+                     sei = sei[[3]] )
+  expect_equal( as.numeric(temp1), temp2)
+  
+  
+  ### Prettify plotting dataframe
+  
+  dp2$N.pretty = NA
+  dp2$N.pretty[ dp2$.sei == "sei[[1]]" ] = N.pretty[1]
+  dp2$N.pretty[ dp2$.sei == "sei[[2]]" ] = N.pretty[2]
+  dp2$N.pretty[ dp2$.sei == "sei[[3]]" ] = N.pretty[3]
+  dp2$N.pretty[ dp2$.sei == "sei[[4]]" ] = N.pretty[4]
+  table(dp2$.sei, dp2$N.pretty)
+  
+  # force ordering of legend variable
+  correct.order = N.pretty
+  
+  dp2$N.pretty = factor(dp2$N.pretty, levels = correct.order)
+  levels(dp2$N.pretty)
+  
+  ### Points that maximize each curve
+  dp2 = dp2 %>% group_by(N.pretty) %>%
+    mutate( is.max = ifelse( prior.val == max(prior.val), TRUE, FALSE ) )
+  max.points = dp2 %>% filter(is.max == TRUE)
+  
+  
+  ### Make plot
+  
+  # in same order as N.pretty
+  my.colors = c("#E39584",
+                "#F2340E",
+                "#0E96F0",
+                "#0F5A8C")
+
+  plot = ggplot( data = dp2, 
+                 aes(x = .tau,
+                     y = prior.val,
+                     color = N.pretty ) ) +
+    
+    geom_line(size = 1.1) +
+    
+    geom_point( data = max.points, 
+                aes(x = .tau,
+                    y = prior.val,
+                    color = N.pretty ),
+                size = 3) +
+    
+    xlab( bquote(tau) ) +
+    ylab( "Log prior" ) +
+    
+    geom_vline( xintercept = 0, lty = 2 ) +
+    
+    scale_x_continuous(breaks = seq( min(dp2$.tau), max(dp2$.tau), 0.1),
+                        limits = c( min(dp2$.tau), max(dp2$.tau) ) ) +
+    
+    # scale_y_continuous(breaks = seq( min(dp$log.prior), max(dp$log.prior), 0.25),
+    #                    limits = c( min(dp$.tau), max(dp$.tau) ) ) +
+    
+    scale_color_manual(values = my.colors, 
+                       name = "") +
+    
+    theme_bw(base_size = 16) +
+    ggtitle( paste("k = ", .k) ) +
+  
+  theme(text = element_text(face = "bold"),
+        axis.title = element_text(size=20),
+        legend.position = "bottom" )
+  
+  
+  ### Return
+  return( list(k = .k,
+               sei_list = sei,
+               d = dp2,
+               plot = plot) )
+  
+}
+
+
 
 # make a plot with 3 variables: x-axis, y-axis, facets, and colors
 # facet vars allowed be null
@@ -1197,9 +1370,11 @@ medNA_pctiles = function(x){
 
 
 
-names_with = function(.dat, .pattern) {
-  names(.dat)[ grepl(pattern = .pattern, x = names(.dat) ) ]
+# get names of dataframe containing a string
+namesWith = function(pattern, dat){
+  names(dat)[ grepl(pattern = pattern, x = names(dat) ) ]
 }
+
 
 
 # one or both dirs can be NA
@@ -1351,8 +1526,8 @@ percTRUE_incl_NA = function(x) {
 # expects "study" to be a global var
 update_result_csv = function( name,
                               .section = NA,
-                              .results.dir = NULL,
-                              .overleaf.dir = NULL,
+                              .results.dir = results.dir,
+                              .overleaf.dir = overleaf.dir.stats,
                               value = NA,
                               print = FALSE ) {
   
@@ -1398,7 +1573,7 @@ update_result_csv = function( name,
   
   
   if ( print == TRUE ) {
-    View(res.overleaf)
+    View(res)
   }
   
 }

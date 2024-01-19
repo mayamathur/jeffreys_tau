@@ -5,9 +5,8 @@
 #   sbatch -p qsu,owners,normal /home/groups/manishad/JTE/job_stitch.sbatch
 # sacct --name=job_stitch
 # look at its out file:
-# cd /home/groups/manishad/JTE/rmfiles
-# less rm_stitch.out
-# less rm_stitch.err
+# less /home/groups/manishad/JTE/rmfiles/rm_stitch.out
+# less /home/groups/manishad/JTE/rmfiles/rm_stitch.err
 # shift-g to jump to bottom of files
 
 # for non-huge simulations, can often run this script interactively in a higher-memory
@@ -63,7 +62,7 @@ names = names( read.csv(keepers[1] ) )
 # read in and rbind the keepers
 tables <- lapply( keepers, function(x) {
   y = read.csv(x, header = TRUE)
-  # y[[ "true.sei.expr" ]] = as.character(y[[ "true.sei.expr" ]] )  # only needed if true.sei.expr is just a number, because it turns into a double for certain datasets and then can't be concatenated with character ones
+  y[[ "N.expr" ]] = as.character(y[[ "N.expr" ]] )  # only needed if it is just a number, because it turns into a double for certain datasets and then can't be concatenated with character ones
   y
   } )
 
@@ -142,7 +141,7 @@ if (FALSE) {
   missed.nums = sbatch_not_run( "/home/groups/manishad/JTE/long_results",
                                 "/home/groups/manishad/JTE/overall_stitched",
                                 .name.prefix = "long_results",
-                                .max.sbatch.num = 3120 )
+                                .max.sbatch.num = 2496 )
   
   
   
@@ -159,8 +158,7 @@ if (FALSE) {
 # ~ Optional: Quick Summary ---------------------------
 
 if (FALSE) {
-  table(s$rep.name)
-  
+
   # reps per scen
   # should be equal to reps.per.scen / reps.in.doParallel
   s %>% group_by(scen.name, method) %>%
@@ -172,7 +170,7 @@ if (FALSE) {
   
   # summarize sim params that have run so far
   library(tableone)
-  vars = c("k.pub", "t2a", "Mu", "true.dist", "p0", "Ytype", "minN", "muN")
+  vars = c("k.pub", "t2a", "Mu", "true.dist", "p0", "Ytype", "N.expr")
   CreateTableOne( dat = s,
                   vars = vars,
                   factorVars = vars )
@@ -190,6 +188,7 @@ if (FALSE) {
     summarise( reps = n(),
                
                MhatBias = meanNA(Mhat - Mu),
+              ShatBias = meanNA(Mhat - Mu),
                sancheck_mean_pY0 = meanNA(sancheck_mean_pY0),
                sancheck_mean_pY = meanNA(sancheck_mean_pY)
                

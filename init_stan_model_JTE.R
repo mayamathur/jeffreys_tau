@@ -1,11 +1,4 @@
 
-# # to test if this compiles in interactive session:
-# # helper code
-# path = "/home/groups/manishad/SAPH"
-# setwd(path)
-# source("init_stan_model_applied_SAPH.R")
-
-
 # 2024-01-04: UNTRUNCATED PRIOR ----------------------
 
 # from setting Mills ratio r=0 in SAPH prior
