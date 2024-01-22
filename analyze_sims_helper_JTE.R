@@ -21,8 +21,8 @@ make_agg_data = function( .s,
     badCoverageCutoff = 0.85
     expected.sim.reps = NA
   }
-
-
+  
+  
   # make unique scenario variable, defined as scen.name AND method
   if ( !"unique.scen" %in% names(.s) ) .s$unique.scen = paste(.s$scen.name, .s$method)
   
@@ -90,16 +90,16 @@ make_agg_data = function( .s,
                  "k.pub",
                  "Mu",
                  "t2a",
-
+                 
                  "true.dist",
-
+                 
                  "p0",
                  "Ytype",
                  "N.expr",
-
+                 
                  "stan.adapt_delta",
                  "stan.maxtreedepth")
-
+  
   
   # sanity check to make sure we've listed all param vars
   t = .s %>% group_by_at(param.vars) %>% summarise(n())
@@ -332,7 +332,7 @@ wrangle_agg_local = function(agg) {
     agg$N.pretty[ agg$N.expr == "round( runif(n=1, min=40, max = 400) )" ] = "N ~ U(40, 400)"
   }
   
-
+  
   if ( "true.sei.expr" %in% names(agg) ){
     agg$true.sei.expr = as.factor(agg$true.sei.expr)
     
@@ -347,9 +347,9 @@ wrangle_agg_local = function(agg) {
     print( table(agg$true.sei.expr, agg$true.sei.expr.pretty ) )
   }
   
-
+  
   agg$MhatEstConverge = 1 - agg$MhatEstFail
-
+  
   return(agg)
 }
 
@@ -369,12 +369,12 @@ make_winner_table_col = function(.agg,
                                              "EB",
                                              "PM",
                                              "robu", 
-                                          
+                                             
                                              # "jeffreys-pmean",
                                              # "jeffreys-pmed",
                                              # "jeffreys-max-lp-iterate",
                                              "jeffreys-pmode"
-                                             ),
+                                 ),
                                  summarise.fun.name = "median",
                                  digits = 2) {
   
@@ -395,7 +395,7 @@ make_winner_table_col = function(.agg,
   # summarise.fun.name = "worst10th"
   # digits = 2
   
-
+  
   # sanity check
   if ( any( is.na( .agg$method.pretty ) ) ) {
     stop(".agg has NAs in method.pretty; will mess up group_by")
@@ -480,7 +480,7 @@ make_winner_table_col = function(.agg,
     .t$Y_sort = .t$Y_disp
   }
   
-
+  
   
   # check if all methods were tied, subject to rounding
   # if so, simplify the output
@@ -528,14 +528,14 @@ make_winner_table = function( .agg,
                               #display = "xtable"
 ){
   
-
+  
   # sanity check
   if ( !( all( .yNames %in% names(.agg) ) )  ){
     not_here = paste( .yNames[ !( .yNames %in% names(.agg) ) ], collapse = ", " )
     stop( paste( "\nThe following .yNames aren't in .agg: ", not_here) )
   } 
   
- #browser()
+  #browser()
   for ( .yName in .yNames ){
     newCol = make_winner_table_col(.agg = .agg,
                                    yName = .yName,
@@ -548,7 +548,7 @@ make_winner_table = function( .agg,
   cat( paste("\n\n**** WINNER TABLE", summarise.fun.name) )
   
   cat( paste("\n\n     Number of scens:", nuni(.agg$scen.name) ) )
-
+  
   cat("\n\n")
   
   # cat( paste("\n\n     Number of scens:", nuni(.agg$scen.name),
@@ -565,7 +565,7 @@ make_winner_table = function( .agg,
     print( xtable( data.frame(t.all) ), include.rownames = FALSE )
   }
   
-
+  
   
   #return(t.all)
   
@@ -578,7 +578,7 @@ make_both_winner_tables = function( .agg,
                                     summarise.fun.name = "mean",  # "mean" or "median"
                                     show.worst10th = FALSE,
                                     display = c("dataframe", "xtable")
-                                    ){
+){
   
   # # to show all yNames in one table
   # make_winner_table( .agg = .agg,
@@ -595,14 +595,14 @@ make_both_winner_tables = function( .agg,
                      summarise.fun.name = summarise.fun.name,
                      display = display)
   
-
+  
   if ( show.worst10th == TRUE ) {
     make_winner_table( .agg = .agg,
                        .yNames = .yNames,
                        summarise.fun.name = "worst10th",
                        display = display)
   }
-
+  
 }
 
 
@@ -612,7 +612,7 @@ make_both_winner_tables = function( .agg,
 
 
 prior_plot_one_k = function(.k,
-
+                            
                             N.expr = c( "40",
                                         "400",
                                         "round( runif(n=1, min=40, max = 400) )",
@@ -623,9 +623,9 @@ prior_plot_one_k = function(.k,
                                          "N = 400",
                                          "N ~ U(40, 400)",
                                          "N ~ U(2000, 3000)") 
-                        
-                              
-                              ) {
+                            
+                            
+) {
   
   # test only
   if (FALSE) {
@@ -717,7 +717,7 @@ prior_plot_one_k = function(.k,
                 "#F2340E",
                 "#0E96F0",
                 "#0F5A8C")
-
+  
   plot = ggplot( data = dp2, 
                  aes(x = .tau,
                      y = prior.val,
@@ -737,7 +737,7 @@ prior_plot_one_k = function(.k,
     geom_vline( xintercept = 0, lty = 2 ) +
     
     scale_x_continuous(breaks = seq( min(dp2$.tau), max(dp2$.tau), 0.1),
-                        limits = c( min(dp2$.tau), max(dp2$.tau) ) ) +
+                       limits = c( min(dp2$.tau), max(dp2$.tau) ) ) +
     
     # scale_y_continuous(breaks = seq( min(dp$log.prior), max(dp$log.prior), 0.25),
     #                    limits = c( min(dp$.tau), max(dp$.tau) ) ) +
@@ -747,10 +747,10 @@ prior_plot_one_k = function(.k,
     
     theme_bw(base_size = 16) +
     ggtitle( paste("k = ", .k) ) +
-  
-  theme(text = element_text(face = "bold"),
-        axis.title = element_text(size=20),
-        legend.position = "bottom" )
+    
+    theme(text = element_text(face = "bold"),
+          axis.title = element_text(size=20),
+          legend.position = "bottom" )
   
   
   ### Return
@@ -758,6 +758,148 @@ prior_plot_one_k = function(.k,
                sei_list = sei,
                d = dp2,
                plot = plot) )
+  
+}
+
+
+# from MRM; not edited
+# # for violin plots, set global parameters that my_violins() will use as arguments
+# set_violin_params = function() {
+#   # set up y-labels and hline
+#   if ( y == "PhatAbsErr" ) {
+#     aggData <<- aggPhat
+#     ylab <<- "Absolute error in estimated proportion above q"
+#     hline <<- 0
+#     yTicks <<- seq(0, 1, .1)
+#   }
+#   
+#   if ( y == "DiffAbsErr" ) {
+#     aggData <<- aggDiff
+#     ylab <<- "Absolute error in estimated difference in proportions"
+#     hline <<- 0
+#     yTicks <<- seq(0, 1, .1)
+#   }
+#   
+#   
+#   if ( y == "PhatBias" ) {
+#     aggData <<- aggPhat
+#     ylab <<- "Bias in estimated proportion above q"
+#     hline <<- 0
+#     yTicks <<- seq(-0.5, .5, .1)
+#     
+#     #cat("\\subsubsection{Relative bias in est prop}")
+#   }
+#   
+#   if ( y == "DiffBias" ) {
+#     aggData <<- aggDiff
+#     ylab <<- "Bias in estimated difference in proportions"
+#     hline <<- 0
+#     yTicks <<- seq(-0.5, .5, .1)
+#   }
+#   
+#   if ( y == "CoverPhat" ) {
+#     aggData <<- aggPhat
+#     ylab <<- "95% CI coverage for estimated proportion above q"
+#     hline <<- 0.95
+#     yTicks <<- seq(0, 1, 0.1)
+#   }
+#   
+#   if ( y == "CoverDiff" ) {
+#     aggData <<- aggDiff
+#     ylab <<- "95% CI coverage of estimated difference in proportions"
+#     hline <<- 0.95
+#     yTicks <<- seq(0, 1, 0.1)
+#   }
+#   
+#   if ( y == "PhatCIWidth" ) {
+#     aggData <<- aggPhat
+#     ylab <<- "95% CI width for estimated proportion above q"
+#     hline <<- NA
+#     yTicks <<- seq(0, 1, 0.1)
+#   }
+#   
+#   if ( y == "DiffCIWidth" ) {
+#     aggData <<- aggDiff
+#     ylab <<- "95% CI width for estimated difference in proportions"
+#     hline <<- NA
+#     yTicks <<- seq(0, 1, 0.1)
+#   }
+# }
+
+
+my_violins = function(xName = NA,
+                      yName,
+                      hline = NA,
+                      xlab = NA,
+                      ylab,
+                      yTicks = NA,
+                      colors = NA,
+                      
+                      prefix = NA,
+                      write = TRUE,
+                      .results.dir = overleaf.dir.figs,
+                      # by default, use all scenarios:
+                      .agg = agg ) {
+  
+  
+  .agg$Y = .agg[[yName]]
+  
+  .agg$X = as.factor( .agg[[xName]] )
+  string = paste( "plot_", xName, "_vs_", yName, ".pdf", sep = "" )
+  
+  p = ggplot( data = .agg,
+              aes(x = X,
+                  y = Y,
+                  color = method.pretty,
+                  fill = method.pretty) ) +
+    
+    geom_boxplot(width=0.6,
+                 alpha = .5,
+                 outlier.shape = NA) +
+    ylab(ylab) +
+    labs(color  = "Method", fill = "Method") +
+    
+    theme_bw(base_size = 16) +
+    
+    theme( text = element_text(face = "bold"),
+           axis.title = element_text(size=16),
+           panel.grid.major.x = element_blank(),
+           panel.grid.minor.x = element_blank(),
+           legend.position = "bottom" ) +
+    guides(color = guide_legend(nrow=1)) +
+    
+    xlab(xlab)
+  
+  # add optional tweaks
+  if ( any(!is.na(colors) ) ){ 
+    p = p + scale_color_manual(values = colors) +
+      scale_fill_manual(values = colors)  
+  }
+  
+  
+  if ( !is.na(hline) ) p = p + geom_hline(yintercept = hline,
+                                          lty = 2,
+                                          color = "gray")
+  
+  if ( any( !is.na(yTicks) ) ) p = p + scale_y_continuous( breaks = yTicks,
+                                                           limits = c( min(yTicks), max(yTicks) ) )
+  
+  # facet by Ytype
+  p = p + facet_grid( ~ Ytype.pretty )
+
+  
+  # write plot
+  if ( write == TRUE ) {
+    
+    if ( !is.na(prefix) ) string = paste( prefix, string, sep = "_" )
+    my_ggsave( name = string,
+               .plot = p,
+               .overleaf.dir = overleaf.dir.figs,
+               .width = 13,
+               .height = 6)
+  } else {
+    p
+  }
   
 }
 
@@ -915,7 +1057,7 @@ sim_plot_multiple_outcomes = function(.agg,
     .Mu = 0.5
     .estimate = "Shat"
     
-
+    
     .y.breaks = NULL
     .local.results.dir = results.dir
     .ggtitle = ""
@@ -924,16 +1066,16 @@ sim_plot_multiple_outcomes = function(.agg,
   if (.estimate == "Mhat") YnamesMain = Ynames[5:8]
   if (.estimate == "Shat") YnamesMain = Ynames[1:4]
   YnamesSupp = YnamesMain
-
+  
   #bm: get the first 3 of these into the plot title, along with Shat vs. Mhat (which will subset the )
   .dat = .agg %>% filter( true.dist == .true.dist,
-                         true.sei.expr == .true.sei.expr,
-                         Mu == .Mu,
-                         
-                         k.pub < 100,
-                         # keep every other level for clarity
-                         t2a %in% c(0.0025, 0.04, 1) )
-
+                          true.sei.expr == .true.sei.expr,
+                          Mu == .Mu,
+                          
+                          k.pub < 100,
+                          # keep every other level for clarity
+                          t2a %in% c(0.0025, 0.04, 1) )
+  
   #.dat$facetVar = paste( "t2a=", .dat$t2a, "; t2w=", .dat$t2w, sep = "")
   #.dat$facetVar = paste( "t2a = ", .dat$t2a, sep = "")
   .dat$facetVar = sqrt(.dat$t2a)
@@ -1214,7 +1356,7 @@ sim_plot_multiple_outcomes = function(.agg,
                 sep = "_" )
   
   if ( overwrite.res == TRUE ) {
-
+    
     my_ggsave( name = name,
                .plot = pCombined,
                .width = 8,
@@ -1331,6 +1473,10 @@ init_var_names = function(.agg) {
   MhatMainYNames <<- paste( "Mhat", c(mainYNames), sep = "" )
   MhatYNames <<- c( paste( "Mhat", c(mainYNames, otherYNames), sep = "" ) )
   #"OptimxPropAgreeConvergersMhatWinner", "OptimxNAgreeOfConvergersMhatWinner" )
+  
+  ### Methods of interest for plots ###
+  # i.e., not jeffreys-pmean, jeffreys-pmed, etc.
+  methods.to.show = c("REML", "DL", "PM", "DL2", "RVE", "Jeffreys")
   
   
   ### Names of parameter variables ###

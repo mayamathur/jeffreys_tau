@@ -476,7 +476,77 @@ construct( as.data.frame(x3) )
 # PLOTS -------------------------------------------------
 
 
-# ~ Line plots of multiple outcomes (not in use)  -------------------------------------------------
+# ~ Boxplots for (signed) bias -------------------------------------------------
+
+aggp = agg2 %>% filter(method.pretty %in% methods.to.show )
+unique(aggp$method.pretty)
+
+# reorder methods
+correct.order = c( "Jeffreys", "DL", "DL2", "REML", "PM", "RVE")
+aggp$method.pretty = factor(aggp$method.pretty, levels = correct.order)
+levels(aggp$method.pretty)
+
+aggp$Ytype.pretty = NA
+aggp$Ytype.pretty[ aggp$Ytype == "cont-SMD" ] = "Continuous Y"
+aggp$Ytype.pretty[ aggp$Ytype == "bin-OR" ] = "Binary Y"
+aggp$Ytype.pretty = factor(aggp$Ytype.pretty, levels = c("Continuous Y", "Binary Y") )
+
+# same colors as in applied example for prettiness
+.colors = c("#F2340E",
+            "#0E96F0",
+            "#845699",
+            "#0F5A8C",
+            "#6D9956",
+            "#D18350")
+
+
+
+my_violins(xName = "k.pub",
+           yName = "MhatBias",
+           hline = 0,
+           xlab = "k",
+           ylab = bquote( bold( hat(mu) ~ " bias") ),
+           yTicks = round( seq(-0.04, 0.04, 0.01), 2 ),
+           prefix = NA,
+           colors = .colors,
+           
+           write = TRUE,
+           # by default, use all scenarios:
+           .agg = aggp )
+
+my_violins(xName = "k.pub",
+           yName = "MhatWidth",
+           hline = 0,
+           xlab = "k",
+           ylab = bquote( bold( hat(mu) ~ " CI width") ),
+           #yTicks = round( seq(-0.04, 0.04, 0.01), 2 ),
+           prefix = NA,       
+           colors = .colors,
+           write = TRUE,
+           # by default, use all scenarios:
+           .agg = aggp )
+
+
+
+
+
+my_violins(xName = "k.pub",
+           yName = "ShatBias",
+           hline = 0,
+           xlab = "k",
+           ylab = bquote( bold( hat(tau) ~ " bias") ),
+           yTicks = round( seq(-0.40, 0.60, 0.1), 2 ),
+           prefix = NA,
+           colors = .colors,
+           write = TRUE,
+           # by default, use all scenarios:
+           .agg = aggp )
+
+
+
+
+
+
 
 
 # ~ Line plots of multiple outcomes (not in use)  -------------------------------------------------
