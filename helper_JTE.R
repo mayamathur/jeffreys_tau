@@ -60,8 +60,8 @@ estimate_jeffreys = function(.yi,
                                  y = .yi ),
                     
                     #iter = p$stan.iter,   
-                    control = list(max_treedepth = p$stan.maxtreedepth,
-                                   adapt_delta = p$stan.adapt_delta),
+                    control = list(max_treedepth = .stan.maxtreedepth,
+                                   adapt_delta = .stan.adapt_delta),
                     
                     init = init.fcn)
     

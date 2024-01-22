@@ -521,7 +521,7 @@ bias_worst10th = function(x) {
 
 
 # display: "xtable" or "dataframe", or both
-make_winner_table = function( .agg,
+make_winner_table = function( .agg, 
                               .yNames,
                               summarise.fun.name,
                               display = c("dataframe", "xtable")
@@ -547,11 +547,15 @@ make_winner_table = function( .agg,
   
   cat( paste("\n\n**** WINNER TABLE", summarise.fun.name) )
   
-  cat( paste("\n\n     Number of scens:", nuni(.agg$scen.name),
-             "; proportion of all scens: ",
-             round( nuni(.agg$scen.name) / nuni(agg$scen.name), 3 ) ) )
-  
+  cat( paste("\n\n     Number of scens:", nuni(.agg$scen.name) ) )
+
   cat("\n\n")
+  
+  # cat( paste("\n\n     Number of scens:", nuni(.agg$scen.name),
+  #            "; proportion of all scens: ",
+  #            round( nuni(.agg$scen.name) / nuni(agg$scen.name), 3 ) ) )
+  # 
+  # cat("\n\n")
   
   if ("dataframe" %in% display) {
     print( data.frame(t.all) )
@@ -572,7 +576,8 @@ make_both_winner_tables = function( .agg,
                                     .yNames = c("MhatBias", "MhatAbsBias", "MhatRMSE", "MhatCover", "MhatWidth", "MhatTestReject",
                                                 "ShatBias", "ShatAbsBias", "ShatRMSE", "ShatCover", "ShatWidth"),
                                     summarise.fun.name = "mean",  # "mean" or "median"
-                                    show.worst10th = FALSE
+                                    show.worst10th = FALSE,
+                                    display = c("dataframe", "xtable")
                                     ){
   
   # # to show all yNames in one table
@@ -583,16 +588,19 @@ make_both_winner_tables = function( .agg,
   # to split by Mhat and Shat
   make_winner_table( .agg = .agg,
                      .yNames = stringsWith(pattern = "Mhat", .yNames),
-                     summarise.fun.name = summarise.fun.name)
+                     summarise.fun.name = summarise.fun.name,
+                     display = display)
   make_winner_table( .agg = .agg,
                      .yNames = stringsWith(pattern = "Shat", .yNames),
-                     summarise.fun.name = summarise.fun.name)
+                     summarise.fun.name = summarise.fun.name,
+                     display = display)
   
 
   if ( show.worst10th == TRUE ) {
     make_winner_table( .agg = .agg,
                        .yNames = .yNames,
-                       summarise.fun.name = "worst10th")
+                       summarise.fun.name = "worst10th",
+                       display = display)
   }
 
 }
@@ -1307,7 +1315,7 @@ performance_regressions = function(.agg,
 
 
 # initialize global variables that describe estimate and outcome names, etc.
-init_var_names = function() {
+init_var_names = function(.agg) {
   
   ### Names of statistical metrics ###
   # used later to create plots and tables, but needed to check var types 
@@ -1328,11 +1336,11 @@ init_var_names = function() {
   ### Names of parameter variables ###
   # figure out which scen params were actually manipulated
   # **assumes that k.pub.nonaffirm is always the first scen parameter variable
-  ( param.vars <<- names(agg)[ which( names(agg) == "k.pub" ) : which( names(agg) == "method" ) ] )
+  ( param.vars <<- names(.agg)[ which( names(.agg) == "k.pub" ) : which( names(.agg) == "method" ) ] )
   
   
   # how many levels does each param var have in dataset?
-  ( n.levels <<- agg %>% dplyr::select(param.vars) %>%
+  ( n.levels <<- .agg %>% dplyr::select(param.vars) %>%
       summarise_all( function(x) nuni(x) ) )
   
   ( param.vars.manip <<- names(n.levels)[ n.levels > 1 ] )

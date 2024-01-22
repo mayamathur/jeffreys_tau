@@ -53,6 +53,9 @@ options(scipen=999)
 # but note that not all fns respect this setting
 overwrite.res = TRUE
 
+# should all the "View()" things be called?
+# they open new RStudio tabs, so can be useful to skip these sanity checks
+use.View = FALSE
 
 # ~~ Set directories -------------------------
 code.dir = here()
@@ -83,37 +86,36 @@ source("analyze_sims_helper_JTE.R")
 source("helper_JTE.R")  # for lprior(), etc.
 
 
-Ynames = c("ShatAbsBias", "ShatCover", "ShatRMSE", "ShatWidth",
-           "MhatAbsBias", "MhatCover", "MhatRMSE", "MhatWidth")
 
 
 # ~~ Get agg data -------------------------
 
 # if only analyzing a single sim environment (no merging):
 setwd(data.dir)
-agg = fread( "agg.csv")
+# "agg all" because we will later exclude scenarios whose parameters led to within-study bias
+agga = fread( "agg.csv")
 # check when the dataset was last modified to make sure we're working with correct version
 file.info("agg.csv")$mtime
 
-dim(agg) / nuni(agg$method)
+dim(agga) / nuni(agga$method)
 
 
 # drop any "NA" methods (i.e., ones that didn't get labeled in wrangle_agg_local)
-agg = agg %>% filter( method.pretty != "" )
-table(agg$method.pretty)
+agga = agga %>% filter( method.pretty != "" )
+table(agga$method.pretty)
 
 # look at number of actual sim reps
-table(agg$sim.reps.actual)
+table(agga$sim.reps.actual)
 
 
 
 # initialize global variables that describe estimate and outcome names, etc.
 # this must be after calling wrangle_agg_local
-init_var_names()
+init_var_names(.agg = agga)
 
 
 # summarize scen params
-CreateTableOne( dat = agg,
+CreateTableOne( dat = agga,
                 vars = param.vars.manip2,
                 factorVars = param.vars.manip2,
                 strata = "Ytype" )
@@ -122,20 +124,83 @@ CreateTableOne( dat = agg,
 # ~~ Check runtimes of sbatch files -------------------------
 
 # mean runtimes within scenarios - HOURS
-summary(agg$doParallelSeconds/60^2) 
+summary(agga$doParallelSeconds/60^2) 
 
 # 95th quantile of runtime within scens - HOURS
-summary(agg$doParallelSecondsQ95/60^2) 
+summary(agga$doParallelSecondsQ95/60^2) 
 
 
 
-# ~~ Make data subsets -------------------------
+                        
 
-# agg_save = agg  # in case you want to subset
-# 
-# # realistically small metas only
-# aggs = agg %>% filter( k.pub <= 20 )
+# SANITY CHECKS ON DATA GENERATION -------------------------
 
+
+# ~ Individual studies should be unbiased  -------------------------------------------------
+
+# look for scens where even the individual studies are biased for Mu
+#  e.g., because of very rare binary Y with small N
+summary( abs(agga$sancheck_mean_yi - agga$Mu) )
+
+ind = which( abs(agga$sancheck_mean_yi - agga$Mu) > 0.1 )
+length(ind)/nrow(agga)  # percent of scens
+
+# summarize scen params for these ones
+CreateTableOne( dat = agga[ind,],
+                vars = param.vars.manip2,
+                factorVars = param.vars.manip2)
+
+table(agga[ind,"N.expr"] )
+# not surprisingly, the bad scens are exclusively binary Y, and almost exclusively ones with N=40
+#  though spread across a variety of p0 values
+
+
+# now with a more stringent threshold for bias in yi
+ind = which( abs(agga$sancheck_mean_yi - agga$Mu) > 0.05 )
+ind
+length(ind)/nrow(agga)  # percent of scens
+
+# summarize scen params for these ones
+CreateTableOne( dat = agga[ind,],
+                vars = param.vars.manip2,
+                factorVars = param.vars.manip2 )
+
+table(agga[ind,"N.expr"] )
+# not surprisingly, the bad scens are exclusively binary Y, and almost exclusively ones with N=40
+#  though spread across a variety of p0 values
+
+
+#***exclude these scens going forward
+agg = agga[-ind,]
+CreateTableOne( dat = agg,
+                vars = param.vars.manip2,
+                factorVars = param.vars.manip2,
+                strata = "Ytype")
+
+# ~ Stats for paper about scen params -------------------------------------------------
+
+# one row per scen only
+first = agg[ !duplicated(agg$scen.name), ]
+  
+update_result_csv( name = "Num scens Ytype bin",
+                   value = sum(first$Ytype == "bin-OR"),
+                   print = TRUE )
+
+update_result_csv( name = "Num scens Ytype cont",
+                   value = sum(first$Ytype == "cont-SMD"),
+                   print = TRUE )
+
+
+
+
+# ~ Other sanity checks -------------------------------------------------
+
+# sanity checks on data generation
+namesWith(pattern = "sancheck_", agg)
+
+summary( abs( agg$sancheck_mean_pY0 - agg$p0 ) )
+summary( abs( agg$sancheck_mean_nY0 - agg$sancheck_mean_nY0_theory) )
+summary( abs( agg$sancheck_mean_nY1 - agg$sancheck_mean_nY1_theory) )
 
 
 # ~~ Convergence stats by method -------------------------
@@ -160,79 +225,8 @@ t = agg %>% group_by(method) %>%
              mean(1-ShatCIFail),
              min(1-ShatCIFail) )
 
-View(t)
+if (use.View = TRUE) View(t)
 
-
-
-
-# SANITY CHECKS ON DATA GENERATION -------------------------
-
-
-# ~ Individual studies should be unbiased  -------------------------------------------------
-
-# look for scens where even the individual studies are biased for Mu
-#  e.g., because of very rare binary Y with small N
-summary( abs(agg$sancheck_mean_yi - agg$Mu) )
-
-ind = which( abs(agg$sancheck_mean_yi - agg$Mu) > 0.1 )
-length(ind)/nrow(agg)  # percent of scens
-
-# summarize scen params for these ones
-CreateTableOne( dat = agg[ind,],
-                vars = param.vars.manip2,
-                factorVars = param.vars.manip2)
-
-table(agg[ind,"N.expr"] )
-# not surprisingly, the bad scens are exclusively binary Y, and almost exclusively ones with N=40
-#  though spread across a variety of p0 values
-
-
-# now with a more stringent threshold for bias in yi
-ind = which( abs(agg$sancheck_mean_yi - agg$Mu) > 0.05 )
-ind
-length(ind)/nrow(agg)  # percent of scens
-
-# summarize scen params for these ones
-CreateTableOne( dat = agg[ind,],
-                vars = param.vars.manip2,
-                factorVars = param.vars.manip2 )
-
-table(agg[ind,"N.expr"] )
-# not surprisingly, the bad scens are exclusively binary Y, and almost exclusively ones with N=40
-#  though spread across a variety of p0 values
-
-
-#***exclude these scens going forward
-agg = agg[-ind,]
-CreateTableOne( dat = agg,
-                vars = param.vars.manip2,
-                factorVars = param.vars.manip2,
-                strata = "Ytype")
-
-# ~ Stats for paper about scen params -------------------------------------------------
-
-# one row per scen only
-first = agg[ !duplicated(agg$scen.name), ]
-  
-update_result_csv( name = "Num scens Ytype bin",
-                   value = sum(first$Ytype == "bin-OR"),
-                   print = TRUE )
-
-update_result_csv( name = "Num scens Ytype cont",
-                   value = sum(first$Ytype == "cont-SMD"),
-                   print = TRUE )
-
-
-
-
-# ~ Other sanity checks -------------------------------------------------
-
-
-namesWith(pattern = "sancheck_", agg)
-
-summary( abs( agg$sancheck_mean_pY0 - agg$p0 ) )
-summary( abs( agg$sancheck_mean_nY0 - agg$sancheck_mean_nY0_theory) )
-summary( abs( agg$sancheck_mean_nY1 - agg$sancheck_mean_nY1_theory) )
 
 
 
@@ -300,9 +294,13 @@ CreateTableOne( dat = agg2[ !duplicated(agg2$scen.name) ],
 
 # ~ Overall  -------------------------------------------------
 
-#**MAIN TEXT TABLES 2-3
+# **MAIN TEXT TABLES 2-5
 make_both_winner_tables(.agg = agg2 %>% filter( Ytype == "cont-SMD" ) )
 make_both_winner_tables(.agg = agg2 %>% filter( Ytype == "bin-OR" ) )
+
+# **MAIN TEXT TABLES 6-10
+make_both_winner_tables(.agg = agg2 %>% filter( Ytype == "cont-SMD" & k.pub <= 5 ) )
+make_both_winner_tables(.agg = agg2 %>% filter( Ytype == "bin-OR" & k.pub <= 5 ) )
 
 
 # for binary Y, investigate the surprising finding that Jeffreys slightly over-covers, yet its CI is much narrower
@@ -347,7 +345,7 @@ t = wide_agg %>% select( all_of( c( "scen.name", param.vars.manip2 ) ),
   filter(scen.name %in% scens) 
   #filter(scen.name == 1072)
 
-View(t)
+if (use.View = TRUE) View(t)
 
 # scen 1072 is striking
 
@@ -410,7 +408,59 @@ make_both_winner_tables(.agg = agg2 %>% filter(Ytype == "bin-OR", N.pretty %in% 
 
 
 
-# 2024-01-13 - PULL OUT A PROBLEM SCENARIO -------------------------------------------------
+
+# SANITY CHECKS VS. LANGAN -------------------------
+
+# for sanity checks, we include the scenarios in which even the individual studies were biased
+# that only affects the inclusion of binary-Y scenarios, not continuous Y 
+
+### overall
+# indeed, all methods have substantial positive bias
+make_both_winner_tables(.agg = agga %>% filter( Ytype == "cont-SMD" ),
+                        display = "dataframe")
+# c.f. excluding the problematic scen combos:
+make_both_winner_tables(.agg = agg %>% filter( Ytype == "cont-SMD" ),
+                        display = "dataframe" )
+
+
+### try to reproduce Figure 1, upper left-hand panel
+# this is one scen only
+temp = agg %>% filter( Ytype == "cont-SMD" &
+                        N.expr == "40",
+                        k.pub == 2,
+                        t2a == 0.04,
+                        true.dist == "norm")
+expect_equal( nuni(temp$scen.name), 1 )
+make_both_winner_tables(.agg = temp,
+                        display = "dataframe" )
+
+# indeed, it is a negative bias, in contrast to Langan's observation of positive bias
+temp$Shat
+sqrt(temp$t2a)
+
+
+
+### is it true that PM has substantial positive bias per Langan?
+temp = agg %>% filter(method == "PM")
+
+summary(temp$ShatBias)
+summary(temp$ShatBias / sqrt(temp$t2a))
+
+# scens with >50% positive bias in Shat
+temp2 = temp %>% filter( ShatBias > 0.5*sqrt(t2a) )
+nrow(temp2)
+
+# summarize scen params
+CreateTableOne( dat = temp2,
+                vars = param.vars.manip2,
+                factorVars = param.vars.manip2,
+                strata = "Ytype" )
+
+# across all scens
+hist(temp$ShatBias / sqrt(temp$t2a))
+
+
+# 2024-01-22 - PULL OUT A PROBLEM SCENARIO -------------------------------------------------
 
 x = agg2 %>% filter(t2a == 0.0001 & ShatCover == 0)
 unique(x$scen.name)
@@ -425,7 +475,11 @@ construct( as.data.frame(x3) )
 
 # PLOTS -------------------------------------------------
 
-# ~ Line plots of multiple outcomes  -------------------------------------------------
+
+# ~ Line plots of multiple outcomes (not in use)  -------------------------------------------------
+
+
+# ~ Line plots of multiple outcomes (not in use)  -------------------------------------------------
 
 .true.dist = "norm"
 .true.sei.expr = "0.02 + rexp(n = 1, rate = 3)"
@@ -465,7 +519,7 @@ t = aggo %>%
              meanNA(MhatWidth) ) %>%
   mutate_if(is.numeric, function(x) round(x,2))
 
-View(t)
+if (use.View = TRUE) View(t)
 
 
 
