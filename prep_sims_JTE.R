@@ -69,6 +69,50 @@ source("analyze_sims_helper_JTE.R")
 
 
 
+
+# READ IN AGGREGATED DATA FROM CLUSTER -------------------------------------------------
+
+setwd(data.dir)
+aggo = fread("aggo.csv")
+# check when the dataset was last modified to make sure we're working with correct version
+file.info("aggo.csv")$mtime
+nrow(aggo) / nuni(aggo$method)  # number of scens that are done; 2496 if sims are done
+
+# add fancy variables for plotting, etc.
+agg = wrangle_agg_local(aggo)
+setwd(data.dir); fwrite(agg, "agg.csv")
+
+
+# PREP ITERATE-LEVEL DATA FOR SCEN 1072  -------------------------------------------------
+
+# this will be a little slow (1-2 min)
+setwd(data.dir)
+s = fread("stitched.csv")
+
+# similar prep work to wrangle_agg_local
+s2 = s %>% filter(scen.name == 1072 &
+                    method %in% c("REML", "DL", "PM", "DL2", "robu", "jeffreys-pmode") )
+
+
+s2 = s2 %>% mutate( CI_asy = (MHi - Mhat) / (Mhat - MLo),
+                    MhatBias = Mhat - Mu,
+                    MhatWidth = MHi - MLo,
+                    MhatCover = (MHi >= Mu & MLo <= Mu) )
+
+s2$method.pretty = s2$method 
+s2$method.pretty[ s2$method == "robu" ] = "RVE"
+s2$method.pretty[ s2$method == "jeffreys-pmode" ] = "Jeffreys"
+table(s2$method, s2$method.pretty)
+
+correct.order = c( "Jeffreys", "DL", "DL2", "REML", "PM", "RVE")
+s2$method.pretty = factor(s2$method.pretty, levels = correct.order)
+levels(s2$method.pretty)
+
+
+fwrite( s2, "stitched_scen_1072.csv" )
+
+
+
 # MERGE 4 SIMULATION DATASETS (ITERATE LEVEL) -------------------------------------------------
 
 # # bind the stitched files
@@ -113,47 +157,33 @@ source("analyze_sims_helper_JTE.R")
 
 
 
-# STITCH FROM SCRATCH -------------------------------------------------
-
-if ( stitch.from.scratch == TRUE ) {
-  setwd(data.dir)
-  s = fread("stitched.csv")
-  
-  aggo = make_agg_data(s,
-                       expected.sim.reps = 1000) 
-  
-  aggo = make_agg_data(s[1:20000,],
-                       expected.sim.reps = 1000) 
-  
-  
-  # sanity check:
-  # should have 1 row per scen-method combo
-  n.scens = 300
-  n.methods = nuni(aggo$method)
-  expect_equal( sum( n.scens * n.methods ),
-                nrow(aggo) )
-  setwd(data.dir); fwrite(aggo, "agg.csv")
-  
-  
-  # add fancy variables for plotting, etc.
-  agg = wrangle_agg_local(aggo)
-  setwd(data.dir); fwrite(agg, "agg.csv")
-  
-}
-
-
-# ALTERNATIVE: READ IN AGG DATA FROM CLUSTER -------------------------------------------------
-
-setwd(data.dir)
-aggo = fread("aggo.csv")
-# check when the dataset was last modified to make sure we're working with correct version
-file.info("aggo.csv")$mtime
-nrow(aggo) / nuni(aggo$method)  # number of scens that are done; 2496 if sims are done
-
-# add fancy variables for plotting, etc.
-agg = wrangle_agg_local(aggo)
-setwd(data.dir); fwrite(agg, "agg.csv")
-
+# # STITCH FROM SCRATCH -------------------------------------------------
+# 
+# if ( stitch.from.scratch == TRUE ) {
+#   setwd(data.dir)
+#   s = fread("stitched.csv")
+#   
+#   aggo = make_agg_data(s,
+#                        expected.sim.reps = 1000) 
+#   
+#   aggo = make_agg_data(s[1:20000,],
+#                        expected.sim.reps = 1000) 
+#   
+#   
+#   # sanity check:
+#   # should have 1 row per scen-method combo
+#   n.scens = 300
+#   n.methods = nuni(aggo$method)
+#   expect_equal( sum( n.scens * n.methods ),
+#                 nrow(aggo) )
+#   setwd(data.dir); fwrite(aggo, "agg.csv")
+#   
+#   
+#   # add fancy variables for plotting, etc.
+#   agg = wrangle_agg_local(aggo)
+#   setwd(data.dir); fwrite(agg, "agg.csv")
+#   
+# }
 
 
 
