@@ -542,7 +542,7 @@ my_violins(xName = "k.pub",
 
 
 
-# ~ Plots for scen 1072 (CI overcoverage despite better efficiency) -------------------------------------------------
+# ~ Plots and stats for scen 1072 (CI overcoverage despite better efficiency) -------------------------------------------------
 
 # for binary Y, investigate the surprising finding that Jeffreys slightly over-covers, yet its CI is much narrower
 
@@ -653,12 +653,33 @@ my_ggsave( name = "scen_1072_CI_asymmetry.pdf",
            .width = 8,
            .height = 6)
 
+
 ### One-off stats about this scenario
 
+# parameters, hard-coded in Supplement
 ( scen.1072.params = s2 %>% select( all_of(param.vars.manip2) ) %>%
   filter( row_number() == 1 ) )
 
-#bm: write about this scen in manuscript :D
+
+temp = agga %>% filter(scen.name == 1072 & method.pretty %in% methods.to.show)
+round( 100 * as.numeric( temp %>% filter(method.pretty == "Jeffreys") %>%
+              select(MhatCover) ) )
+
+update_result_csv( name = "Scen 1072 Jeffreys MhatCover",
+                   value = round( 100 * as.numeric( temp %>% filter(method.pretty == "Jeffreys") %>%
+                                                      select(MhatCover) ) ),
+                   print = TRUE )
+
+# all other methods have 95% coverage
+round( 100 * temp$MhatCover[ !temp$method.pretty == "Jeffreys" ] )
+
+update_result_csv( name = "Scen 1072 Jeffreys MhatWidth",
+                   value = round( as.numeric( temp %>% filter(method.pretty == "Jeffreys") %>%
+                                                      select(MhatWidth) ), 2 ),
+                   print = TRUE )
+
+
+
 
 
 # ~ Line plots of multiple outcomes (not in use)  -------------------------------------------------
@@ -680,6 +701,7 @@ sim_plot_multiple_outcomes(.agg = agg,
                            .y.breaks = NULL,
                            .ggtitle = "",
                            .local.results.dir = .local.results.dir)
+
 
 # SANITY CHECK ON WINNER TABLES: QUICK AND SIMPLE SUBSET ANALYSIS -------------------------------------------------
 
