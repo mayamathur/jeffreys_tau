@@ -177,8 +177,9 @@ CreateTableOne( dat = agg,
                 factorVars = param.vars.manip2,
                 strata = "Ytype")
 
-# ~ Stats for paper about scen params -------------------------------------------------
+# ~ One-off stats for paper -------------------------------------------------
 
+### Stats about scen parameters
 # one row per scen only
 first = agg[ !duplicated(agg$scen.name), ]
   
@@ -190,6 +191,20 @@ update_result_csv( name = "Num scens Ytype cont",
                    value = sum(first$Ytype == "cont-SMD"),
                    print = TRUE )
 
+
+
+### CI width comparisons
+t = agg %>% filter(Ytype == "cont-SMD") %>%
+  group_by(scen.name) %>%
+  mutate( CI_ratio = min( MhatWidth[ method.pretty != "Jeffreys" ] ) / MhatWidth[ method.pretty == "Jeffreys" ] ) %>%
+  filter( !duplicated(scen.name) )
+
+expect_equal( nrow(t), nuni(agg$scen.name[agg$Ytype == "cont-SMD"]) )
+
+#@definitely check these and the underlying CI_ratio calculation
+update_result_csv( name = "Sims - Mean perc narrower Jeffreys vs winning other method - Ycont",
+                   value = round( 100 * ( mean(t$CI_ratio) - 1 ) ),
+                   print = TRUE )
 
 
 
@@ -303,52 +318,6 @@ make_both_winner_tables(.agg = agg2 %>% filter( Ytype == "cont-SMD" & k.pub <= 5
 make_both_winner_tables(.agg = agg2 %>% filter( Ytype == "bin-OR" & k.pub <= 5 ) )
 
 
-# for binary Y, investigate the surprising finding that Jeffreys slightly over-covers, yet its CI is much narrower
-# wide form wrt methods:
-w = pivot_wider(agg, names_from = method, values_from = MhatCover)
-
-
-wide_agg <- pivot_wider(agg,
-                        names_from = method,
-                        values_from = c(MhatCover, MhatWidth, MhatBias, MhatAbsBias,
-                                        MLo, MHi),
-                        names_sep = "_",
-                        id_cols = all_of( c( "scen.name", param.vars.manip2 ) ) )
-
-expect_equal( nrow(wide_agg), nuni(agg$scen.name) )
-# View( wide_agg %>% select(`MhatCover_jeffreys-pmode`, `MhatCover_REML`) )
-
-
-# scens where Jeffreys over-covered but was narrower than REML:
-scens = wide_agg$scen.name[ wide_agg$`MhatCover_jeffreys-pmode` > 0.95 & 
-                      wide_agg$`MhatCover_REML` < 0.95 & 
-                      wide_agg$`MhatWidth_jeffreys-pmode` < wide_agg$`MhatWidth_REML` ]
-
-t = wide_agg %>% select( all_of( c( "scen.name", param.vars.manip2 ) ),
-                     `MhatCover_jeffreys-pmode`, 
-                     `MhatCover_REML`,
-                     
-                     `MhatWidth_jeffreys-pmode`, 
-                     `MhatWidth_REML`,
-                     
-                     `MhatBias_jeffreys-pmode`, 
-                     `MhatBias_REML`,
-                     
-                     `MhatAbsBias_jeffreys-pmode`, 
-                     `MhatAbsBias_REML`,
-                     
-                     `MLo_jeffreys-pmode`, 
-                     `MLo_REML`,
-                     
-                     `MHi_jeffreys-pmode`, 
-                     `MHi_REML`) %>%
-  filter(scen.name %in% scens) 
-  #filter(scen.name == 1072)
-
-if (use.View = TRUE) View(t)
-
-# scen 1072 is striking
-
 
 # ~ k  -------------------------------------------------
 
@@ -407,9 +376,187 @@ make_both_winner_tables(.agg = agg2 %>% filter(Ytype == "bin-OR", N.pretty %in% 
 
 
 
+# ONE-OFF PERFORMANCE STATS FOR PAPER -------------------------------------------------
 
 
-# SANITY CHECKS VS. LANGAN -------------------------
+### CI width comparisons
+
+# these use only the k <= 20 scens
+
+
+#@UNDERLYING FN NEEDS SANITY CHECKS
+update_result_csv( name = "Sims - Mean perc narrower Jeffreys vs winning other method - Ycont",
+                   value = perc_CI_narrower(.agg = agg2 %>% filter(Ytype == "cont-SMD")),
+                   print = TRUE )
+update_result_csv( name = "Sims - Mean perc narrower Jeffreys vs winning other method - Ycont small metas",
+                   value = perc_CI_narrower(.agg = agg2 %>% filter(k.pub <= 5 & Ytype == "cont-SMD")),
+                   print = TRUE )
+
+
+
+update_result_csv( name = "Sims - Mean perc narrower Jeffreys vs winning other method - Ybin",
+                   value = perc_CI_narrower(.agg = agg2 %>% filter(Ytype == "bin-OR")),
+                   print = TRUE )
+
+update_result_csv( name = "Sims - Mean perc narrower Jeffreys vs winning other method - Ybin small metas",
+                   value = perc_CI_narrower(.agg = agg2 %>% filter(k.pub <= 5 & Ytype == "bin-OR")),
+                   print = TRUE )
+
+
+### How asymmetric is Jeffreys CI for binary outcomes?
+
+# for binary Y, investigate the surprising finding that Jeffreys slightly over-covers, yet its CI is much narrower
+# wide form wrt methods:
+w = pivot_wider(agg, names_from = method, values_from = MhatCover)
+
+
+wide_agg <- pivot_wider(agg,
+                        names_from = method,
+                        values_from = c(MhatCover, MhatWidth, MhatBias, MhatAbsBias,
+                                        MLo, MHi),
+                        names_sep = "_",
+                        id_cols = all_of( c( "scen.name", param.vars.manip2 ) ) )
+
+expect_equal( nrow(wide_agg), nuni(agg$scen.name) )
+# View( wide_agg %>% select(`MhatCover_jeffreys-pmode`, `MhatCover_REML`) )
+
+# scens where Jeffreys over-covered but was narrower than REML:
+scens = wide_agg$scen.name[ wide_agg$`MhatCover_jeffreys-pmode` > 0.95 & 
+                              wide_agg$`MhatCover_REML` < 0.95 & 
+                              wide_agg$`MhatWidth_jeffreys-pmode` < wide_agg$`MhatWidth_REML` ]
+
+t = wide_agg %>% select( all_of( c( "scen.name", param.vars.manip2 ) ),
+                         `MhatCover_jeffreys-pmode`, 
+                         `MhatCover_REML`,
+                         
+                         `MhatWidth_jeffreys-pmode`, 
+                         `MhatWidth_REML`,
+                         
+                         `MhatBias_jeffreys-pmode`, 
+                         `MhatBias_REML`,
+                         
+                         `MhatAbsBias_jeffreys-pmode`, 
+                         `MhatAbsBias_REML`,
+                         
+                         `MLo_jeffreys-pmode`, 
+                         `MLo_REML`,
+                         
+                         `MHi_jeffreys-pmode`, 
+                         `MHi_REML`) %>%
+  filter(scen.name %in% scens) 
+#filter(scen.name == 1072)
+
+if (use.View = TRUE) View(t)
+# scen 1072 is striking
+
+# asymmetry
+t = agg %>% mutate(CI_asy = (MHi - Mhat) / (Mhat - MLo) )
+
+temp = t %>% group_by(method.pretty) %>%
+  filter(method.pretty %in% methods.to.show & scen.name == 1072) %>%
+  summarise( mean(CI_asy))
+
+temp
+
+### look at individual iterates for scen 1072
+
+# commented out because slow
+#setwd(data.dir)
+#s = fread("stitched.csv")
+#s2 = s %>% filter(scen.name == 1072)
+#fwrite( s2, "stitched_scen_1072.csv" )
+
+# prep the data
+setwd(data.dir)
+s2 = fread("stitched_scen_1072.csv") %>% filter(method %in% c("REML", "DL", "PM", "DL2", "robu", "jeffreys-pmode"))
+
+s2 = s2 %>% mutate( CI_asy = (MHi - Mhat) / (Mhat - MLo),
+                    MhatBias = Mhat - Mu,
+                    MhatWidth = MHi - MLo,
+                    MhatCover = (MHi >= Mu & MLo <= Mu) )
+
+s2$method.pretty = s2$method # temporarily not relabeling them
+s2$method.pretty[ s2$method == "robu" ] = "RVE"
+s2$method.pretty[ s2$method == "jeffreys-pmode" ] = "Jeffreys"
+table(s2$method, s2$method.pretty)
+
+correct.order = c( "Jeffreys", "DL", "DL2", "REML", "PM", "RVE")
+s2$method.pretty = factor(s2$method.pretty, levels = correct.order)
+levels(s2$method.pretty)
+
+
+#bm
+# **super interesting!!
+p = ggplot( data = s2, 
+        aes( x = MhatBias,
+             y = MhatWidth,
+             color = MhatCover) ) +
+  geom_point(alpha = 0.5) +
+  facet_wrap( ~ method.pretty,
+              nrow = 2) +
+  
+  scale_color_manual( values = c("red", "black") ) +
+  scale_y_continuous( limits = c(0, 2.6),
+                      breaks = seq(0, 3, .5) ) +
+  
+  labs(color  = bquote(CI ~ includes ~ mu) ) +
+  xlab( bquote(hat(mu) ~ bias) ) +
+  ylab( "CI width" ) +
+  
+  theme_bw(base_size = 16) +
+  
+  theme( text = element_text(face = "bold"),
+         axis.title = element_text(size=16),
+         panel.grid.major.x = element_blank(),
+         panel.grid.minor.x = element_blank(),
+         legend.position = "bottom" ) 
+
+my_ggsave( name = "scen_1072_bias_vs_CI_width.pdf",
+           .plot = p,
+           .overleaf.dir = overleaf.dir.figs,
+           .results.dir = results.dir,
+           .width = 10,
+           .height = 8)
+
+
+
+### 
+p = ggplot( data = s2 %>% filter(method.pretty == "Jeffreys"), 
+        aes( x = CI_asy) ) +
+  geom_vline(xintercept = 1, lty = 2) +
+  geom_density(size = 1.2) +
+  
+  theme_bw(base_size = 16) +
+  
+  xlab( "CI asymmetry" ) +
+  ylab("Density") +
+  scale_y_continuous(breaks = NULL) +
+  
+  theme( text = element_text(face = "bold"),
+         axis.title = element_text(size=16),
+         axis.ticks.y = element_blank(),
+         panel.grid.major.x = element_blank(),
+         panel.grid.minor.x = element_blank(),
+         legend.position = "bottom" ) 
+
+my_ggsave( name = "scen_1072_CI_asymmetry.pdf",
+           .plot = p,
+           .overleaf.dir = overleaf.dir.figs,
+           .results.dir = results.dir,
+           .width = 8,
+           .height = 6)
+
+#bm: save these gorgeous plots! :D
+
+
+
+# SANITY CHECKS -------------------------
+
+# ~ Investigate binary-Y CI -------------------------------------------------
+
+# why is it that Jeffreys over-covers for binary Y, yet is much narrower?
+
+# ~ Compare to Langan results  -------------------------------------------------
 
 # for sanity checks, we include the scenarios in which even the individual studies were biased
 # that only affects the inclusion of binary-Y scenarios, not continuous Y 
@@ -460,7 +607,7 @@ CreateTableOne( dat = temp2,
 hist(temp$ShatBias / sqrt(temp$t2a))
 
 
-# 2024-01-22 - PULL OUT A PROBLEM SCENARIO -------------------------------------------------
+# ~ Isolate an interesting scenario  -------------------------------------------------
 
 x = agg2 %>% filter(t2a == 0.0001 & ShatCover == 0)
 unique(x$scen.name)
@@ -498,7 +645,6 @@ aggp$Ytype.pretty = factor(aggp$Ytype.pretty, levels = c("Continuous Y", "Binary
             "#0F5A8C",
             "#6D9956",
             "#D18350")
-
 
 
 my_violins(xName = "k.pub",

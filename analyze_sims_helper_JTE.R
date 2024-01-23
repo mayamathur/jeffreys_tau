@@ -1476,7 +1476,7 @@ init_var_names = function(.agg) {
   
   ### Methods of interest for plots ###
   # i.e., not jeffreys-pmean, jeffreys-pmed, etc.
-  methods.to.show = c("REML", "DL", "PM", "DL2", "RVE", "Jeffreys")
+  methods.to.show <<- c("REML", "DL", "PM", "DL2", "RVE", "Jeffreys")
   
   
   ### Names of parameter variables ###
@@ -1508,6 +1508,21 @@ init_var_names = function(.agg) {
              paste(param.vars.manip2, collapse= ", ") ) )
   
 }
+
+
+# what percent narrower is the Jeffreys CI than the CI of the narrowest other method?
+perc_CI_narrower = function(.agg) {
+  t = .agg %>% filter(method.pretty %in% methods.to.show) %>%
+    group_by(scen.name) %>%
+    mutate( CI_ratio = min( MhatWidth[ method.pretty != "Jeffreys" ] ) / MhatWidth[ method.pretty == "Jeffreys" ] ) 
+  
+  # sanity check
+  #if (use.View == TRUE ) View( t %>% select(scen.name, method.pretty, MhatWidth, CI_ratio) )
+  
+  first = t %>% filter( !duplicated(scen.name) )
+  return( round( 100 * ( mean(t$CI_ratio) - 1 ) ) )
+}
+
 
 # GENERIC SMALL HELPERS -------------------------------------------------------------
 
@@ -1555,6 +1570,8 @@ my_ggsave = function(name,
                      .height,
                      .results.dir = results.dir,
                      .overleaf.dir = overleaf.dir) {
+  
+  if ( is.null(.plot) ) message("Argument .plot is NULL")
   
   dirs = c(.results.dir, .overleaf.dir)
   dirIsNA = sapply(dirs, is.na)
