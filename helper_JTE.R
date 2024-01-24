@@ -627,6 +627,8 @@ sim_one_study = function( Mu,  # overall mean for meta-analysis
       nY0_theory = p0 * (muN/2)
       nY1_theory = p0 * exp(mui) * (muN/2)
       
+      browser()
+      
       # sanity check
       if (FALSE){
         coef( glm(Y ~ X, family=binomial(link = "log")) )[["X"]]; mui
