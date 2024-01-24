@@ -679,7 +679,8 @@ update_result_csv( name = "Scen 1072 Jeffreys MhatWidth",
                    print = TRUE )
 
 
-
+# all other methods
+round( temp$MhatWidth[ !temp$method.pretty == "Jeffreys" ], 2 )
 
 
 # ~ Line plots of multiple outcomes (not in use)  -------------------------------------------------
