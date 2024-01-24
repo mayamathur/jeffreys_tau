@@ -72,6 +72,8 @@ source("analyze_sims_helper_JTE.R")
 
 # READ IN AGGREGATED DATA FROM CLUSTER -------------------------------------------------
 
+
+# ~ Basic prep -------------------------------------------------
 setwd(data.dir)
 aggo = fread("aggo.csv")
 # check when the dataset was last modified to make sure we're working with correct version
@@ -80,7 +82,47 @@ nrow(aggo) / nuni(aggo$method)  # number of scens that are done; 2496 if sims ar
 
 # add fancy variables for plotting, etc.
 agg = wrangle_agg_local(aggo)
-setwd(data.dir); fwrite(agg, "agg.csv")
+
+# initialize global variables that describe estimate and outcome names, etc.
+# this must be after calling wrangle_agg_local
+init_var_names(.agg = agg)
+
+
+# ~ Individual studies should be unbiased -------------------------------------------------
+
+# look for scens where even the individual studies are biased for Mu
+#  e.g., because of very rare binary Y with small N
+summary( abs(agg$sancheck_mean_yi - agg$Mu) )
+
+# flag scens where yi has bias > 0.05
+agg$exclude_scen_biased_yi = abs(agg$sancheck_mean_yi - agg$Mu) > 0.05
+mean(agg$exclude_scen_biased_yi)  # percent of scens
+
+# summarize scen params for these ones
+# not surprisingly, the bad scens are exclusively binary Y, and mostly ones with N=40 or N ~ Unif(40,400)
+#  though spread across a variety of p0 values
+agg_bad = agg %>% filter(exclude_scen_biased_yi == TRUE)
+CreateTableOne( dat = agg_bad,
+                vars = param.vars.manip2,
+                factorVars = param.vars.manip2 )
+
+table(agg_bad$N.expr )
+
+
+
+#***exclude these scens going forward
+agg = agg %>% filter(exclude_scen_biased_yi == FALSE)
+CreateTableOne( dat = agg,
+                vars = param.vars.manip2,
+                factorVars = param.vars.manip2,
+                strata = "Ytype")
+
+
+# Write prepped datasets -------------------------------------------------
+
+setwd(data.dir)
+fwrite(agg, "agg.csv")
+fwrite(agg_bad, "agg_excluded_scens_biased_yi.csv")
 
 
 # PREP ITERATE-LEVEL DATA FOR SCEN 1072  -------------------------------------------------
@@ -113,6 +155,8 @@ fwrite( s2, "stitched_scen_1072.csv" )
 
 
 
+
+# NOT IN USE (FROM OTHER PROJECTS):
 # MERGE 4 SIMULATION DATASETS (ITERATE LEVEL) -------------------------------------------------
 
 # # bind the stitched files

@@ -92,44 +92,39 @@ source("helper_JTE.R")  # for lprior(), etc.
 
 # if only analyzing a single sim environment (no merging):
 setwd(data.dir)
-# "agg all" because we will later exclude scenarios whose parameters led to within-study bias
-agga = fread( "agg.csv")
+agg = fread( "agg.csv")
 # check when the dataset was last modified to make sure we're working with correct version
 file.info("agg.csv")$mtime
 
-dim(agga) / nuni(agga$method)
+dim(agg) / nuni(agg$method)
 
 
-# drop any "NA" methods (i.e., ones that didn't get labeled in wrangle_agg_local)
-agga = agga %>% filter( method.pretty != "" )
-table(agga$method.pretty)
+# # drop any "NA" methods (i.e., ones that didn't get labeled in wrangle_agg_local)
+# agg = agg %>% filter( method.pretty != "" )
+# table(agg$method.pretty)
 
-# look at number of actual sim reps
-table(agga$sim.reps.actual)
+# check that all sim reps completed
+expect_equal( unique(agg$sim.reps.actual), 500 )
 
 # initialize global variables that describe estimate and outcome names, etc.
 # this must be after calling wrangle_agg_local
-init_var_names(.agg = agga)
+init_var_names(.agg = agg)
 
 # summarize scen params
-CreateTableOne( dat = agga,
+CreateTableOne( dat = agg,
                 vars = param.vars.manip2,
                 factorVars = param.vars.manip2,
                 strata = "Ytype" )
 
-# scen 1072 data
-setwd(data.dir)
-s2 = fread("stitched_scen_1072.csv")
-levels( as.factor(s2$method.pretty) )
 
 
 # ~~ Check runtimes of sbatch files -------------------------
 
 # mean runtimes within scenarios - HOURS
-summary(agga$doParallelSeconds/60^2) 
+summary(agg$doParallelSeconds/60^2) 
 
 # 95th quantile of runtime within scens - HOURS
-summary(agga$doParallelSecondsQ95/60^2) 
+summary(agg$doParallelSecondsQ95/60^2) 
 
 
 
@@ -138,46 +133,6 @@ summary(agga$doParallelSecondsQ95/60^2)
 # SANITY CHECKS ON DATA GENERATION -------------------------
 
 
-# ~ Individual studies should be unbiased  -------------------------------------------------
-
-# look for scens where even the individual studies are biased for Mu
-#  e.g., because of very rare binary Y with small N
-summary( abs(agga$sancheck_mean_yi - agga$Mu) )
-
-ind = which( abs(agga$sancheck_mean_yi - agga$Mu) > 0.1 )
-length(ind)/nrow(agga)  # percent of scens
-
-# summarize scen params for these ones
-CreateTableOne( dat = agga[ind,],
-                vars = param.vars.manip2,
-                factorVars = param.vars.manip2)
-
-table(agga[ind,"N.expr"] )
-# not surprisingly, the bad scens are exclusively binary Y, and almost exclusively ones with N=40
-#  though spread across a variety of p0 values
-
-
-# now with a more stringent threshold for bias in yi
-ind = which( abs(agga$sancheck_mean_yi - agga$Mu) > 0.05 )
-ind
-length(ind)/nrow(agga)  # percent of scens
-
-# summarize scen params for these ones
-CreateTableOne( dat = agga[ind,],
-                vars = param.vars.manip2,
-                factorVars = param.vars.manip2 )
-
-table(agga[ind,"N.expr"] )
-# not surprisingly, the bad scens are exclusively binary Y, and almost exclusively ones with N=40
-#  though spread across a variety of p0 values
-
-
-#***exclude these scens going forward
-agg = agga[-ind,]
-CreateTableOne( dat = agg,
-                vars = param.vars.manip2,
-                factorVars = param.vars.manip2,
-                strata = "Ytype")
 
 # ~ One-off stats for paper -------------------------------------------------
 
@@ -295,7 +250,7 @@ agg = left_join(x = agg,
                 by = "scen.name")
 
 
-# ******** WINNER TABLES -------------------------
+# WINNER TABLES -------------------------
 
 # create the base dataset from which to filter all winner tables
 #agg2 = agg %>% filter( scen_important == TRUE & Ytype == .Ytype )
@@ -412,15 +367,6 @@ update_result_csv( name = "Sims - Mean perc narrower Jeffreys vs winning other m
 
 # for sanity checks, we include the scenarios in which even the individual studies were biased
 # that only affects the inclusion of binary-Y scenarios, not continuous Y 
-
-### overall
-# indeed, all methods have substantial positive bias
-make_both_winner_tables(.agg = agga %>% filter( Ytype == "cont-SMD" ),
-                        display = "dataframe")
-# c.f. excluding the problematic scen combos:
-make_both_winner_tables(.agg = agg %>% filter( Ytype == "cont-SMD" ),
-                        display = "dataframe" )
-
 
 ### try to reproduce Figure 1, upper left-hand panel
 # this is one scen only
@@ -546,6 +492,12 @@ my_violins(xName = "k.pub",
 
 # for binary Y, investigate the surprising finding that Jeffreys slightly over-covers, yet its CI is much narrower
 
+# scen 1072 data
+setwd(data.dir)
+s2 = fread("stitched_scen_1072.csv")
+levels( as.factor(s2$method.pretty) )
+
+
 ### Look for scens exhibiting this property
 # wide form wrt methods:
 w = pivot_wider(agg, names_from = method, values_from = MhatCover)
@@ -661,7 +613,7 @@ my_ggsave( name = "scen_1072_CI_asymmetry.pdf",
   filter( row_number() == 1 ) )
 
 
-temp = agga %>% filter(scen.name == 1072 & method.pretty %in% methods.to.show)
+temp = agg %>% filter(scen.name == 1072 & method.pretty %in% methods.to.show)
 round( 100 * as.numeric( temp %>% filter(method.pretty == "Jeffreys") %>%
               select(MhatCover) ) )
 
