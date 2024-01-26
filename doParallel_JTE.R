@@ -539,6 +539,9 @@ doParallel.seconds = system.time({
       
     }
     
+    # NOTE: if doing run.local, this will break if you didn't run naive
+    if (run.local == TRUE) srr(rep.res)
+    
     # ~~ Robust Variance Estimation ------------------------------
     
     # when no clustering or userweights, coincides exactly with DL
