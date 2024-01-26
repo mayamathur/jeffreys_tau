@@ -148,7 +148,16 @@ report_meta = function(.mod,
     
     
     if ( .mod.type == "rma" ) {
-      tau.CI = tau_CI(.mod)
+      # uses Q-profile intervals
+      # from here (https://wviechtb.github.io/metafor/reference/confint.rma.html):
+      # For objects of class "rma.uni" obtained with the rma.uni function, a confidence interval for the amount of (residual) heterogeneity (i.e., 𝜏2
+      # ) can be obtained by setting random=TRUE (which is the default). The interval is obtained iteratively either via the Q-profile method or via the generalized Q-statistic method (Hartung and Knapp, 2005; Viechtbauer, 2007; Jackson, 2013; Jackson et al., 2014). The latter is automatically used when the model was fitted with method="GENQ" or method="GENQM", the former is used in all other cases.
+      x = confint(.mod)
+      tau.lb = x$random["tau","ci.lb"]
+      tau.ub = x$random["tau","ci.ub"]
+      
+      # Wald-type CIs:
+      #tau.CI = tau_CI(.mod)
       .res = data.frame( .mod$b,
                          .mod$ci.lb,
                          .mod$ci.ub,
