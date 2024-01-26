@@ -414,7 +414,7 @@ doParallel.seconds = system.time({
     # https://cran.r-project.org/web/packages/metafor/metafor.pdf
     metafor.methods = all.methods[ all.methods %in% c("REML", "ML", "DL", "EB", "PM", "PMM", "HS", "SJ") ]
     
-    
+     
     if ( length(metafor.methods) > 0 ) {
       
       for ( .method in metafor.methods ) {
