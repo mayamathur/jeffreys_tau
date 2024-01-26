@@ -222,118 +222,120 @@ mle_params <- function(mu_start, tau_start, yi, sei) {
 
 
 
+
+
 # ~ Other Helpers ---------------
 
-# taken from TNE 2022-2-26
-get_optimx_dataframe = function( .yi,
-                                 .sei,
-                                 .tcrit,
-                                 .usePrior,
-                                 .par2is,
-                                 .Mu.start,
-                                 .par2.start ) {
-  
-  
-  ox.methods <- c('Nelder-Mead', 'BFGS', 'CG', 'L-BFGS-B', 'nlm', 'nlminb', 'spg', 'ucminf',
-                  'newuoa', 'bobyqa', 'nmkb', 'hjkb', 'Rcgmin', 'Rvmmin')
-  
-  l = optimx( par = c(.Mu.start, .par2.start),
-              fn = function(..pars) as.numeric( nlpost_jeffreys_RTMA( .pars = ..pars,
-                                                                      .par2is = .par2is,
-                                                                      .yi = .yi,
-                                                                      .sei = .sei,
-                                                                      .tcrit = .tcrit,
-                                                                      .usePrior = .usePrior ) ),
-              method = ox.methods )
-  
-  l$opt.method = row.names(l)
-  
-  # transform second parameter so it's always Shat instead of Vhat
-  if ( .par2is == "T2t" ) { l$p2 = sqrt(l$p2) }
-  
-  l2 = l %>% select(opt.method, p1, p2, convcode, value, kkt1, kkt2) 
-  
-  l2 = l2 %>% rename( Mhat = p1, Shat = p2, nll = value )
-  
-  w = pivot_wider(l2, 
-                  names_from = "opt.method",
-                  values_from = c("Mhat", "Shat", "convcode", "nll", "kkt1", "kkt2"),
-                  names_glue = "optimx.{opt.method}.{.value}")
-  
-  
-  if ( length( l$p1[ l$convcode == 0 ] ) > 0 ){
-    
-    # only keep the ones that had values for Mhat, Shat (not ones that didn't even give a value)
-    l = l[ !is.na(l$p1) & !is.na(l$p2), ]
-    
-    
-    #**optimizers that converged AND
-    # had a small gradient (kkt1) AND
-    # had a positive-definite Hessian (kkt2)
-    lc = l[ l$convcode == 0 & l$kkt1 == TRUE & l$kkt2 == TRUE, ]
-    
-    # index of optimizer with the best nll
-    lc.winner.ind = which.min(lc$value)
-    
-    
-    # Mhat.winner is the Mhat of the optimizer with the best nll, OF converged ones
-    # catch case in which no optimizers converged
-    if ( length(lc.winner.ind > 0) ) {
-      Mhat.winner = lc$p1[lc.winner.ind]
-      Shat.winner = lc$p2[lc.winner.ind]
-    } else {
-      Mhat.winner = Shat.winner = NA
-    }
-    
-    
-    # **note that this is the criterion for agreement
-    l$agree.Mhat = abs(l$p1 - Mhat.winner) < 0.01
-    l$agree.Shat = abs(l$p2 - Shat.winner) < 0.01
-    
-    # sanity check: look at differences of non-agreers from Mhat.winner
-    #l$p1[ l$agree.Mhat == FALSE ] - Mhat.winner
-    
-    
-    # get lc again now that we have the agreement indicator
-    lc = l[ l$convcode == 0 & l$kkt1 == TRUE & l$kkt2 == TRUE, ]
-    w$optimx.Nconvergers = nrow(lc)
-    w$optimx.convergers = paste( lc$opt.method, collapse = " ")
-    
-    w$optimx.Mhat.winner = Mhat.winner
-    w$optimx.Pagree.Mhat.winner = sum(l$agree.Mhat)/nrow(l)
-    # number and proportion of optimizers that converged that agreed with mode:
-    w$optimx.Nagree.of.convergers.Mhat.winner = sum(lc$agree.Mhat)
-    w$optimx.Pagree.of.convergers.Mhat.winner = sum(lc$agree.Mhat)/nrow(lc)
-    w$optimx.Mhat.agreers = paste( l$opt.method[ l$agree.Mhat == TRUE ], collapse = " ")
-    w$optimx.Mhat.convergers.agreers = paste( lc$opt.method[ lc$agree.Mhat == TRUE ], collapse = " ")
-    
-    w$optimx.Shat.winner = Shat.winner
-    w$optimx.Pagree.Shat.winner = sum(l$agree.Shat)/nrow(l)
-    w$optimx.Nagree.of.convergers.Shat.winner = sum(lc$agree.Shat)
-    w$optimx.Pagree.of.convergers.Shat.winner = sum(lc$agree.Shat)/nrow(lc)
-    w$optimx.Shat.agreers = paste( l$opt.method[ l$agree.Shat == TRUE ], collapse = " ")
-    w$optimx.Shat.convergers.agreers = paste( lc$opt.method[ lc$agree.Shat == TRUE ], collapse = " ")
-    
-  } else {
-    w$optimx.Nconvergers = NA
-    w$optimx.convergers = NA
-    w$optimx.Mhat.winner = NA
-    w$optimx.Pagree.Mhat.winner = NA
-    w$optimx.Nagree.of.convergers.Mhat.winner = NA
-    w$optimx.Pagree.of.convergers.Mhat.winner = NA
-    w$optimx.Mhat.agreers = NA
-    w$optimx.Mhat.convergers.agreers = NA
-    
-    w$optimx.Shat.winner = NA
-    w$optimx.Nagree.of.convergers.Shat.winner = NA
-    w$optimx.Pagree.of.convergers.Shat.winner = NA
-    w$optimx.Pagree.Shat.winner = NA
-    w$optimx.Shat.agreers = NA
-    w$optimx.Shat.convergers.agreers = NA
-  }
-  
-  return(w)
-} 
+# # taken from TNE 2022-2-26
+# get_optimx_dataframe = function( .yi,
+#                                  .sei,
+#                                  .tcrit,
+#                                  .usePrior,
+#                                  .par2is,
+#                                  .Mu.start,
+#                                  .par2.start ) {
+#   
+#   
+#   ox.methods <- c('Nelder-Mead', 'BFGS', 'CG', 'L-BFGS-B', 'nlm', 'nlminb', 'spg', 'ucminf',
+#                   'newuoa', 'bobyqa', 'nmkb', 'hjkb', 'Rcgmin', 'Rvmmin')
+#   
+#   l = optimx( par = c(.Mu.start, .par2.start),
+#               fn = function(..pars) as.numeric( nlpost_jeffreys_RTMA( .pars = ..pars,
+#                                                                       .par2is = .par2is,
+#                                                                       .yi = .yi,
+#                                                                       .sei = .sei,
+#                                                                       .tcrit = .tcrit,
+#                                                                       .usePrior = .usePrior ) ),
+#               method = ox.methods )
+#   
+#   l$opt.method = row.names(l)
+#   
+#   # transform second parameter so it's always Shat instead of Vhat
+#   if ( .par2is == "T2t" ) { l$p2 = sqrt(l$p2) }
+#   
+#   l2 = l %>% select(opt.method, p1, p2, convcode, value, kkt1, kkt2) 
+#   
+#   l2 = l2 %>% rename( Mhat = p1, Shat = p2, nll = value )
+#   
+#   w = pivot_wider(l2, 
+#                   names_from = "opt.method",
+#                   values_from = c("Mhat", "Shat", "convcode", "nll", "kkt1", "kkt2"),
+#                   names_glue = "optimx.{opt.method}.{.value}")
+#   
+#   
+#   if ( length( l$p1[ l$convcode == 0 ] ) > 0 ){
+#     
+#     # only keep the ones that had values for Mhat, Shat (not ones that didn't even give a value)
+#     l = l[ !is.na(l$p1) & !is.na(l$p2), ]
+#     
+#     
+#     #**optimizers that converged AND
+#     # had a small gradient (kkt1) AND
+#     # had a positive-definite Hessian (kkt2)
+#     lc = l[ l$convcode == 0 & l$kkt1 == TRUE & l$kkt2 == TRUE, ]
+#     
+#     # index of optimizer with the best nll
+#     lc.winner.ind = which.min(lc$value)
+#     
+#     
+#     # Mhat.winner is the Mhat of the optimizer with the best nll, OF converged ones
+#     # catch case in which no optimizers converged
+#     if ( length(lc.winner.ind > 0) ) {
+#       Mhat.winner = lc$p1[lc.winner.ind]
+#       Shat.winner = lc$p2[lc.winner.ind]
+#     } else {
+#       Mhat.winner = Shat.winner = NA
+#     }
+#     
+#     
+#     # **note that this is the criterion for agreement
+#     l$agree.Mhat = abs(l$p1 - Mhat.winner) < 0.01
+#     l$agree.Shat = abs(l$p2 - Shat.winner) < 0.01
+#     
+#     # sanity check: look at differences of non-agreers from Mhat.winner
+#     #l$p1[ l$agree.Mhat == FALSE ] - Mhat.winner
+#     
+#     
+#     # get lc again now that we have the agreement indicator
+#     lc = l[ l$convcode == 0 & l$kkt1 == TRUE & l$kkt2 == TRUE, ]
+#     w$optimx.Nconvergers = nrow(lc)
+#     w$optimx.convergers = paste( lc$opt.method, collapse = " ")
+#     
+#     w$optimx.Mhat.winner = Mhat.winner
+#     w$optimx.Pagree.Mhat.winner = sum(l$agree.Mhat)/nrow(l)
+#     # number and proportion of optimizers that converged that agreed with mode:
+#     w$optimx.Nagree.of.convergers.Mhat.winner = sum(lc$agree.Mhat)
+#     w$optimx.Pagree.of.convergers.Mhat.winner = sum(lc$agree.Mhat)/nrow(lc)
+#     w$optimx.Mhat.agreers = paste( l$opt.method[ l$agree.Mhat == TRUE ], collapse = " ")
+#     w$optimx.Mhat.convergers.agreers = paste( lc$opt.method[ lc$agree.Mhat == TRUE ], collapse = " ")
+#     
+#     w$optimx.Shat.winner = Shat.winner
+#     w$optimx.Pagree.Shat.winner = sum(l$agree.Shat)/nrow(l)
+#     w$optimx.Nagree.of.convergers.Shat.winner = sum(lc$agree.Shat)
+#     w$optimx.Pagree.of.convergers.Shat.winner = sum(lc$agree.Shat)/nrow(lc)
+#     w$optimx.Shat.agreers = paste( l$opt.method[ l$agree.Shat == TRUE ], collapse = " ")
+#     w$optimx.Shat.convergers.agreers = paste( lc$opt.method[ lc$agree.Shat == TRUE ], collapse = " ")
+#     
+#   } else {
+#     w$optimx.Nconvergers = NA
+#     w$optimx.convergers = NA
+#     w$optimx.Mhat.winner = NA
+#     w$optimx.Pagree.Mhat.winner = NA
+#     w$optimx.Nagree.of.convergers.Mhat.winner = NA
+#     w$optimx.Pagree.of.convergers.Mhat.winner = NA
+#     w$optimx.Mhat.agreers = NA
+#     w$optimx.Mhat.convergers.agreers = NA
+#     
+#     w$optimx.Shat.winner = NA
+#     w$optimx.Nagree.of.convergers.Shat.winner = NA
+#     w$optimx.Pagree.of.convergers.Shat.winner = NA
+#     w$optimx.Pagree.Shat.winner = NA
+#     w$optimx.Shat.agreers = NA
+#     w$optimx.Shat.convergers.agreers = NA
+#   }
+#   
+#   return(w)
+# } 
 
 
 # ANALYSIS FNS ---------------------------------------------------------------
@@ -591,6 +593,7 @@ sim_one_study = function( Mu,  # overall mean for meta-analysis
            rnorm( n = N/2, mean = mui, sd = sd.w ) )
     
     # calculate ES for this study using metafor (see Viechtbauer "Conducting...", pg 10)
+    # per metafor docs, this automatically uses the Hedges' g correction
     ES = escalc( measure="SMD",   
                  n1i = N/2, 
                  n2i = N/2,
@@ -664,6 +667,10 @@ sim_one_study = function( Mu,  # overall mean for meta-analysis
     y0 = sum(Y[X==0])  # number of deaths in control group
     
     # calculate log-RR for this study using metafor (see Viechtbauer "Conducting...", pg 10)
+    # handling of zero cell counts (metafor docs):
+    # When to="only0" (the default), the value of add (the default is 1/2; but see ‘Note’) is added to each cell of those 
+    # tables with at least one cell equal to 0. When to="all", the value of add is added to each cell of all 
+    # tables
     if (Ytype == "bin-RR") {
       ES = escalc( measure="RR", ai=y1, bi=n1-y1, ci=y0, di=n0-y0 )  # returns on log scale
       

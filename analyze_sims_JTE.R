@@ -132,6 +132,13 @@ summary(agg$doParallelSecondsQ95/60^2)
 
 # SANITY CHECKS ON DATA GENERATION -------------------------
 
+# ~ RVE should be equivalent to DL since no clustering  -------------------------------------------------
+# is RVE always same as DL?
+t = agg %>% filter(method.pretty %in% c("DL", "RVE")) %>%
+  group_by(scen.name) %>%
+  summarise( sd(Mhat),
+             sd(Shat),
+             sd(MLo))
 
 
 # ~ One-off stats for paper -------------------------------------------------
@@ -175,13 +182,7 @@ summary( abs( agg$sancheck_mean_nY0 - agg$sancheck_mean_nY0_theory) )
 summary( abs( agg$sancheck_mean_nY1 - agg$sancheck_mean_nY1_theory) )
 
 
-# ~~ Convergence stats by method -------------------------
-
-summary(agg$MhatEstFail)
-summary(agg$MhatCIFail)
-
-summary(agg$ShatEstFail)
-summary( agg$ShatCIFail[ agg$method != "robu" ] ) # robu doesn't even try to provide inference
+# ~ Convergence stats by method -------------------------
 
 # convergence rates
 t = agg %>% group_by(method) %>%
@@ -198,6 +199,19 @@ t = agg %>% group_by(method) %>%
              min(1-ShatCIFail) )
 
 if (use.View = TRUE) View(t)
+
+
+# Bayesian convergence metrics
+( t = agg %>% filter(method.pretty == "Jeffreys") %>%
+  summarise( mean(MhatRhatGt1.05),
+             mean(ShatRhatGt1.05),
+             max(MhatRhatGt1.05),
+             max(ShatRhatGt1.05) ) )
+
+
+update_result_csv( name = paste("Perc Jeffreys", names(t)),
+                   value = round( 100 * t[1,], 2 ),
+                   print = TRUE )
 
 
 
