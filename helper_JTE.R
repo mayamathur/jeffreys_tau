@@ -163,8 +163,8 @@ report_meta = function(.mod,
                          .mod$ci.ub,
                          
                          sqrt(.mod$tau2),
-                         tau.CI[1],
-                         tau.CI[2] )
+                         tau.lb,
+                         tau.ub )
     } 
     
     

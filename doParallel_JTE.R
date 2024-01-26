@@ -428,7 +428,7 @@ doParallel.seconds = system.time({
     # https://cran.r-project.org/web/packages/metafor/metafor.pdf
     metafor.methods = all.methods[ all.methods %in% c("REML", "ML", "DL", "EB", "PM", "PMM", "HS", "SJ") ]
     
-     
+    
     if ( length(metafor.methods) > 0 ) {
       
       for ( .method in metafor.methods ) {
@@ -450,7 +450,7 @@ doParallel.seconds = system.time({
     # NOTE: if doing run.local, this will break if you didn't run naive
     if (run.local == TRUE) srr(rep.res)
     
-
+    
     # ~~ DL2 (Two-Step DL) -------------------------------------------------
     
     # requires 2 calls to metafor, so not handled in the loop above
@@ -460,16 +460,16 @@ doParallel.seconds = system.time({
                                   
                                   # first step
                                   m0 = rma( yi = d$yi,
-                                             vi = d$vi,
-                                             method = "DL",
-                                             knha = TRUE )
+                                            vi = d$vi,
+                                            method = "DL",
+                                            knha = TRUE )
                                   
                                   # second step, per Wolfgang
                                   mod = rma( yi = d$yi,
-                                            vi = d$vi,
-                                            method = "GENQ",
-                                            weights = 1 / (d$vi + m0$tau2),
-                                            knha = TRUE )
+                                             vi = d$vi,
+                                             method = "GENQ",
+                                             weights = 1 / (d$vi + m0$tau2),
+                                             knha = TRUE )
                                   
                                   report_meta(mod, .mod.type = "rma")
                                 },
@@ -487,10 +487,13 @@ doParallel.seconds = system.time({
       rep.res = run_method_safe(method.label = c("exact"),
                                 method.fn = function() {
                                   
-                                  mod = rma.exact.fast( yi = d$yi,
-                                             vi = d$vi )
+                                  ci = rma.exact.fast( yi = d$yi,
+                                                       vi = d$vi )
                                   
-                                  report_meta(mod, .mod.type = "rma")
+                                  # this method doesn't do point estimation of inference for tau
+                                  return( list( stats = data.frame( 
+                                    MLo = ci[1],
+                                    MHi = ci[2]) ) )
                                   
                                   
                                 },
@@ -501,9 +504,45 @@ doParallel.seconds = system.time({
     # NOTE: if doing run.local, this will break if you didn't run naive
     if (run.local == TRUE) srr(rep.res)
     
+    # ~~ MLE-profile ------------------------------
+    
+    if ( "MLE-profile" %in% all.methods ) {
+      rep.res = run_method_safe(method.label = c("MLE-profile"),
+                                method.fn = function() {
+                                  
+                                  nll_fun <- function(mu, tau) get_nll(mu, tau, d$yi, d$sei)
+                                  my_mle = stats4::mle(minuslogl = nll_fun,
+                                                       start = list(mu = Mhat.start, tau = Shat.start),
+                                                       method = "L-BFGS-B")
+                                  
+                                  # this fn will complain if optimizer in my_mle hasn't found the true max
+                                  #  which is a good thing
+                                  cis = stats4::confint(my_mle)
+                                  
+                                  return( list( stats = data.frame( 
+                                    
+                                    Mhat = as.numeric( attr(my_mle, "coef")["mu"] ),
+                                    Shat = as.numeric( attr(my_mle, "coef")["tau"] ),
+                                    
+                                    MhatSE = NA,
+                                    ShatSE = NA,
+                                    
+                                    MLo = cis["mu", 1],
+                                    MHi = cis["mu", 2],
+                                    
+                                    SLo = max( 0, cis["tau", 1] ),
+                                    SHi = cis["tau", 2] ) ) )
+                                  
+                                  
+                                },
+                                .rep.res = rep.res )
+      
+    }
     
     # ~~ Robust Variance Estimation ------------------------------
-
+    
+    # when no clustering or userweights, coincides exactly with DL
+    #  so only useful as a sanity check
     if ( "robu" %in% all.methods ) {
       rep.res = run_method_safe(method.label = c("robu"),
                                 method.fn = function() {
@@ -524,6 +563,7 @@ doParallel.seconds = system.time({
     
     
     # ~ New Methods ------------------------------
+    
     # ~~ ***** Jeffreys (MCMC) ------------------------------
     
     if ( "jeffreys" %in% all.methods ) {
@@ -581,7 +621,7 @@ doParallel.seconds = system.time({
                                   
                                 }, .rep.res = rep.res )
       
-
+      
       
       cat("\n doParallel flag: Done jeffreys if applicable")
     }
@@ -589,7 +629,7 @@ doParallel.seconds = system.time({
     # NOTE: if doing run.local, this will break if you didn't run naive
     if (run.local == TRUE) srr(rep.res)
     
-
+    
     # ~ Add Scen Params and Sanity Checks  -------------------------------------------------
     
     # add in scenario parameters
@@ -612,9 +652,9 @@ doParallel.seconds = system.time({
     rep.res$sancheck_mean_nY0_theory = mean(d$nY0_theory)
     rep.res$sancheck_mean_nY1 = mean(d$nY1)
     rep.res$sancheck_mean_nY1_theory = mean(d$nY1_theory)
-
+    
     rep.res$sancheck_mean_N = mean(d$N)
-
+    
     rep.res
     
   }  ### end foreach loop
