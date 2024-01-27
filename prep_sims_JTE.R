@@ -32,6 +32,7 @@ library(truncnorm)
 library(tmvtnorm)
 library(RColorBrewer)
 library(sjmisc)
+library(tableone)
 
 # prevent masking
 select = dplyr::select

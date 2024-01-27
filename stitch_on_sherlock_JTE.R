@@ -72,7 +72,6 @@ cat("\n\nFinished reading in tables")
 # sanity check: do all files have the same names?
 # if not, could be because some jobs were killed early so didn't get doParallelTime
 #  variable added at the end
-#  can be verified by looking at out-file for a job without name "doParallelTime"
 allNames = lapply( tables, names )
 # # find out which jobs had wrong number of names
 # lapply( allNames, function(x) all.equal(x, names ) )table(s$method)
@@ -201,18 +200,19 @@ if (FALSE) {
   #sum(s$k.pub == 10 & s$t2a == 0.2^2 & s$Mu == 0)
   
   
-  
+  # main results
   t = s %>% group_by(method) %>%
-    #filter(k.pub == 10 & t2a == 0.04 & Mu == 0) %>%  # jeffreys tau coverage is fine
-    #filter(k.pub == 10 & t2a == 1 & Mu == 0) %>%  # jeffreys tau coverage is fine
-    #filter(k.pub == 10 & t2a == 0 & Mu == 0) %>%  # @ALL METHODS HAVE 0 COVERAGE HERE WHEN TAU = 0 - WHY?
-    #filter(t2a > 0) %>%
-    #filter(t2a > 0 & Mu == 0.5) %>%
-    #filter(k.pub == 10 & true.dist == "norm" & true.sei.expr == "0.02 + rexp(n = 1, rate = 3)") %>%  # **this is an interesting case where mine clearly wins
-    
+    #filter(Ytype == "cont-SMD") %>% 
+    filter(Ytype == "bin-OR") %>% 
+
     summarise( reps = n(),
-               EstFail = mean(is.na(Mhat)),
-               #Mhat = meanNA(Mhat),
+               # EstFail = mean(is.na(Mhat)),
+               # #Mhat = meanNA(Mhat),
+               
+               MhatBias = meanNA(Mhat - Mu),
+               MhatCover = meanNA(MLo <= Mu & MHi >= Mu),
+               MhatWidth = meanNA(MHi - MLo),
+               MhatMSE = meanNA( ( Mhat - Mu )^2 ),
                
                ShatBias = meanNA(Shat - sqrt(t2a)),
                ShatCover = meanNA(SLo <= sqrt(t2a) & SHi >= sqrt(t2a)),
@@ -221,16 +221,13 @@ if (FALSE) {
                # SLo = meanNA(SLo),
                # SHi = meanNA(SHi),
                # Shat = meanNA(Shat),
-               ShatNA = mean(is.na(Shat)),
+               #ShatNA = mean(is.na(Shat)),
                
-               MhatBias = meanNA(Mhat - Mu),
-               MhatCover = meanNA(MLo <= Mu & MHi >= Mu),
-               MhatWidth = meanNA(MHi - MLo),
-               MhatMSE = meanNA( ( Mhat - Mu )^2 ),
+
                # MLo = meanNA(MLo),
                # MHi = meanNA(MHi),
                # Shat = meanNA(Shat),
-               MhatNA = mean(is.na(Mhat))
+               #MhatNA = mean(is.na(Mhat))
                #MhatRhatGt1.05 = mean(MhatRhat>1.05),
                #MhatRhatGt1.02 = mean(MhatRhat>1.02)
     ) %>%

@@ -30,6 +30,8 @@ toLoad = c("crayon",
            "rstan", # note: to reinstall this one, need to use high-mem session
            "optimx",
            "weightr",
+           "rma.exact",
+           "CompQuadForm",
            "phacking")  # note: to reinstall this one, need ml load jags
 
 # to install everything
@@ -183,7 +185,7 @@ if ( run.local == TRUE ) {
     N.expr = "40",
     stan.adapt_delta = 0.995,
     stan.maxtreedepth = 25,
-    rep.methods = c("MLE-profile ; exact ; ML ; REML")
+    rep.methods = c("MLE-profile ; exact ; ML ; REML ; jeffreys")
   )
   
   ### One scen - 105 ###

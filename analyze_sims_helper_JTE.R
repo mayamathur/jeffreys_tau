@@ -132,7 +132,7 @@ make_agg_data = function( .s,
              "stan.warning", 
              "job.name",
              "overall.error",  
-             names_with(.dat = .s, .pattern = "optimx") )
+             namesWith(dat = .s, pattern = "optimx") )
   
   firstOnly = c("scen.name",
                 "unique.scen",
@@ -314,6 +314,7 @@ wrangle_agg_local = function(agg) {
   agg$method.pretty = agg$method # temporarily not relabeling them
   agg$method.pretty[ agg$method == "robu" ] = "RVE"
   agg$method.pretty[ agg$method == "jeffreys-pmode" ] = "Jeffreys"
+  agg$method.pretty[ agg$method == "ML" ] = "MLE-Wald"
   table(agg$method, agg$method.pretty)
   
   if ( "minN" %in% names(agg) ){
@@ -364,11 +365,13 @@ make_winner_table_col = function(.agg,
                                  methods = c("DL",
                                              "DL2",
                                              "ML",
+                                             "MLE-profile",
                                              "PMM",
                                              "REML",
                                              "EB",
                                              "PM",
                                              "robu", 
+                                             "exact",
                                              
                                              # "jeffreys-pmean",
                                              # "jeffreys-pmed",
@@ -524,7 +527,8 @@ bias_worst10th = function(x) {
 make_winner_table = function( .agg, 
                               .yNames,
                               summarise.fun.name,
-                              display = c("dataframe", "xtable")
+                              #display = c("dataframe", "xtable")
+                              display = "dataframe"
                               #display = "xtable"
 ){
   
@@ -577,7 +581,8 @@ make_both_winner_tables = function( .agg,
                                                 "ShatBias", "ShatAbsBias", "ShatRMSE", "ShatCover", "ShatWidth"),
                                     summarise.fun.name = "mean",  # "mean" or "median"
                                     show.worst10th = FALSE,
-                                    display = c("dataframe", "xtable")
+                                    display = "dataframe"
+                                    #display = c("dataframe", "xtable")
 ){
   
   # # to show all yNames in one table

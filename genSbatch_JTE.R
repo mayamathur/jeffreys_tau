@@ -41,31 +41,31 @@ lapply( allPackages,
 ### 2024-01-15 ###
 scen.params = tidyr::expand_grid(
   # full list (save):
-  rep.methods = "REML ; DL ; DL2 ; PM ; robu ; jeffreys",
-  
+  rep.methods = "ML ; MLE-profile ; exact ; REML ; DL ; DL2 ; PM ; jeffreys",
+
   # *If you reorder the args, need to adjust wrangle_agg_local
   ### args shared between sim environments
   k.pub = c(10,
             2, 3, 5, 20, 100),  # intentionally out of order so that jobs with most interesting choices with complete first
- 
+
   t2a = c(0.1^2, 0.05^2, 0.2^2, 0.5^2),
 
   # same with Mu
   Mu = c(0, 0.5, 1.1, 2.3), # same as Langan's log-ORs
   true.dist = c("norm", "expo"),
-  p0 = c(NA, 0.05, 0.1, 0.5),  
-  
+  p0 = c(NA, 0.05, 0.1, 0.5),
+
   Ytype = c("cont-SMD", "bin-OR"),
-  
+
   N.expr = c( "40",
               "round( runif(n=1, min=40, max = 400) )",
               "400",
               "round( runif(n=1, min=2000, max = 4000) )" ),
-  
+
   # Stan control args
   stan.maxtreedepth = 25,
   stan.adapt_delta = 0.995,
-  
+
   get.CIs = TRUE,
   run.optimx = FALSE )
 
@@ -167,10 +167,10 @@ n.files
 #     sbatch -p qsu,owners,normal /home/groups/manishad/JTE/sbatch_files/1.sbatch
 
 
-# 2024-01-15: 2496
+# 2024-01-26: 2496
 path = "/home/groups/manishad/JTE"
 setwd( paste(path, "/sbatch_files", sep="") )
-for (i in 2001:2496) {
+for (i in 1001:2000) {
   system( paste("sbatch -p qsu,owners,normal /home/groups/manishad/JTE/sbatch_files/", i, ".sbatch", sep="") )
 }
 

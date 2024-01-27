@@ -198,7 +198,7 @@ t = agg %>% group_by(method) %>%
              mean(1-ShatCIFail),
              min(1-ShatCIFail) )
 
-if (use.View = TRUE) View(t)
+if (use.View == TRUE) View(t)
 
 
 # Bayesian convergence metrics
@@ -279,6 +279,8 @@ CreateTableOne( dat = agg2[ !duplicated(agg2$scen.name) ],
 
 
 # ~ Overall  -------------------------------------------------
+
+# if the tables don't have all the methods you want, adjust args in make_winner_table_col
 
 # **MAIN TEXT TABLES 2-5
 make_both_winner_tables(.agg = agg2 %>% filter( Ytype == "cont-SMD" ) )
