@@ -139,6 +139,127 @@ estimate_jeffreys = function(.yi,
 }
 
 
+
+# same as fn above, but calls stan.model.tau from init_stan_model_tau instead of stan.model
+# same prior as in bayesmeta
+estimate_jeffreys_tau_only = function(.yi,
+                             .sei,
+                             
+                             .Mu.start,
+                             .Tt.start,
+                             .stan.adapt_delta = 0.8,
+                             .stan.maxtreedepth = 10 ) {
+  
+  # stan.model (used later) is compiled OUTSIDE this fn in doParallel to avoid 
+  #  issues with nodes competing with one another
+  
+  
+  # prepare to capture warnings from Stan
+  stan.warned = 0
+  stan.warning = NA
+  
+  # set start values for sampler
+  init.fcn = function(o){ list(mu = .Mu.start,
+                               tau = .Tt.start ) }
+  
+  
+  # like tryCatch, but captures warnings without stopping the function from
+  #  returning its results
+  withCallingHandlers({
+    
+    # necessary to prevent ReadRDS errors in which cores try to work with other cores' intermediate results
+    # https://groups.google.com/g/stan-users/c/8snqQTTfWVs?pli=1
+    options(mc.cores = parallel::detectCores())
+    
+    cat( paste("\n estimate_jeffreys flag 2: about to call sampling") )
+    
+    post = sampling(stan.model.tau,
+                    cores = 1,
+                    refresh = 0,
+                    data = list( k = length(.yi),
+                                 sei = .sei,
+                                 y = .yi ),
+                    
+                    #iter = p$stan.iter,   
+                    control = list(max_treedepth = .stan.maxtreedepth,
+                                   adapt_delta = .stan.adapt_delta),
+                    
+                    init = init.fcn)
+    
+    
+  }, warning = function(condition){
+    stan.warned <<- 1
+    stan.warning <<- condition$message
+  } )
+  
+  cat( paste("\n estimate_jeffreys flag 3: about to call postSumm") )
+  postSumm = summary(post)$summary
+  if (is.null(postSumm)) stop("In stan, postSumm is null")
+  
+  # pull out best iterate to pass to MAP optimization later
+  ext = rstan::extract(post) # a vector of all post-WU iterates across all chains
+  best.ind = which.max(ext$log_post)  # single iterate with best log-posterior should be very close to MAP
+  
+  
+  # posterior means, posterior medians, modes, and max-LP iterate
+  Mhat = c( postSumm["mu", "mean"],
+            median( rstan::extract(post, "mu")[[1]] ),
+            ext$mu[best.ind] )
+  
+  Shat = c( postSumm["tau", "mean"],
+            median( rstan::extract(post, "tau")[[1]] ),
+            ext$tau[best.ind] )
+  
+  # sanity check
+  #expect_equal( Mhat[1], mean( rstan::extract(post, "mu")[[1]] ) )
+  
+  
+  # SEs
+  MhatSE = postSumm["mu", "se_mean"]
+  ShatSE = postSumm["tau", "se_mean"]
+  # how Stan estimates the SE: https://discourse.mc-stan.org/t/se-mean-in-print-stanfit/2869
+  expect_equal( postSumm["mu", "sd"],
+                sd( rstan::extract(post, "mu")[[1]] ) )
+  expect_equal( MhatSE,
+                postSumm["mu", "sd"] / sqrt( postSumm["mu", "n_eff"] ) )
+  
+  # CI limits
+  S.CI = c( postSumm["tau", "2.5%"], postSumm["tau", "97.5%"] )
+  M.CI = c( postSumm["mu", "2.5%"], postSumm["mu", "97.5%"] )
+  # sanity check:
+  myMhatCI = as.numeric( c( quantile( rstan::extract(post, "mu")[[1]], 0.025 ),
+                            quantile( rstan::extract(post, "mu")[[1]], 0.975 ) ) )
+  expect_equal(M.CI, myMhatCI)
+  
+  
+  # the point estimates are length 2 (post means, then medians),
+  #  but the inference is the same for each type of point estimate
+  return( list( stats = data.frame( 
+    
+    Mhat = Mhat,
+    Shat = Shat,
+    
+    MhatSE = MhatSE,
+    ShatSE = ShatSE,
+    
+    # this will use same CI limits for all pt estimates
+    MLo = M.CI[1],
+    MHi = M.CI[2],
+    
+    SLo = S.CI[1],
+    SHi = S.CI[2],
+    
+    stan.warned = stan.warned,
+    stan.warning = stan.warning,
+    MhatRhat = postSumm["mu", "Rhat"],
+    ShatRhat = postSumm["tau", "Rhat"] ),
+    
+    post = post,
+    postSumm = postSumm ) )
+  
+}
+
+
 # nicely report a metafor or robumeta object with optional suffix to denote which model
 report_meta = function(.mod,
                        .mod.type = "rma",  # "rma" or "robu"

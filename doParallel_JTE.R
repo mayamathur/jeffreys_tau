@@ -508,7 +508,7 @@ doParallel.seconds = system.time({
     if (run.local == TRUE) srr(rep.res)
     
     
-    # ~~ Jeffreys prior on *only* tau (package bayesmeta; also Bodnar) -------------------------------------------------
+    # ~~ bayesmeta: Jeffreys prior on *only* tau (package bayesmeta; also Bodnar) -------------------------------------------------
     
     if ( "bayesmeta" %in% all.methods ) {
       rep.res = run_method_safe(method.label = c("bayesmeta"),
@@ -517,7 +517,7 @@ doParallel.seconds = system.time({
                                   m = bayesmeta(y = d$yi,
                                                 sigma = d$sei,
                                                 tau.prior = "Jeffreys")
-                                 
+                                  
                                   # marginal (not joint) intervals
                                   tau_ci = as.numeric( m$post.interval(tau.level=0.95) ) 
                                   mu_ci = as.numeric( m$post.interval(mu.level=0.95) )
@@ -539,6 +539,74 @@ doParallel.seconds = system.time({
     
     # NOTE: if doing run.local, this will break if you didn't run naive
     if (run.local == TRUE) srr(rep.res)
+    
+    
+    # ~~ Own stan model: Jeffreys prior on *only* tau ------------------------------
+    
+    if ( "jeffreys-tau" %in% all.methods ) {
+      # this one has multiple labels in method arg because a single call to estimate_jeffreys_mcmc
+      #  returns 2 lines of output, one for posterior mean and one for posterior median
+      # order of labels in method arg needs to match return structure of estimate_jeffreys_mcmc
+      rep.res = run_method_safe(method.label = c("jeffreys-tau-pmean",
+                                                 "jeffreys-tau-pmed",
+                                                 "jeffreys-tau-max-lp-iterate"),
+                                method.fn = function() estimate_jeffreys_tau_only(.yi = d$yi,
+                                                                                  .sei = d$sei,
+                                                                                  
+                                                                                  .Mu.start = Mhat.start,
+                                                                                  # can't handle start value of 0:
+                                                                                  .Tt.start = max(0.01, Shat.start),
+                                                                                  .stan.adapt_delta = p$stan.adapt_delta,
+                                                                                  .stan.maxtreedepth = p$stan.maxtreedepth), .rep.res = rep.res )
+      
+      
+      # start values for finding posterior mode analytically
+      maxlp = rep.res[ rep.res$method == "jeffreys-tau-max-lp-iterate", ]
+      Mhat.MaxLP = maxlp$Mhat
+      Shat.MaxLP = maxlp$Shat
+      
+      
+      # find posterior mode analytically
+      rep.res = run_method_safe(method.label = c("jeffreys-tau-pmode"),
+                                method.fn = function() {
+                                  
+                                  # as in the future pkg
+                                  mle_fit <- mle_params(Mhat.MaxLP, Shat.MaxLP, d$yi, d$sei)
+                                  modes <- c(mle_fit@coef[["mu"]], mle_fit@coef[["tau"]])
+                                  optim_converged <- mle_fit@details$convergence == 0
+                                  
+                                  
+                                  return( list( stats = data.frame( 
+                                    
+                                    Mhat = modes[1],
+                                    Shat = modes[2],
+                                    
+                                    # all inference is again from MCMC
+                                    MhatSE = maxlp$MhatSE,
+                                    ShatSE = maxlp$ShatSE,
+                                    MLo = maxlp$MLo,
+                                    MHi =maxlp$MHi,
+                                    SLo = maxlp$SLo,
+                                    SHi = maxlp$SHi,
+                                    
+                                    stan.warned = maxlp$stan.warned,
+                                    stan.warning = maxlp$stan.warning,
+                                    MhatRhat = maxlp$MhatRhat,
+                                    ShatRhat = maxlp$ShatRhat,
+                                    
+                                    OptimConverged = optim_converged) ) )
+                                  
+                                }, .rep.res = rep.res )
+      
+      
+      
+      cat("\n doParallel flag: Done jeffreys-tau if applicable")
+    }
+    
+    # NOTE: if doing run.local, this will break if you didn't run naive
+    if (run.local == TRUE) srr(rep.res)
+    
+    
     
     # ~~ MLE-profile ------------------------------
     
