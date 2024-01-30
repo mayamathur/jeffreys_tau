@@ -516,7 +516,8 @@ doParallel.seconds = system.time({
                                   
                                   m = bayesmeta(y = d$yi,
                                                 sigma = d$sei,
-                                                tau.prior = "Jeffreys")
+                                                tau.prior = "Jeffreys",
+                                                interval.type = "central")
                                   
                                   # marginal (not joint) intervals
                                   tau_ci = as.numeric( m$post.interval(tau.level=0.95) ) 
