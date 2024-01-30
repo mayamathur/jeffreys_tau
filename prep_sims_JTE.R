@@ -99,6 +99,9 @@ summary( abs(agg$sancheck_mean_yi - agg$Mu) )
 agg$exclude_scen_biased_yi = abs(agg$sancheck_mean_yi - agg$Mu) > 0.05
 mean(agg$exclude_scen_biased_yi)  # percent of scens
 
+message( paste( "\n\n", round( 100 * mean(agg$exclude_scen_biased_yi) ), "% of scens had biased yi and will be removed", sep = " ") )
+
+
 # summarize scen params for these ones
 # not surprisingly, the bad scens are exclusively binary Y, and mostly ones with N=40 or N ~ Unif(40,400)
 #  though spread across a variety of p0 values

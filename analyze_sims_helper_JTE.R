@@ -371,6 +371,7 @@ make_winner_table_col = function(.agg,
                                              "EB",
                                              "PM",
                                              "robu", 
+                                             "bayesmeta",
                                              "exact",
                                              
                                              # "jeffreys-pmean",
@@ -487,7 +488,9 @@ make_winner_table_col = function(.agg,
   
   # check if all methods were tied, subject to rounding
   # if so, simplify the output
-  if ( nuni(.t$Y_disp) == 1 ) {
+  # removing NAs is in case some methods don't provide point ests or inference, for example
+  #  in that case, the column will still say "All"
+  if ( nuni( .t$Y_disp[ !is.na(.t$Y_disp) ] ) == 1 ) {
     
     .t$method.pretty = c( "All", rep( NA, nrow(.t) - 1 ) )
     .t$Y_disp = c( .t$Y_disp[1], rep( NA, nrow(.t) - 1 ) )

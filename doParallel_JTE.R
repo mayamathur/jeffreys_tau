@@ -32,6 +32,7 @@ toLoad = c("crayon",
            "weightr",
            "rma.exact",
            "CompQuadForm",
+           "bayesmeta",
            "phacking")  # note: to reinstall this one, need ml load jags
 
 # to install everything
@@ -185,7 +186,7 @@ if ( run.local == TRUE ) {
     N.expr = "40",
     stan.adapt_delta = 0.995,
     stan.maxtreedepth = 25,
-    rep.methods = c("MLE-profile ; exact ; ML ; REML ; jeffreys")
+    rep.methods = c("MLE-profile ; bayesmeta ; jeffreys")
   )
   
   ### One scen - 105 ###
@@ -496,6 +497,39 @@ doParallel.seconds = system.time({
                                   return( list( stats = data.frame( 
                                     MLo = ci[1],
                                     MHi = ci[2]) ) )
+                                  
+                                  
+                                },
+                                .rep.res = rep.res )
+      
+    }
+    
+    # NOTE: if doing run.local, this will break if you didn't run naive
+    if (run.local == TRUE) srr(rep.res)
+    
+    
+    # ~~ Jeffreys prior on *only* tau (package bayesmeta; also Bodnar) -------------------------------------------------
+    
+    if ( "bayesmeta" %in% all.methods ) {
+      rep.res = run_method_safe(method.label = c("bayesmeta"),
+                                method.fn = function() {
+                                  
+                                  m = bayesmeta(y = d$yi,
+                                                sigma = d$sei,
+                                                tau.prior = "Jeffreys")
+                                 
+                                  # marginal (not joint) intervals
+                                  tau_ci = as.numeric( m$post.interval(tau.level=0.95) ) 
+                                  mu_ci = as.numeric( m$post.interval(mu.level=0.95) )
+                                  
+                                  # this method doesn't do point estimation of inference for tau
+                                  return( list( stats = data.frame( 
+                                    Mhat = m$MAP["joint", "mu"],
+                                    Shat = m$MAP["joint", "tau"],
+                                    MLo = mu_ci[1],
+                                    MHi = mu_ci[2],
+                                    SLo = tau_ci[1],
+                                    SHi = tau_ci[2] ) ) )
                                   
                                   
                                 },
