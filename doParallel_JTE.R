@@ -33,6 +33,7 @@ toLoad = c("crayon",
            "rma.exact",
            "CompQuadForm",
            "bayesmeta",
+           "metaLik",
            "phacking")  # note: to reinstall this one, need ml load jags
 
 # to install everything
@@ -185,7 +186,8 @@ if ( run.local == TRUE ) {
     N.expr = "40",
     stan.adapt_delta = 0.995,
     stan.maxtreedepth = 25,
-    rep.methods = c("bayesmeta ; jeffreys ; jeffreys-tau")
+    rep.methods = c("MLE-profile ; metaLik")
+    #rep.methods = c("bayesmeta ; jeffreys ; jeffreys-tau")
   )
   
   ### One scen - 105 ###
@@ -608,7 +610,7 @@ doParallel.seconds = system.time({
     
     
     
-    # ~~ MLE-profile ------------------------------
+    # ~~ Own implementation: MLE-profile ------------------------------
     
     if ( "MLE-profile" %in% all.methods ) {
       rep.res = run_method_safe(method.label = c("MLE-profile"),
@@ -636,6 +638,45 @@ doParallel.seconds = system.time({
                                     
                                     SLo = max( 0, cis["tau", 1] ),
                                     SHi = cis["tau", 2] ) ) )
+                                  
+                                  
+                                },
+                                .rep.res = rep.res )
+      
+    }
+    
+    # NOTE: if doing run.local, this will break if you didn't run naive
+    if (run.local == TRUE) srr(rep.res)
+    
+    
+    
+    # ~~ metaLik: MLE-profile ------------------------------
+    
+    # only here as a sanity check for my own MLE-profile
+    if ( "metaLik" %in% all.methods ) {
+      rep.res = run_method_safe(method.label = c("metaLik"),
+                                method.fn = function() {
+                                  
+                                  m = metaLik(yi~1, data=d, sigma2=vi)
+                                  summary(m)
+                                  # using this internal fn per Annamaria's email:
+                                  prof = metaLik:::.profLik(m)
+                                  mu_ci = predict( prof$smooth.rs.inv, x=c( -qnorm(.975), qnorm(.975) ) )$y
+                                  
+                                  return( list( stats = data.frame( 
+                                    
+                                    Mhat = as.numeric( m$mle[1] ),
+                                    Shat = as.numeric( sqrt( m$mle[2] ) ),
+                                    
+                                    MhatSE = NA,
+                                    ShatSE = NA,
+                                    
+                                    # sometimes mu_ci is out of order
+                                    MLo = min(mu_ci),
+                                    MHi = max(mu_ci),
+                                    
+                                    SLo = NA,
+                                    SHi = NA ) ) )
                                   
                                   
                                 },

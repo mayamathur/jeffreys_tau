@@ -38,17 +38,17 @@ lapply( allPackages,
 # - I think a similar thing will be true with the Rhats if you omit jeffreys-mcmc?
 
 
-### 2024-01-27 ###
+### 2024-01-30 ###
 scen.params = tidyr::expand_grid(
   # full list (save):
-  rep.methods = "ML ; MLE-profile ; bayesmeta ; exact ; REML ; DL ; DL2 ; PM ; jeffreys ; jeffreys-tau",
+  rep.methods = "ML ; MLE-profile ; metaLik ; bayesmeta ; exact ; REML ; DL ; DL2 ; PM ; jeffreys ; jeffreys-tau",
 
   # *If you reorder the args, need to adjust wrangle_agg_local
   ### args shared between sim environments
   k.pub = c(10,
             2, 3, 5, 20, 100),  # intentionally out of order so that jobs with most interesting choices with complete first
 
-  t2a = c(0.1^2, 0.05^2, 0.2^2, 0.5^2),
+  t2a = c(0, 0.1^2, 0.05^2, 0.2^2, 0.5^2),
 
   # same with Mu
   Mu = c(0, 0.5, 1.1, 2.3), # same as Langan's log-ORs
@@ -167,10 +167,10 @@ n.files
 #     sbatch -p qsu,owners,normal /home/groups/manishad/JTE/sbatch_files/1.sbatch
 
 
-# 2024-01-30: 2496
+# 2024-01-30: 3120
 path = "/home/groups/manishad/JTE"
 setwd( paste(path, "/sbatch_files", sep="") )
-for (i in 1:1) {
+for (i in 1:1000) {
   system( paste("sbatch -p qsu,owners,normal /home/groups/manishad/JTE/sbatch_files/", i, ".sbatch", sep="") )
 }
 
