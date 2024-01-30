@@ -175,10 +175,9 @@ if ( run.local == TRUE ) {
   
   # ~~ ****** Set Local Sim Params -----------------------------
   
-  # this is one where Shat behavior was horrible for Jeffreys, but reasonable for other methods
   scen.params = data.frame(
     k.pub = 4,
-    t2a = 0.025,
+    t2a = 0.001,
     Mu = 0,
     true.dist = "norm",
     p0 = 0.05,
@@ -186,7 +185,7 @@ if ( run.local == TRUE ) {
     N.expr = "40",
     stan.adapt_delta = 0.995,
     stan.maxtreedepth = 25,
-    rep.methods = c("MLE-profile ; bayesmeta ; jeffreys")
+    rep.methods = c("bayesmeta ; jeffreys ; jeffreys-tau")
   )
   
   ### One scen - 105 ###
@@ -351,8 +350,8 @@ if ( run.local == TRUE ) setwd(code.dir)
 
 if ( run.local == FALSE ) setwd(path)
 
-
 source("init_stan_model_JTE.R")
+source("init_stan_model_tau.R")  # only needed if running method "jeffreys-tau"
 
 
 # RUN SIMULATION ------------------------------
