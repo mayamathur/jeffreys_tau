@@ -1,7 +1,5 @@
 
-# 2024-01-04: UNTRUNCATED PRIOR ----------------------
-
-# from setting Mills ratio r=0 in SAPH prior
+# 2024-01-30 - PRIOR ON TAU ONLY ----------------------
 
 model.text <- "
 
@@ -33,7 +31,8 @@ functions{
 
 		  Si = sqrt( tau^2 + sei[i]^2 );
       
-      kmm = Si^(-2);
+      // only difference from joint Jeffreys prior is that here, kmm=1
+      kmm = 1;
       kms = 0;
       kss = tau^2 * Si^(-4); 
 
@@ -103,9 +102,9 @@ options(mc.cores = parallel::detectCores())
 # "isystem" arg is just a placeholder to avoid Stan's not understanding special characters
 #  in getwd(), even though we don't actually use the dir at all
 # note: removing the isystem arg does NOT fix the very sporadic "error reading from connection" on cluster
-cat( paste("\n init_stan_model: about to call stan_model") )
-stan.model <- stan_model(model_code = model.text,
+cat( paste("\n init_stan_model_tau: about to call stan_model_tau") )
+stan.model.tau <- stan_model(model_code = model.text,
                          isystem = "~/Desktop")
 
 
-cat( paste("\n init_stan_model: done calling stan_model") )
+cat( paste("\n init_stan_model_tau: done calling stan_model_tau") )
