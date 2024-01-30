@@ -41,7 +41,7 @@ lapply( allPackages,
 ### 2024-01-27 ###
 scen.params = tidyr::expand_grid(
   # full list (save):
-  rep.methods = "ML ; MLE-profile ; bayesmeta ; exact ; REML ; DL ; DL2 ; PM ; jeffreys",
+  rep.methods = "ML ; MLE-profile ; bayesmeta ; exact ; REML ; DL ; DL2 ; PM ; jeffreys ; jeffreys-tau",
 
   # *If you reorder the args, need to adjust wrangle_agg_local
   ### args shared between sim environments
@@ -167,10 +167,10 @@ n.files
 #     sbatch -p qsu,owners,normal /home/groups/manishad/JTE/sbatch_files/1.sbatch
 
 
-# 2024-01-26: 2496
+# 2024-01-30: 2496
 path = "/home/groups/manishad/JTE"
 setwd( paste(path, "/sbatch_files", sep="") )
-for (i in 2001:2496) {
+for (i in 1:1) {
   system( paste("sbatch -p qsu,owners,normal /home/groups/manishad/JTE/sbatch_files/", i, ".sbatch", sep="") )
 }
 
