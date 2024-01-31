@@ -61,7 +61,9 @@ names = names( read.csv(keepers[1] ) )
 
 # read in and rbind the keepers
 tables <- lapply( keepers, function(x) {
-  y = read.csv(x, header = TRUE)
+  
+  y = tryCatch( read.csv(x, header = TRUE), error = function(e) NULL )
+  
   y[[ "N.expr" ]] = as.character(y[[ "N.expr" ]] )  # only needed if it is just a number, because it turns into a double for certain datasets and then can't be concatenated with character ones
   y
   } )

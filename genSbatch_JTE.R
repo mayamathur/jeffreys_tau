@@ -38,7 +38,7 @@ lapply( allPackages,
 # - I think a similar thing will be true with the Rhats if you omit jeffreys-mcmc?
 
 
-### 2024-01-30 ###
+### 2024-01-30 - full set ###
 scen.params = tidyr::expand_grid(
   # full list (save):
   rep.methods = "ML ; MLE-profile ; metaLik ; bayesmeta ; exact ; REML ; DL ; DL2 ; PM ; jeffreys ; jeffreys-tau",
@@ -170,7 +170,7 @@ n.files
 # 2024-01-30: 3120
 path = "/home/groups/manishad/JTE"
 setwd( paste(path, "/sbatch_files", sep="") )
-for (i in 1:1000) {
+for (i in 2:2000) {
   system( paste("sbatch -p qsu,owners,normal /home/groups/manishad/JTE/sbatch_files/", i, ".sbatch", sep="") )
 }
 

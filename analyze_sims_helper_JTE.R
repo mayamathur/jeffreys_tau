@@ -314,7 +314,8 @@ wrangle_agg_local = function(agg) {
   agg$method.pretty = agg$method # temporarily not relabeling them
   agg$method.pretty[ agg$method == "robu" ] = "RVE"
   agg$method.pretty[ agg$method == "jeffreys-pmode" ] = "Jeffreys"
-  agg$method.pretty[ agg$method == "ML" ] = "MLE-Wald"
+  agg$method.pretty[ agg$method == "jeffreys-tau-pmode" ] = "Jeffreys tau"
+  agg$method.pretty[ agg$method == "ML" ] = "MLE-metafor"
   table(agg$method, agg$method.pretty)
   
   if ( "minN" %in% names(agg) ){

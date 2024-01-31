@@ -132,6 +132,16 @@ summary(agg$doParallelSecondsQ95/60^2)
 
 # SANITY CHECKS ON DATA GENERATION -------------------------
 
+# ~ metaLik should be equivalent to MLE-profile  -------------------------------------------------
+# are they always the same?
+#@no, not exact agreement; return to this later
+t = agg %>% filter(method.pretty %in% c("metaLik", "MLE-profile")) %>%
+  group_by(scen.name) %>%
+  summarise( sd(Mhat),
+             sd(Shat),
+             sd(MLo))
+
+
 # ~ RVE should be equivalent to DL since no clustering  -------------------------------------------------
 # is RVE always same as DL?
 t = agg %>% filter(method.pretty %in% c("DL", "RVE")) %>%
@@ -216,52 +226,52 @@ update_result_csv( name = paste("Perc Jeffreys", names(t)),
 
 
 
-# AUTO-FIND INTERESTING SCENS  -------------------------------------------------
-
-# scens with meaningful differences across methods in AbsBias, RMSE, or Cover for Mhat or Shat
-# among those, label the winning method? or assign points for winning each of these?
-
-# basically no meaningful differences in: 
-
+# # AUTO-FIND INTERESTING SCENS  -------------------------------------------------
+# 
+# # scens with meaningful differences across methods in AbsBias, RMSE, or Cover for Mhat or Shat
+# # among those, label the winning method? or assign points for winning each of these?
+# 
+# # basically no meaningful differences in: 
+# 
+# # t = agg %>% group_by(scen.name) %>%
+# #   summarise( MhatAbsBiasSD = sd(MhatAbsBias, na.rm = TRUE),
+# #              MhatAbsBiasSD = sd(MhatAbsBias, na.rm = TRUE))
+# 
+# # alternate: range instead of SD
 # t = agg %>% group_by(scen.name) %>%
-#   summarise( MhatAbsBiasSD = sd(MhatAbsBias, na.rm = TRUE),
-#              MhatAbsBiasSD = sd(MhatAbsBias, na.rm = TRUE))
-
-# alternate: range instead of SD
-t = agg %>% group_by(scen.name) %>%
-  summarise( MhatAbsBiasRange = diff( range(MhatAbsBias, na.rm = TRUE) ),
-             MhatCoverRange = diff( range(MhatCover, na.rm = TRUE) ),
-             MhatRMSERange = diff( range(MhatRMSE, na.rm = TRUE) ),
-             
-             ShatAbsBiasRange = diff( range(ShatAbsBias, na.rm = TRUE) ),
-             ShatCoverRange = diff( range(ShatCover, na.rm = TRUE) ),
-             ShatRMSERange = diff( range(ShatRMSE, na.rm = TRUE) ) )
-
-summary(t$MhatAbsBiasRange)
-summary(t$MhatCoverRange)
-summary(t$MhatRMSERange)
-
-summary(t$ShatAbsBiasRange)
-summary(t$ShatCoverRange)
-summary(t$ShatRMSERange)
-
-# *much more variability on Shat performance metrics than on Mu
-
-# mark scens as important if methods vary on any of these characteristics
-t$scen_important_Mhat = t$MhatCoverRange > 0.1 | t$MhatRMSERange > 0.25
-t$scen_important_Shat = t$ShatAbsBiasRange > 0.1 | t$ShatCoverRange > 0.1 | t$ShatRMSERange > 0.25
-t$scen_important = t$scen_important_Mhat | t$scen_important_Shat
-
-mean(t$scen_important_Mhat)
-mean(t$scen_important_Shat)
-mean(t$scen_important_Mhat | t$scen_important_Shat)  # the Mhat important ones are mostly a subset of the Shat important ones
-
-important_scens = t$scen.name[ t$scen_important_Mhat | t$scen_important_Shat ]
-
-# **add the importance vars to agg
-agg = left_join(x = agg,
-                y = t %>% select(scen.name, scen_important),
-                by = "scen.name")
+#   summarise( MhatAbsBiasRange = diff( range(MhatAbsBias, na.rm = TRUE) ),
+#              MhatCoverRange = diff( range(MhatCover, na.rm = TRUE) ),
+#              MhatRMSERange = diff( range(MhatRMSE, na.rm = TRUE) ),
+#              
+#              ShatAbsBiasRange = diff( range(ShatAbsBias, na.rm = TRUE) ),
+#              ShatCoverRange = diff( range(ShatCover, na.rm = TRUE) ),
+#              ShatRMSERange = diff( range(ShatRMSE, na.rm = TRUE) ) )
+# 
+# summary(t$MhatAbsBiasRange)
+# summary(t$MhatCoverRange)
+# summary(t$MhatRMSERange)
+# 
+# summary(t$ShatAbsBiasRange)
+# summary(t$ShatCoverRange)
+# summary(t$ShatRMSERange)
+# 
+# # *much more variability on Shat performance metrics than on Mu
+# 
+# # mark scens as important if methods vary on any of these characteristics
+# t$scen_important_Mhat = t$MhatCoverRange > 0.1 | t$MhatRMSERange > 0.25
+# t$scen_important_Shat = t$ShatAbsBiasRange > 0.1 | t$ShatCoverRange > 0.1 | t$ShatRMSERange > 0.25
+# t$scen_important = t$scen_important_Mhat | t$scen_important_Shat
+# 
+# mean(t$scen_important_Mhat)
+# mean(t$scen_important_Shat)
+# mean(t$scen_important_Mhat | t$scen_important_Shat)  # the Mhat important ones are mostly a subset of the Shat important ones
+# 
+# important_scens = t$scen.name[ t$scen_important_Mhat | t$scen_important_Shat ]
+# 
+# # **add the importance vars to agg
+# agg = left_join(x = agg,
+#                 y = t %>% select(scen.name, scen_important),
+#                 by = "scen.name")
 
 
 # WINNER TABLES -------------------------
@@ -296,11 +306,16 @@ make_both_winner_tables(.agg = agg2 %>% filter( Ytype == "bin-OR" & k.pub <= 5 )
 
 #**SUPP TABLES S1 - S4
 # very small metas
+#@ HOW DID BODNAR GET 100% COVERAGE FOR TAU = 0??
 make_both_winner_tables(.agg = agg %>% filter( Ytype == "cont-SMD", k.pub == 100))
 make_both_winner_tables(.agg = agg %>% filter( Ytype == "bin-OR", k.pub == 100))
 
 
 # ~ Tau^2  -------------------------------------------------
+
+# tau=0
+make_both_winner_tables(.agg = agg2 %>% filter(Ytype == "cont-SMD", t2a == 0))
+make_both_winner_tables(.agg = agg2 %>% filter(Ytype == "bin-OR", t2a == 0))
 
 #**SUPP TABLES S5 - S10
 make_both_winner_tables(.agg = agg2 %>% filter(Ytype == "cont-SMD", t2a <= 0.01))
@@ -423,13 +438,13 @@ hist(temp$ShatBias / sqrt(temp$t2a))
 
 # ~ Isolate an interesting scenario  -------------------------------------------------
 
-x = agg2 %>% filter(t2a == 0.0001 & ShatCover == 0)
+x = agg2 %>% filter(t2a == 0 & ShatCover == 0)
 unique(x$scen.name)
 
-x2 = agg %>% filter(scen.name==105); View(x2)
+x2 = agg %>% filter(scen.name==1); View(x2)
 
 # scen params only
-x3 = x2[1, 1:11] 
+x3 = x2[1, 1:12] 
 library(constructive)
 construct( as.data.frame(x3) )
 
