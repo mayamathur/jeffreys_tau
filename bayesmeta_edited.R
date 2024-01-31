@@ -504,6 +504,8 @@ mybayesmeta.default <- function(y, sigma, labels=names(y),
       if (! (is.logical(individual) && (!individual))) warning("'individual' argument ignored!")
       if (method=="central")         # central interval
         result <- qposterior(tau.p=c((1-tau.level)/2, 1-(1-tau.level)/2))
+      
+      
       else if (method=="shortest") { # shortest interval
         intwidth <- function(left)
         {
@@ -518,6 +520,8 @@ mybayesmeta.default <- function(y, sigma, labels=names(y),
         else
           result <- c(opti, qposterior(tau=tau.level+pposterior(tau=opti)))
       }
+      
+      
       else {                         # evidentiary interval (tau)
         expectedLogLikeli <- function(left)
         {

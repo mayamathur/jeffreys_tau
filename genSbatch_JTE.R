@@ -42,15 +42,15 @@ lapply( allPackages,
 
 scen.params = data.frame(
   k.pub = 10,
-  t2a = 0,
+  t2a = 0.0001,
   Mu = 0,
   true.dist = "norm",
   p0 = 0.05,
-  Ytype = "bin-OR",
+  Ytype = "cont-SMD",
   N.expr = "40",
   stan.adapt_delta = 0.995,
   stan.maxtreedepth = 25,
-  rep.methods = c("bayesmeta ; bayesmeta-shortest ; jeffreys")
+  rep.methods = c("ML ; bayesmeta ; bayesmeta-shortest ; mybayesmeta-shortest ; jeffreys")
   #rep.methods = c("bayesmeta ; jeffreys ; jeffreys-tau")
 )
 

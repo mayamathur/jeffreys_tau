@@ -92,6 +92,18 @@ estimate_jeffreys = function(.yi,
   # sanity check
   #expect_equal( Mhat[1], mean( rstan::extract(post, "mu")[[1]] ) )
   
+  ### TEST
+  # #bm: HDI intervals
+  # library(HDInterval)
+  # x = rstan::extract(post, "tau")[[1]]
+  # hdi(x)
+  # 
+  # # sanity check: reproduce the equal-tailed interval
+  # quantile(x, 0.025)
+  # quantile(x, 0.975)
+  # 
+  # plot(ext$tau, ext$log_post)
+  ### END TEST
   
   # SEs
   MhatSE = postSumm["mu", "se_mean"]
@@ -102,7 +114,7 @@ estimate_jeffreys = function(.yi,
   expect_equal( MhatSE,
                 postSumm["mu", "sd"] / sqrt( postSumm["mu", "n_eff"] ) )
   
-  # CI limits
+  # CI limits (central interval)
   S.CI = c( postSumm["tau", "2.5%"], postSumm["tau", "97.5%"] )
   M.CI = c( postSumm["mu", "2.5%"], postSumm["mu", "97.5%"] )
   # sanity check:
@@ -110,11 +122,13 @@ estimate_jeffreys = function(.yi,
                             quantile( rstan::extract(post, "mu")[[1]], 0.975 ) ) )
   expect_equal(M.CI, myMhatCI)
   
+  # CI limits (highest-density interval, i.e., shortest)
+  M.HDI = as.numeric( HDInterval::hdi( rstan::extract(post, "mu")[[1]] ) )
+  S.HDI = as.numeric( HDInterval::hdi( rstan::extract(post, "tau")[[1]] ) )
   
   # the point estimates are length 2 (post means, then medians),
   #  but the inference is the same for each type of point estimate
-  return( list( stats = data.frame( 
-    
+  stats = data.frame( 
     Mhat = Mhat,
     Shat = Shat,
     
@@ -131,24 +145,166 @@ estimate_jeffreys = function(.yi,
     stan.warned = stan.warned,
     stan.warning = stan.warning,
     MhatRhat = postSumm["mu", "Rhat"],
-    ShatRhat = postSumm["tau", "Rhat"] ),
-    
-    post = post,
-    postSumm = postSumm ) )
+    ShatRhat = postSumm["tau", "Rhat"] )
+  
+  #@NEW: add a row for HDI so it's treated as own method
+  stats = stats %>% add_row( MLo = M.HDI[1],
+                             MHi = M.HDI[2],
+                             SLo = S.HDI[1],
+                             SHi = S.HDI[2] )
+  
+  return( list( stats = stats,
+                post = post,
+                postSumm = postSumm ) )
   
 }
 
 
 
+
+
+# 2024-01-31 - BACKUP FROM BEFORE ADDING HDI OUTPUT AS AN EXTRA ROW
+# estimate_jeffreys = function(.yi,
+#                              .sei,
+#                              
+#                              .Mu.start,
+#                              .Tt.start,
+#                              .stan.adapt_delta = 0.8,
+#                              .stan.maxtreedepth = 10 ) {
+#   
+#   # stan.model (used later) is compiled OUTSIDE this fn in doParallel to avoid 
+#   #  issues with nodes competing with one another
+#   
+#   
+#   # prepare to capture warnings from Stan
+#   stan.warned = 0
+#   stan.warning = NA
+#   
+#   # set start values for sampler
+#   init.fcn = function(o){ list(mu = .Mu.start,
+#                                tau = .Tt.start ) }
+#   
+#   
+#   # like tryCatch, but captures warnings without stopping the function from
+#   #  returning its results
+#   withCallingHandlers({
+#     
+#     # necessary to prevent ReadRDS errors in which cores try to work with other cores' intermediate results
+#     # https://groups.google.com/g/stan-users/c/8snqQTTfWVs?pli=1
+#     options(mc.cores = parallel::detectCores())
+#     
+#     cat( paste("\n estimate_jeffreys flag 2: about to call sampling") )
+#     
+#     post = sampling(stan.model,
+#                     cores = 1,
+#                     refresh = 0,
+#                     data = list( k = length(.yi),
+#                                  sei = .sei,
+#                                  y = .yi ),
+#                     
+#                     #iter = p$stan.iter,   
+#                     control = list(max_treedepth = .stan.maxtreedepth,
+#                                    adapt_delta = .stan.adapt_delta),
+#                     
+#                     init = init.fcn)
+#     
+#     
+#   }, warning = function(condition){
+#     stan.warned <<- 1
+#     stan.warning <<- condition$message
+#   } )
+#   
+#   cat( paste("\n estimate_jeffreys flag 3: about to call postSumm") )
+#   postSumm = summary(post)$summary
+#   if (is.null(postSumm)) stop("In stan, postSumm is null")
+#   
+#   browser()
+#   
+#   # pull out best iterate to pass to MAP optimization later
+#   ext = rstan::extract(post) # a vector of all post-WU iterates across all chains
+#   best.ind = which.max(ext$log_post)  # single iterate with best log-posterior should be very close to MAP
+#   
+#   
+#   # posterior means, posterior medians, modes, and max-LP iterate
+#   Mhat = c( postSumm["mu", "mean"],
+#             median( rstan::extract(post, "mu")[[1]] ),
+#             ext$mu[best.ind] )
+#   
+#   Shat = c( postSumm["tau", "mean"],
+#             median( rstan::extract(post, "tau")[[1]] ),
+#             ext$tau[best.ind] )
+#   
+#   # sanity check
+#   #expect_equal( Mhat[1], mean( rstan::extract(post, "mu")[[1]] ) )
+#   
+#   ### TEST
+#   # #bm: HDI intervals
+#   # library(HDInterval)
+#   # x = rstan::extract(post, "tau")[[1]]
+#   # hdi(x)
+#   # 
+#   # # sanity check: reproduce the equal-tailed interval
+#   # quantile(x, 0.025)
+#   # quantile(x, 0.975)
+#   # 
+#   # plot(ext$tau, ext$log_post)
+#   ### END TEST
+#   
+#   # SEs
+#   MhatSE = postSumm["mu", "se_mean"]
+#   ShatSE = postSumm["tau", "se_mean"]
+#   # how Stan estimates the SE: https://discourse.mc-stan.org/t/se-mean-in-print-stanfit/2869
+#   expect_equal( postSumm["mu", "sd"],
+#                 sd( rstan::extract(post, "mu")[[1]] ) )
+#   expect_equal( MhatSE,
+#                 postSumm["mu", "sd"] / sqrt( postSumm["mu", "n_eff"] ) )
+#   
+#   # CI limits
+#   S.CI = c( postSumm["tau", "2.5%"], postSumm["tau", "97.5%"] )
+#   M.CI = c( postSumm["mu", "2.5%"], postSumm["mu", "97.5%"] )
+#   # sanity check:
+#   myMhatCI = as.numeric( c( quantile( rstan::extract(post, "mu")[[1]], 0.025 ),
+#                             quantile( rstan::extract(post, "mu")[[1]], 0.975 ) ) )
+#   expect_equal(M.CI, myMhatCI)
+#   
+#   
+#   # the point estimates are length 2 (post means, then medians),
+#   #  but the inference is the same for each type of point estimate
+#   return( list( stats = data.frame( 
+#     
+#     Mhat = Mhat,
+#     Shat = Shat,
+#     
+#     MhatSE = MhatSE,
+#     ShatSE = ShatSE,
+#     
+#     # this will use same CI limits for all pt estimates
+#     MLo = M.CI[1],
+#     MHi = M.CI[2],
+#     
+#     SLo = S.CI[1],
+#     SHi = S.CI[2],
+#     
+#     stan.warned = stan.warned,
+#     stan.warning = stan.warning,
+#     MhatRhat = postSumm["mu", "Rhat"],
+#     ShatRhat = postSumm["tau", "Rhat"] ),
+#     
+#     post = post,
+#     postSumm = postSumm ) )
+#   
+# }
+
+
 # same as fn above, but calls stan.model.tau from init_stan_model_tau instead of stan.model
 # same prior as in bayesmeta
 estimate_jeffreys_tau_only = function(.yi,
-                             .sei,
-                             
-                             .Mu.start,
-                             .Tt.start,
-                             .stan.adapt_delta = 0.8,
-                             .stan.maxtreedepth = 10 ) {
+                                      .sei,
+                                      
+                                      .Mu.start,
+                                      .Tt.start,
+                                      .stan.adapt_delta = 0.8,
+                                      .stan.maxtreedepth = 10 ) {
   
   # stan.model (used later) is compiled OUTSIDE this fn in doParallel to avoid 
   #  issues with nodes competing with one another
@@ -384,7 +540,7 @@ get_optimx_dataframe = function( .yi,
   
   l$opt.method = row.names(l)
   
-
+  
   l2 = l %>% select(opt.method, p1, p2, convcode, value, kkt1, kkt2)
   
   l2 = l2 %>% rename( Mhat = p1, Shat = p2, nll = value )

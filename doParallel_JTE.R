@@ -34,6 +34,7 @@ toLoad = c("crayon",
            "CompQuadForm",
            "bayesmeta",
            "metaLik",
+           "HDInterval",
            "phacking")  # note: to reinstall this one, need ml load jags
 
 # to install everything
@@ -179,7 +180,7 @@ if ( run.local == TRUE ) {
   
   scen.params = data.frame(
     k.pub = 10,
-    t2a = 0,
+    t2a = 0.0001,
     Mu = 0,
     true.dist = "norm",
     p0 = 0.05,
@@ -794,7 +795,9 @@ doParallel.seconds = system.time({
       # order of labels in method arg needs to match return structure of estimate_jeffreys_mcmc
       rep.res = run_method_safe(method.label = c("jeffreys-pmean",
                                                  "jeffreys-pmed",
-                                                 "jeffreys-max-lp-iterate"),
+                                                 "jeffreys-max-lp-iterate",
+                                                 #@TEMP for running HDI:
+                                                 "jeffreys-hdi"),
                                 method.fn = function() estimate_jeffreys(.yi = d$yi,
                                                                          .sei = d$sei,
                                                                          
@@ -982,8 +985,8 @@ if ( run.local == TRUE ) {
 
 # ~ WRITE LONG AND SHORT RESULTS ------------------------------
 if ( run.local == FALSE ) {
-  setwd("/home/groups/manishad/JTE/long_results")
-  fwrite( rs, paste( "long_results", jobname, ".csv", sep="_" ) )
+  # setwd("/home/groups/manishad/JTE/long_results")
+  # fwrite( rs, paste( "long_results", jobname, ".csv", sep="_" ) )
   
   # pre-aggregate 
   agg_job = make_agg_data(rs)
