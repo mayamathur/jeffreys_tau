@@ -172,6 +172,7 @@ if ( run.local == TRUE ) {
   code.dir = here()
   setwd(code.dir)
   source("helper_JTE.R")
+  source("analyze_sims_helper_JTE.R")  # for make_agg_data
   
   
   # ~~ ****** Set Local Sim Params -----------------------------
@@ -186,7 +187,7 @@ if ( run.local == TRUE ) {
     N.expr = "40",
     stan.adapt_delta = 0.995,
     stan.maxtreedepth = 25,
-    rep.methods = c("bayesmeta ; bayesmeta-shortest ; jeffreys")
+    rep.methods = c("bayesmeta ; bayesmeta-shortest ; mybayesmeta-shortest ; jeffreys")
     #rep.methods = c("bayesmeta ; jeffreys ; jeffreys-tau")
   )
   
@@ -354,6 +355,8 @@ if ( run.local == FALSE ) setwd(path)
 
 source("init_stan_model_JTE.R")
 source("init_stan_model_tau.R")  # only needed if running method "jeffreys-tau"
+source("bayesmeta_edited.R")
+source("analyze_sims_helper_JTE.R")  # for make_agg_data
 
 
 # RUN SIMULATION ------------------------------
@@ -554,6 +557,40 @@ doParallel.seconds = system.time({
                                   m = bayesmeta(y = d$yi,
                                                 sigma = d$sei,
                                                 tau.prior = "Jeffreys",
+                                                interval.type = "shortest")
+                                  
+                                  # marginal (not joint) intervals
+                                  tau_ci = as.numeric( m$post.interval(tau.level=0.95) ) 
+                                  mu_ci = as.numeric( m$post.interval(mu.level=0.95) )
+                                  
+                                  # this method doesn't do point estimation of inference for tau
+                                  return( list( stats = data.frame( 
+                                    Mhat = m$MAP["joint", "mu"],
+                                    Shat = m$MAP["joint", "tau"],
+                                    MLo = mu_ci[1],
+                                    MHi = mu_ci[2],
+                                    SLo = tau_ci[1],
+                                    SHi = tau_ci[2] ) ) )
+                                  
+                                  
+                                },
+                                .rep.res = rep.res )
+      
+    }
+    
+    # NOTE: if doing run.local, this will break if you didn't run naive
+    if (run.local == TRUE) srr(rep.res)
+    
+    
+    # ~~ mybayesmeta with shortest interval -------------------------------------------------
+    
+    if ( "mybayesmeta-shortest" %in% all.methods ) {
+      rep.res = run_method_safe(method.label = c("mybayesmeta-shortest"),
+                                method.fn = function() {
+                                  
+                                  m = mybayesmeta(y = d$yi,
+                                                sigma = d$sei,
+                                                tau.prior = "Jeffreys2",
                                                 interval.type = "shortest")
                                   
                                   # marginal (not joint) intervals
@@ -945,8 +982,8 @@ if ( run.local == TRUE ) {
 
 # ~ WRITE LONG AND SHORT RESULTS ------------------------------
 if ( run.local == FALSE ) {
-  # setwd("/home/groups/manishad/JTE/long_results")
-  # fwrite( rs, paste( "long_results", jobname, ".csv", sep="_" ) )
+  setwd("/home/groups/manishad/JTE/long_results")
+  fwrite( rs, paste( "long_results", jobname, ".csv", sep="_" ) )
   
   # pre-aggregate 
   agg_job = make_agg_data(rs)
