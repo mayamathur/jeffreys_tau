@@ -379,7 +379,7 @@ estimate_jeffreys_tau_only = function(.yi,
   expect_equal( MhatSE,
                 postSumm["mu", "sd"] / sqrt( postSumm["mu", "n_eff"] ) )
   
-  # CI limits
+  # CI limits (central interval)
   S.CI = c( postSumm["tau", "2.5%"], postSumm["tau", "97.5%"] )
   M.CI = c( postSumm["mu", "2.5%"], postSumm["mu", "97.5%"] )
   # sanity check:
@@ -387,11 +387,13 @@ estimate_jeffreys_tau_only = function(.yi,
                             quantile( rstan::extract(post, "mu")[[1]], 0.975 ) ) )
   expect_equal(M.CI, myMhatCI)
   
+  # CI limits (highest-density interval, i.e., shortest)
+  M.HDI = as.numeric( HDInterval::hdi( rstan::extract(post, "mu")[[1]] ) )
+  S.HDI = as.numeric( HDInterval::hdi( rstan::extract(post, "tau")[[1]] ) )
   
   # the point estimates are length 2 (post means, then medians),
   #  but the inference is the same for each type of point estimate
-  return( list( stats = data.frame( 
-    
+  stats = data.frame( 
     Mhat = Mhat,
     Shat = Shat,
     
@@ -408,10 +410,17 @@ estimate_jeffreys_tau_only = function(.yi,
     stan.warned = stan.warned,
     stan.warning = stan.warning,
     MhatRhat = postSumm["mu", "Rhat"],
-    ShatRhat = postSumm["tau", "Rhat"] ),
-    
-    post = post,
-    postSumm = postSumm ) )
+    ShatRhat = postSumm["tau", "Rhat"] )
+  
+  #@NEW: add a row for HDI so it's treated as own method
+  stats = stats %>% add_row( MLo = M.HDI[1],
+                             MHi = M.HDI[2],
+                             SLo = S.HDI[1],
+                             SHi = S.HDI[2] )
+  
+  return( list( stats = stats,
+                post = post,
+                postSumm = postSumm ) )
   
 }
 

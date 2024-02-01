@@ -5,7 +5,7 @@
 
 # PRELIMINARIES ----------------------------------------------------
 
-#rm(list=ls())
+#  rm(list=ls())
 
 # This script uses renv to preserve the R environment specs (e.g., package versions.)
 library(renv)
@@ -277,8 +277,28 @@ update_result_csv( name = paste("Perc Jeffreys", names(t)),
 # WINNER TABLES -------------------------
 
 # create the base dataset from which to filter all winner tables
-#agg2 = agg %>% filter( scen_important == TRUE & Ytype == .Ytype )
-agg2 = agg %>% filter( k.pub <= 20)
+methods_for_table = c(
+   "DL",
+   "DL2",
+  # "ML",
+   "MLE-profile",
+   "REML",
+  # "EB",
+   "PM",
+  # "robu", 
+   "exact",
+  
+  "bayesmeta",
+  
+  # "jeffreys-pmean",
+  # "jeffreys-pmed",
+  # "jeffreys-max-lp-iterate",
+  "jeffreys-pmode",
+  
+  "jeffreys-tau-pmode",
+  "jeffreys-hdi"
+)
+agg2 = agg %>% filter( k.pub <= 20 & method %in% methods_for_table )
 
 
 dim(agg2)
@@ -314,8 +334,8 @@ make_both_winner_tables(.agg = agg %>% filter( Ytype == "bin-OR", k.pub == 100))
 # ~ Tau^2  -------------------------------------------------
 
 # tau=0
-make_both_winner_tables(.agg = agg2 %>% filter(Ytype == "cont-SMD", t2a == 0))
-make_both_winner_tables(.agg = agg2 %>% filter(Ytype == "bin-OR", t2a == 0))
+make_both_winner_tables(.agg = agg2 %>% filter(Ytype == "cont-SMD", t2a == 0.0001))
+make_both_winner_tables(.agg = agg2 %>% filter(Ytype == "bin-OR", t2a == 0.0001))
 
 #**SUPP TABLES S5 - S10
 make_both_winner_tables(.agg = agg2 %>% filter(Ytype == "cont-SMD", t2a <= 0.01))

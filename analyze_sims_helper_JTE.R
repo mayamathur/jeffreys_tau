@@ -363,23 +363,7 @@ wrangle_agg_local = function(agg) {
 
 make_winner_table_col = function(.agg,
                                  yName,
-                                 methods = c("DL",
-                                             "DL2",
-                                             "ML",
-                                             "MLE-profile",
-                                             "PMM",
-                                             "REML",
-                                             "EB",
-                                             "PM",
-                                             "robu", 
-                                             "bayesmeta",
-                                             "exact",
-                                             
-                                             # "jeffreys-pmean",
-                                             # "jeffreys-pmed",
-                                             # "jeffreys-max-lp-iterate",
-                                             "jeffreys-pmode"
-                                 ),
+                                 methods = unique(.agg$method),
                                  summarise.fun.name = "median",
                                  digits = 2) {
   

@@ -129,33 +129,34 @@ fwrite(agg, "agg.csv")
 fwrite(agg_bad, "agg_excluded_scens_biased_yi.csv")
 
 
-# PREP ITERATE-LEVEL DATA FOR SCEN 1072  -------------------------------------------------
-
-# this will be a little slow (1-2 min)
-setwd(data.dir)
-s = fread("stitched.csv")
-
-# similar prep work to wrangle_agg_local
-s2 = s %>% filter(scen.name == 1072 &
-                    method %in% c("REML", "DL", "PM", "DL2", "robu", "jeffreys-pmode") )
-
-
-s2 = s2 %>% mutate( CI_asy = (MHi - Mhat) / (Mhat - MLo),
-                    MhatBias = Mhat - Mu,
-                    MhatWidth = MHi - MLo,
-                    MhatCover = (MHi >= Mu & MLo <= Mu) )
-
-s2$method.pretty = s2$method 
-s2$method.pretty[ s2$method == "robu" ] = "RVE"
-s2$method.pretty[ s2$method == "jeffreys-pmode" ] = "Jeffreys"
-table(s2$method, s2$method.pretty)
-
-correct.order = c( "Jeffreys", "DL", "DL2", "REML", "PM", "RVE")
-s2$method.pretty = factor(s2$method.pretty, levels = correct.order)
-levels(s2$method.pretty)
-
-
-fwrite( s2, "stitched_scen_1072.csv" )
+# SAVE:# (will need to be run separately on the cluster, saving long results)
+# # PREP ITERATE-LEVEL DATA FOR SCEN 1072  -------------------------------------------------
+# 
+# # this will be a little slow (1-2 min)
+# setwd(data.dir)
+# s = fread("stitched.csv")
+# 
+# # similar prep work to wrangle_agg_local
+# s2 = s %>% filter(scen.name == 1072 &
+#                     method %in% c("REML", "DL", "PM", "DL2", "robu", "jeffreys-pmode") )
+# 
+# 
+# s2 = s2 %>% mutate( CI_asy = (MHi - Mhat) / (Mhat - MLo),
+#                     MhatBias = Mhat - Mu,
+#                     MhatWidth = MHi - MLo,
+#                     MhatCover = (MHi >= Mu & MLo <= Mu) )
+# 
+# s2$method.pretty = s2$method 
+# s2$method.pretty[ s2$method == "robu" ] = "RVE"
+# s2$method.pretty[ s2$method == "jeffreys-pmode" ] = "Jeffreys"
+# table(s2$method, s2$method.pretty)
+# 
+# correct.order = c( "Jeffreys", "DL", "DL2", "REML", "PM", "RVE")
+# s2$method.pretty = factor(s2$method.pretty, levels = correct.order)
+# levels(s2$method.pretty)
+# 
+# 
+# fwrite( s2, "stitched_scen_1072.csv" )
 
 
 

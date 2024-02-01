@@ -57,7 +57,7 @@ lapply( allPackages,
 ### 2024-01-31 - full set ###
 scen.params = tidyr::expand_grid(
   # full list (save):
-  rep.methods = "ML ; MLE-profile ; metaLik ; bayesmeta ; exact ; REML ; DL ; DL2 ; PM ; jeffreys ; jeffreys-tau",
+  rep.methods = "ML ; MLE-profile ; metaLik ; bayesmeta ; exact ; REML ; DL ; DL2 ; PM ; jeffreys ; mybayesmeta ; jeffreys-tau",
 
   # *If you reorder the args, need to adjust wrangle_agg_local
   ### args shared between sim environments
