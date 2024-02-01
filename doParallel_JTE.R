@@ -188,7 +188,7 @@ if ( run.local == TRUE ) {
     stan.adapt_delta = 0.995,
     stan.maxtreedepth = 25,
     #rep.methods = c("bayesmeta ; bayesmeta-shortest ; mybayesmeta-shortest ; jeffreys")
-    rep.methods = c("jeffreys")
+    rep.methods = c("bayesmeta-tau-central ; bayesmeta-tau-shortest ; bayesmeta-joint-central ; bayesmeta-joint-shortest ; jeffreys-tau ; jeffreys")
     #rep.methods = c("bayesmeta ; jeffreys ; jeffreys-tau")
   )
   
@@ -513,10 +513,10 @@ doParallel.seconds = system.time({
     if (run.local == TRUE) srr(rep.res)
     
     
-    # ~~ bayesmeta with central interval: Jeffreys prior on *only* tau (package bayesmeta; also Bodnar) -------------------------------------------------
+    # ~~ bayesmeta-tau-central -------------------------------------------------
     
-    if ( "bayesmeta" %in% all.methods ) {
-      rep.res = run_method_safe(method.label = c("bayesmeta"),
+    if ( "bayesmeta-tau-central" %in% all.methods ) {
+      rep.res = run_method_safe(method.label = c("bayesmeta-tau-central"),
                                 method.fn = function() {
                                   
                                   m = bayesmeta(y = d$yi,
@@ -549,10 +549,10 @@ doParallel.seconds = system.time({
     
     
     
-    # ~~ bayesmeta with shortest interval: Jeffreys prior on *only* tau (package bayesmeta; also Bodnar) -------------------------------------------------
-    
-    if ( "bayesmeta-shortest" %in% all.methods ) {
-      rep.res = run_method_safe(method.label = c("bayesmeta-shortest"),
+    # ~~ bayesmeta-tau-shortest -------------------------------------------------
+    # this is the package's default
+    if ( "bayesmeta-tau-shortest" %in% all.methods ) {
+      rep.res = run_method_safe(method.label = c("bayesmeta-tau-shortest"),
                                 method.fn = function() {
                                   
                                   m = bayesmeta(y = d$yi,
@@ -583,10 +583,11 @@ doParallel.seconds = system.time({
     if (run.local == TRUE) srr(rep.res)
     
     
-    # ~~ mybayesmeta with shortest interval -------------------------------------------------
+    # ~~ bayesmeta-joint-shortest -------------------------------------------------
     
-    if ( "mybayesmeta-shortest" %in% all.methods ) {
-      rep.res = run_method_safe(method.label = c("mybayesmeta-shortest"),
+    # from mybayesmeta()
+    if ( "bayesmeta-joint-shortest" %in% all.methods ) {
+      rep.res = run_method_safe(method.label = c("bayesmeta-joint-shortest"),
                                 method.fn = function() {
                                   
                                   m = mybayesmeta(y = d$yi,
@@ -618,7 +619,7 @@ doParallel.seconds = system.time({
     
     
     
-    # ~~ Own stan model: Jeffreys prior on *only* tau ------------------------------
+    # ~~ jeffreys-tau (own MCMC) ------------------------------
     
     if ( "jeffreys-tau" %in% all.methods ) {
       # this one has multiple labels in method arg because a single call to estimate_jeffreys_mcmc
@@ -626,7 +627,9 @@ doParallel.seconds = system.time({
       # order of labels in method arg needs to match return structure of estimate_jeffreys_mcmc
       rep.res = run_method_safe(method.label = c("jeffreys-tau-pmean",
                                                  "jeffreys-tau-pmed",
-                                                 "jeffreys-tau-max-lp-iterate"),
+                                                 "jeffreys-tau-max-lp-iterate",
+                                                 #@TEMP for running HDI:
+                                                 "jeffreys-tau-hdi"),
                                 method.fn = function() estimate_jeffreys_tau_only(.yi = d$yi,
                                                                                   .sei = d$sei,
                                                                                   
@@ -685,7 +688,7 @@ doParallel.seconds = system.time({
     
     
     
-    # ~~ Own implementation: MLE-profile ------------------------------
+    # ~~ MLE-profile (own implementation) ------------------------------
     
     if ( "MLE-profile" %in% all.methods ) {
       rep.res = run_method_safe(method.label = c("MLE-profile"),
