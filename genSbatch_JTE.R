@@ -161,7 +161,7 @@ sbatch_params <- data.frame(jobname,
                             # how to specify job times: https://www.sherlock.stanford.edu/docs/advanced-topics/job-management/#job-submission-limits
                             # days-hh:mm:ss
                             #jobtime = "1-00:00:00",  # 1 day
-                            jobtime = "03:00:00",
+                            jobtime = "02:00:00",
                             quality = "normal",
                             node_number = 1,
                             mem_per_node = 64000,
@@ -183,10 +183,10 @@ n.files
 #     sbatch -p qsu,owners,normal /home/groups/manishad/JTE/sbatch_files/1.sbatch
 
 
-# 2024-01-31: 3120
+# 2024-02-01: 3120
 path = "/home/groups/manishad/JTE"
 setwd( paste(path, "/sbatch_files", sep="") )
-for (i in 1001:2000) {
+for (i in 1:1000) {
   system( paste("sbatch -p qsu,owners,normal /home/groups/manishad/JTE/sbatch_files/", i, ".sbatch", sep="") )
 }
 

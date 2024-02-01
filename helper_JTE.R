@@ -92,19 +92,6 @@ estimate_jeffreys = function(.yi,
   # sanity check
   #expect_equal( Mhat[1], mean( rstan::extract(post, "mu")[[1]] ) )
   
-  ### TEST
-  # #bm: HDI intervals
-  # library(HDInterval)
-  # x = rstan::extract(post, "tau")[[1]]
-  # hdi(x)
-  # 
-  # # sanity check: reproduce the equal-tailed interval
-  # quantile(x, 0.025)
-  # quantile(x, 0.975)
-  # 
-  # plot(ext$tau, ext$log_post)
-  ### END TEST
-  
   # SEs
   MhatSE = postSumm["mu", "se_mean"]
   ShatSE = postSumm["tau", "se_mean"]
