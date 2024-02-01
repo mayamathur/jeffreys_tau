@@ -31,7 +31,6 @@ toLoad = c("crayon",
            "optimx",
            "weightr",
            "rma.exact",
-           "CompQuadForm",
            "bayesmeta",
            "metaLik",
            "HDInterval",
@@ -188,7 +187,8 @@ if ( run.local == TRUE ) {
     N.expr = "40",
     stan.adapt_delta = 0.995,
     stan.maxtreedepth = 25,
-    rep.methods = c("bayesmeta ; bayesmeta-shortest ; mybayesmeta-shortest ; jeffreys")
+    #rep.methods = c("bayesmeta ; bayesmeta-shortest ; mybayesmeta-shortest ; jeffreys")
+    rep.methods = c("jeffreys")
     #rep.methods = c("bayesmeta ; jeffreys ; jeffreys-tau")
   )
   

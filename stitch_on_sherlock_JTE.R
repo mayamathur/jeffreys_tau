@@ -41,10 +41,12 @@ library(testthat)
 #                  .name.prefix = "long_results",
 #                  .stitch.file.name="stitched.csv")
 
+
 .results.singles.path = "/home/groups/manishad/JTE/long_results"
 .results.stitched.write.path = "/home/groups/manishad/JTE/overall_stitched"
 .name.prefix = "long_results"
 .stitch.file.name="stitched.csv"
+
 
 
 # MAKE STITCHED DATA ----------------------------------------------
