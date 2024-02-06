@@ -179,7 +179,7 @@ if ( run.local == TRUE ) {
   
   scen.params = data.frame(
     k.pub = 10,
-    t2a = 0.0001,
+    t2a = 0.1^2,
     Mu = 0,
     true.dist = "norm",
     p0 = 0.05,

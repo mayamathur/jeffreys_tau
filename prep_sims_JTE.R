@@ -1,7 +1,7 @@
 
 # PRELIMINARIES ----------------------------------------------------
 
-#rm(list=ls())
+#  rm(list=ls())
 
 # This script uses renv to preserve the R environment specs (e.g., package versions.)
 library(renv)
@@ -79,7 +79,8 @@ setwd(data.dir)
 aggo = fread("aggo.csv")
 # check when the dataset was last modified to make sure we're working with correct version
 file.info("aggo.csv")$mtime
-nrow(aggo) / nuni(aggo$method)  # number of scens that are done; 2496 if sims are done
+nrow(aggo) / nuni(aggo$method)  # number of scens that are done; 3120 if sims are done
+nuni(aggo$scen.name)
 
 # add fancy variables for plotting, etc.
 agg = wrangle_agg_local(aggo)
@@ -87,6 +88,11 @@ agg = wrangle_agg_local(aggo)
 # initialize global variables that describe estimate and outcome names, etc.
 # this must be after calling wrangle_agg_local
 init_var_names(.agg = agg)
+
+# checking progress
+first = agg[ !duplicated(agg$scen.name), ]
+first %>% group_by(k.pub) %>%
+  summarise(n())
 
 
 # ~ Individual studies should be unbiased -------------------------------------------------
@@ -99,8 +105,11 @@ summary( abs(agg$sancheck_mean_yi - agg$Mu) )
 agg$exclude_scen_biased_yi = abs(agg$sancheck_mean_yi - agg$Mu) > 0.05
 mean(agg$exclude_scen_biased_yi)  # percent of scens
 
-message( paste( "\n\n", round( 100 * mean(agg$exclude_scen_biased_yi) ), "% of scens had biased yi and will be removed", sep = " ") )
+message( paste( "\n\n", round( 100 * meanNA(agg$exclude_scen_biased_yi) ), "% of scens had biased yi and will be removed", sep = " ") )
 
+
+#@why are some of these NA?
+mean(is.na(agg$sancheck_mean_yi))
 
 # summarize scen params for these ones
 # not surprisingly, the bad scens are exclusively binary Y, and mostly ones with N=40 or N ~ Unif(40,400)
@@ -120,6 +129,8 @@ CreateTableOne( dat = agg,
                 vars = param.vars.manip2,
                 factorVars = param.vars.manip2,
                 strata = "Ytype")
+
+nuni(agg$scen.name)
 
 
 # Write prepped datasets -------------------------------------------------

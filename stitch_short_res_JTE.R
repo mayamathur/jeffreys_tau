@@ -52,10 +52,11 @@ tables <- foreach(i = 1:length(split_files), .packages = c("data.table")) %dopar
 
 # combine the results
 agg <- rbindlist(tables, fill = TRUE)
-length(unique(agg$scen.name))
 
 
 # write it
 setwd(.results.stitched.write.path)
 fwrite(agg, .stitch.file.name)
+
+length(unique(agg$scen.name))
 

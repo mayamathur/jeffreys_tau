@@ -313,8 +313,8 @@ wrangle_agg_local = function(agg) {
   # label methods more intelligently for use in plots
   agg$method.pretty = agg$method # temporarily not relabeling them
   agg$method.pretty[ agg$method == "robu" ] = "RVE"
-  agg$method.pretty[ agg$method == "jeffreys-pmode" ] = "Jeffreys"
-  agg$method.pretty[ agg$method == "jeffreys-tau-pmode" ] = "Jeffreys tau"
+  agg$method.pretty[ agg$method == "jeffreys-pmode" ] = "jeffreys-joint-pmode"
+  agg$method.pretty[ agg$method == "jeffreys-tau-pmode" ] = "jeffreys-tau-pmode"
   agg$method.pretty[ agg$method == "ML" ] = "MLE-metafor"
   table(agg$method, agg$method.pretty)
   
@@ -384,6 +384,7 @@ make_winner_table_col = function(.agg,
   # summarise.fun.name = "worst10th"
   # digits = 2
   
+
   
   # sanity check
   if ( any( is.na( .agg$method.pretty ) ) ) {
@@ -565,8 +566,8 @@ make_winner_table = function( .agg,
 
 # makes both winner tables (medians and worst 10th pctiles)
 make_both_winner_tables = function( .agg,
-                                    .yNames = c("MhatBias", "MhatAbsBias", "MhatRMSE", "MhatCover", "MhatWidth", "MhatTestReject",
-                                                "ShatBias", "ShatAbsBias", "ShatRMSE", "ShatCover", "ShatWidth"),
+                                    .yNames = c("MhatAbsBias", "MhatRMSE", "MhatCover", "MhatWidth", #"MhatTestReject",
+                                                "ShatAbsBias", "ShatRMSE", "ShatCover", "ShatWidth"),
                                     summarise.fun.name = "mean",  # "mean" or "median"
                                     show.worst10th = FALSE,
                                     display = "dataframe"

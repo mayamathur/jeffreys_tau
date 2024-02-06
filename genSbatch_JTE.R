@@ -144,8 +144,8 @@ n.reps.in.doParallel = 500
 scen.name = rep( scen.params$scen, each = ( n.files / n.scen ) )
 jobname = paste("job", 1:n.files, sep="_")
 # for re-run only: jobname = paste("job", 100:147, sep="_")
-outfile = paste("/home/groups/manishad/JTE/rmfiles/rm_", 1:n.files, ".out", sep="")
-errorfile = paste("/home/groups/manishad/JTE/rmfiles/rm_", 1:n.files, ".err", sep="")
+outfile = paste("/scratch/groups/manishad/JTE/rmfiles/rm_", 1:n.files, ".out", sep="")  #*NOTE CHANGE TO SCRATCH
+errorfile = paste("/scratch/groups/manishad/JTE/rmfiles/rm_", 1:n.files, ".err", sep="")
 write_path = paste(path, "/sbatch_files/", 1:n.files, ".sbatch", sep="")
 runfile_path = paste(path, "/testRunFile.R", sep="")
 
@@ -160,8 +160,8 @@ sbatch_params <- data.frame(jobname,
                             # for RSM_1 sims with sim.env=stefan, n.reps.per.scen=500, and n.reps.in.doParallel=20 (1750 files):
                             # how to specify job times: https://www.sherlock.stanford.edu/docs/advanced-topics/job-management/#job-submission-limits
                             # days-hh:mm:ss
-                            #jobtime = "1-00:00:00",  # 1 day
-                            jobtime = "02:00:00",
+                            jobtime = "1-00:00:00",  # 1 day
+                            #jobtime = "04:00:00",  # when running all methods, 4:00:00 is enough for all k EXCEPT k=100, which needs 1 day
                             quality = "normal",
                             node_number = 1,
                             mem_per_node = 64000,
@@ -186,7 +186,7 @@ n.files
 # 2024-02-01: 3120
 path = "/home/groups/manishad/JTE"
 setwd( paste(path, "/sbatch_files", sep="") )
-for (i in 1:1000) {
+for (i in 3001:3120) {
   system( paste("sbatch -p qsu,owners,normal /home/groups/manishad/JTE/sbatch_files/", i, ".sbatch", sep="") )
 }
 
@@ -199,13 +199,13 @@ path = "/home/groups/manishad/JTE"
 setwd(path)
 source("helper_JTE.R")
 
-missed.nums = sbatch_not_run( "/home/groups/manishad/JTE/long_results",
-                              "/home/groups/manishad/JTE/long_results",
-                              .name.prefix = "long_results",
-                              .max.sbatch.num = 3000 )
+missed.nums = sbatch_not_run( "/home/groups/manishad/JTE/short_results",
+                              "/home/groups/manishad/JTE/short_results",
+                              .name.prefix = "short_results",
+                              .max.sbatch.num = 3120 )
 
 setwd( paste(path, "/sbatch_files", sep="") )
-for (i in missed.nums[1:1000]) {
+for (i in missed.nums) {
   system( paste("sbatch -p qsu,owners,normal /home/groups/manishad/JTE/sbatch_files/", i, ".sbatch", sep="") )
 }
 

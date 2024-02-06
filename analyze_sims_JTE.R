@@ -55,7 +55,7 @@ overwrite.res = TRUE
 
 # should all the "View()" things be called?
 # they open new RStudio tabs, so can be useful to skip these sanity checks
-use.View = FALSE
+use.View = TRUE
 
 # ~~ Set directories -------------------------
 code.dir = here()
@@ -140,6 +140,10 @@ t = agg %>% filter(method.pretty %in% c("metaLik", "MLE-profile")) %>%
   summarise( sd(Mhat),
              sd(Shat),
              sd(MLo))
+
+# their average performances are the same, though:
+make_both_winner_tables(.agg = agg2 %>% filter( Ytype == "cont-SMD" & method.pretty %in% c("metaLik", "MLE-profile") ) )
+make_both_winner_tables(.agg = agg2 %>% filter( Ytype == "bin-OR" & method.pretty %in% c("metaLik", "MLE-profile") ) )
 
 
 # ~ RVE should be equivalent to DL since no clustering  -------------------------------------------------
@@ -276,37 +280,65 @@ update_result_csv( name = paste("Perc Jeffreys", names(t)),
 
 # WINNER TABLES -------------------------
 
+
+dput(unique(agg$method))
+
+
+
 # create the base dataset from which to filter all winner tables
 methods_for_table = c(
-   "DL",
-   "DL2",
-  # "ML",
-   "MLE-profile",
-   "REML",
-  # "EB",
-   "PM",
-  # "robu", 
-   "exact",
+   "ML", "REML", "DL", "PM", "DL2", "exact","MLE-profile",
+  #"metaLik",
+  "bayesmeta-tau-central", 
+  "bayesmeta-tau-shortest",
+  "bayesmeta-joint-shortest",
+  "bayesmeta-joint-central",
+  # "jeffreys-tau-pmean", 
+  # "jeffreys-tau-pmed",
+  # "jeffreys-tau-max-lp-iterate",
+  "jeffreys-tau-hdi", 
+  "jeffreys-tau-pmode",
   
-  "bayesmeta",
-  
-  # "jeffreys-pmean",
+  # "jeffreys-pmean", 
   # "jeffreys-pmed",
   # "jeffreys-max-lp-iterate",
-  "jeffreys-pmode",
-  
-  "jeffreys-tau-pmode",
-  "jeffreys-hdi"
+  "jeffreys-hdi",
+  "jeffreys-pmode"
 )
+
+
+# fewer BY methods
+methods_for_table = c(
+  "ML", "REML", "DL", "PM", "DL2", "exact","MLE-profile",
+  "bayesmeta-tau-central", 
+  "bayesmeta-tau-shortest",
+  "bayesmeta-joint-shortest",
+  "bayesmeta-joint-central")
 agg2 = agg %>% filter( k.pub <= 20 & method %in% methods_for_table )
 
 
-dim(agg2)
+dim(agg2); nuni(agg2$scen.name)
 # summarize scen params
 CreateTableOne( dat = agg2[ !duplicated(agg2$scen.name) ],
                 vars = param.vars.manip2,
                 factorVars = param.vars.manip2 )
 
+#  ~ Sanity checks -------------------------------------------------
+
+# only look at methods that should be exactly the same
+
+# very similar, but not exactly the same
+make_both_winner_tables(.agg = agg2 %>% filter( Ytype == "cont-SMD" &
+                                                  method %in% c("bayesmeta-joint-shortest", "jeffreys-hdi") ) )
+
+# **big difference here: bayesmeta is way shorter
+# could it be that the posterior is multimodal?
+make_both_winner_tables(.agg = agg2 %>% filter( Ytype == "cont-SMD" &
+                                                  method %in% c("bayesmeta-tau-shortest", "jeffreys-tau-hdi") ) )
+
+# again extremely different! 
+make_both_winner_tables(.agg = agg2 %>% filter( Ytype == "cont-SMD" &
+                                                  method %in% c("bayesmeta-tau-central", "jeffreys-tau-pmode") ) )
 
 # ~ Overall  -------------------------------------------------
 
@@ -325,17 +357,25 @@ make_both_winner_tables(.agg = agg2 %>% filter( Ytype == "bin-OR" & k.pub <= 5 )
 # ~ k  -------------------------------------------------
 
 #**SUPP TABLES S1 - S4
-# very small metas
-#@ HOW DID BODNAR GET 100% COVERAGE FOR TAU = 0??
-make_both_winner_tables(.agg = agg %>% filter( Ytype == "cont-SMD", k.pub == 100))
-make_both_winner_tables(.agg = agg %>% filter( Ytype == "bin-OR", k.pub == 100))
+# very large metas
+make_both_winner_tables(.agg = agg %>% filter( Ytype == "cont-SMD" &
+                                                 method %in% methods_for_table &
+                                                 k.pub == 100))
+make_both_winner_tables(.agg = agg %>% filter( Ytype == "bin-OR" &
+                                                 method %in% methods_for_table &
+                                                 k.pub == 100))
 
 
 # ~ Tau^2  -------------------------------------------------
 
-# tau=0
+# tau near zero
 make_both_winner_tables(.agg = agg2 %>% filter(Ytype == "cont-SMD", t2a == 0.0001))
 make_both_winner_tables(.agg = agg2 %>% filter(Ytype == "bin-OR", t2a == 0.0001))
+
+
+# tau not near zero
+make_both_winner_tables(.agg = agg2 %>% filter(Ytype == "cont-SMD", t2a > 0.0001))
+make_both_winner_tables(.agg = agg2 %>% filter(Ytype == "bin-OR", t2a > 0.0001))
 
 #**SUPP TABLES S5 - S10
 make_both_winner_tables(.agg = agg2 %>% filter(Ytype == "cont-SMD", t2a <= 0.01))
