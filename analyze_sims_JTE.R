@@ -423,6 +423,25 @@ make_both_winner_tables(.agg = agg2 %>% filter(Ytype == "bin-OR", N.pretty %in% 
 # make_both_winner_tables(.agg = agg2 %>% filter( N.pretty == "N ~ U(2000, 4000)" ))
 
 
+# ~ Sensitivity analysis: When including scens with biased yi  -------------------------------------------------
+
+# results are quite similar
+setwd(data.dir)
+list.files()
+agge = fread( "agg_including_scens_biased_yi.csv") 
+nuni(agge$scen.name)
+
+agge2 = agge %>% filter(method %in% methods_for_table &
+                          k.pub <= 20)
+
+
+
+# overall winner tables
+make_both_winner_tables(.agg = agge2 %>% filter( Ytype == "cont-SMD" ) )
+make_both_winner_tables(.agg = agge2 %>% filter( Ytype == "bin-OR" ) )
+
+
+
 
 # ONE-OFF PERFORMANCE STATS FOR PAPER -------------------------------------------------
 
@@ -453,6 +472,22 @@ update_result_csv( name = "Sims - Mean perc narrower Jeffreys vs winning other m
 
 
 # SANITY CHECKS -------------------------
+
+# ~ Compare to Kontopantelis results  -------------------------------------------------
+
+make_both_winner_tables(.agg = agg2 %>% filter( Ytype == "bin-OR" &
+                                                  k.pub <= 5 &
+                                                  t2a == 0.25 ) )
+
+
+make_both_winner_tables(.agg = agg2 %>% filter( Ytype == "bin-OR" &
+                                                  k.pub <= 5 &
+                                                  t2a == 0.0001 ) )
+
+#***very interesting. Mhat coverage depends heavily on t2a for MLE-profile, but not for bayesmeta-joint-central! Both methods are fine for t2a = 0.0001, BUT only jeffreys is fine for t2a = 0.25.
+
+
+
 
 # ~ Compare to Langan results  -------------------------------------------------
 
@@ -510,6 +545,141 @@ construct( as.data.frame(x3) )
 
 
 # PLOTS -------------------------------------------------
+
+methods_for_table = c(
+  "ML", "REML", "DL", "PM", "DL2", "exact","MLE-profile",
+  "bayesmeta-tau-central", 
+  "bayesmeta-tau-shortest",
+  "bayesmeta-joint-shortest",
+  "bayesmeta-joint-central")
+agg2 = agg %>% filter( k.pub <= 20 & method %in% methods_for_table )
+aggp = agg2
+
+# reorder methods
+correct.order = c( "Jeffreys2-central", 
+                   "Jeffreys2-shortest",
+                   
+                   "Jeffreys1-central",
+                   "Jeffreys1-shortest",
+                   
+                   "MLE-profile",
+                   "MLE-Wald-Qprofile",
+                   "REML-Wald-Qprofile",
+                   
+                   "DL-Wald-Qprofile",
+                   "DL2-Wald-Qprofile",
+
+                   "PM-Wald-Qprofile")
+aggp$method.pretty = factor(aggp$method.pretty, levels = correct.order)
+levels(aggp$method.pretty)
+table(aggp$method.pretty, useNA = "ifany")
+
+aggp$Ytype.pretty = NA
+aggp$Ytype.pretty[ aggp$Ytype == "cont-SMD" ] = "Continuous Y"
+aggp$Ytype.pretty[ aggp$Ytype == "bin-OR" ] = "Binary Y"
+aggp$Ytype.pretty = factor(aggp$Ytype.pretty, levels = c("Continuous Y", "Binary Y") )
+
+# same colors as in applied example for prettiness
+.colors = c("#F2340E",
+            "#F2340E",
+            
+            "#E075DB",
+            "#E075DB",
+            
+            "#0F5A8C",
+            "#0E96F0",
+            "black",
+            
+            "#246105",
+            "#8CB876",
+            
+            "#845699",
+            
+            "#D18350")
+
+# dashed lines = shortest intervals
+.lty = c("solid",
+         "dashed",
+         "solid",
+         "dashed",
+         
+         rep("solid", 7) )
+
+expect_equal(length(.colors), length(methods_for_table))
+expect_equal(length(.lty), length(methods_for_table))
+
+
+# ~ Coverage by k and tau -------------------------------------------------
+
+
+# aggregate within scenarios, but keep the variation in k and tau
+dp = aggp %>% filter(k.pub <= 20 & method %in% methods_for_table ) %>%
+  #filter(true.dist == "norm") %>%
+  group_by(k.pub, t2a, method.pretty, Ytype.pretty) %>%
+  summarise_if(is.numeric, meanNA)
+table(dp$method.pretty, useNA = "ifany")
+
+# Mhat coverage
+p = ggplot( data = dp, 
+        aes( x = k.pub, 
+             y = MhatCover,
+             color = method.pretty,
+             lty = method.pretty) ) + 
+  geom_hline(yintercept = .95, lty = 2) +
+  
+  # slightly dodge line positions to avoid exact overlap:
+  #geom_line( position=position_jitter(w=.8, h=0) ) + 
+  geom_line() +
+  
+  scale_linetype_manual(values = .lty) +
+scale_color_manual(values = .colors) +
+  facet_grid(rows = vars(Ytype.pretty), cols = vars(t2a) )
+
+
+p
+ggplotly(p)
+
+
+
+
+
+# MhatWidth
+# zoom in to k<= 10 for legibility; all methods are basically the same for larger metas
+p = ggplot( data = dp %>% filter(k.pub <=10), 
+            aes( x = k.pub, 
+                 y = MhatWidth,
+                 color = method.pretty,
+                 lty = method.pretty) ) + 
+  
+  # slightly dodge line positions to avoid exact overlap:
+  #geom_line( position=position_jitter(w=.8, h=0) ) + 
+  geom_line() +
+  
+  scale_linetype_manual(values = .lty) +
+  scale_color_manual(values = .colors) +
+  facet_grid(rows = vars(Ytype.pretty), cols = vars(t2a) )
+ggplotly(p)
+
+# Shat coverage
+p = ggplot( data = dp, 
+            aes( x = k.pub, 
+                 y = ShatCover,
+                 color = method.pretty ) ) + 
+  geom_hline(yintercept = .95, lty = 2) +
+  geom_line() + 
+  facet_grid(rows = vars(Ytype), cols = vars(t2a) )
+
+ggplotly(p)
+
+# ShatWidth
+p = ggplot( data = dp, 
+            aes( x = k.pub, 
+                 y = ShatWidth,
+                 color = method.pretty ) ) +
+  geom_line() + 
+  facet_grid(rows = vars(Ytype), cols = vars(t2a) )
+
+ggplotly(p)
 
 
 # ~ Boxplots for (signed) bias -------------------------------------------------

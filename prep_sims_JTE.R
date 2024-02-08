@@ -121,6 +121,9 @@ CreateTableOne( dat = agg_bad,
 
 table(agg_bad$N.expr )
 
+# write dataset before excluding scens
+setwd(data.dir)
+fwrite(agg, "agg_including_scens_biased_yi.csv")
 
 
 #***exclude these scens going forward
@@ -137,7 +140,7 @@ nuni(agg$scen.name)
 
 setwd(data.dir)
 fwrite(agg, "agg.csv")
-fwrite(agg_bad, "agg_excluded_scens_biased_yi.csv")
+fwrite(agg_bad, "agg_just_the_excluded_scens_biased_yi.csv")
 
 
 # SAVE:# (will need to be run separately on the cluster, saving long results)

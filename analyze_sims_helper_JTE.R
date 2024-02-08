@@ -312,10 +312,21 @@ wrangle_agg_local = function(agg) {
   
   # label methods more intelligently for use in plots
   agg$method.pretty = agg$method # temporarily not relabeling them
+  # methods to include in paper:
+  agg$method.pretty[ agg$method == "bayesmeta-joint-central" ] = "Jeffreys2-central"
+  agg$method.pretty[ agg$method == "bayesmeta-joint-shortest" ] = "Jeffreys2-shortest"
+  agg$method.pretty[ agg$method == "bayesmeta-tau-central" ] = "Jeffreys1-central"
+  agg$method.pretty[ agg$method == "bayesmeta-tau-shortest" ] = "Jeffreys1-shortest"
+  agg$method.pretty[ agg$method == "ML" ] = "MLE-Wald-Qprofile"
+  agg$method.pretty[ agg$method == "PM" ] = "PM-Wald-Qprofile"
+  agg$method.pretty[ agg$method == "DL" ] = "DL-Wald-Qprofile"
+  agg$method.pretty[ agg$method == "DL2" ] = "DL2-Wald-Qprofile"
+  agg$method.pretty[ agg$method == "REML" ] = "REML-Wald-Qprofile"
+  agg$method.pretty[ agg$method == "exact" ] = "Exact"
+  # other methods not in paper:
   agg$method.pretty[ agg$method == "robu" ] = "RVE"
   agg$method.pretty[ agg$method == "jeffreys-pmode" ] = "jeffreys-joint-pmode"
-  agg$method.pretty[ agg$method == "jeffreys-tau-pmode" ] = "jeffreys-tau-pmode"
-  agg$method.pretty[ agg$method == "ML" ] = "MLE-metafor"
+
   table(agg$method, agg$method.pretty)
   
   if ( "minN" %in% names(agg) ){
