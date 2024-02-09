@@ -1531,17 +1531,18 @@ CI_comparison = function(.agg,
   
   temp = temp %>% select(target_94, compar_94, target_wins_cover, target_wins_width, target_wins)
   
-  return( round( 100 * colMeans(temp) ) )
+  return( round( 100 * colMeans(temp[2:6]) ) )
 }
 
 
 # NOT IN USE? SAVE, THOUGH
 # what percent narrower is the Jeffreys CI than the CI of the narrowest other method?
 # mean of this across all included scens
-perc_CI_narrower = function(.agg, target.method.pretty, methods.pretty.to.show) {
-  t = .agg %>% filter(method.pretty %in% methods.pretty.to.show) %>%
+perc_CI_narrower = function(.agg, .target.method.pretty, .comparison.method.pretty) {
+  t = .agg %>% filter(method.pretty %in% c(.target.method.pretty,
+                                           .comparison.method.pretty) ) %>%
     group_by(scen.name) %>%
-    mutate( CI_ratio = min( MhatWidth[ method.pretty != target.method.pretty ] ) / MhatWidth[ method.pretty == target.method.pretty ] ) 
+    mutate( CI_ratio = min( MhatWidth[ method.pretty == .comparison.method.pretty ] ) / MhatWidth[ method.pretty == .target.method.pretty ] ) 
   
   # sanity check
   #if (use.View == TRUE ) View( t %>% select(scen.name, method.pretty, MhatWidth, CI_ratio) )

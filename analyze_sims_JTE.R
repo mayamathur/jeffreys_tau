@@ -448,23 +448,6 @@ make_both_winner_tables(.agg = agge2 %>% filter( Ytype == "bin-OR" ) )
 
 ### CI width comparisons
 
-# these use only the k <= 20 scens
-
-#bm: think about how best to present this; coverage can be low 
-# can you report something like: % of these scens where jeffreys coverage was AT LEAST equal to the comparison methods and it was narrower? and average efficiency improvement there?
-temp = agg2 %>% filter(method.pretty == "Jeffreys2-central" & Ytype == "bin-OR") %>%
-  select( all_of( c(param.vars.manip2, "MhatCover") ) )
-View( temp %>% arrange(MhatCover) )
-
-
-
-Qprofile.names = stringsWith(pattern = "Qprofile", unique(agg2$method.pretty))
-methods.pretty.to.show = c("Jeffreys2-central", Qprofile_names)
-
-perc_CI_narrower(.agg = agg2 %>% filter(Ytype == "cont-SMD"),
-                 target.method = "Jeffreys2-central",
-                 methods.pretty.to.show = methods.pretty.to.show)
-
 # SAVE?
 # temp = agg2 %>% filter(method.pretty %in% methods_to_include) %>%
 #   #filter(k.pub <= 5) %>%
@@ -481,59 +464,47 @@ perc_CI_narrower(.agg = agg2 %>% filter(Ytype == "cont-SMD"),
 # mean(temp$jeff_wins)
 
 
-temp = agg2 %>% filter(method.pretty %in% methods_to_include) %>%
-  #filter(k.pub <= 5) %>%
-  filter(Ytype == "bin-OR") %>%
-  group_by(scen.name) %>%
-  filter( MhatCover[method.pretty == "Jeffreys2-central"] >= max( MhatCover[method.pretty != "Jeffreys2-central"] ) ) %>%
-  mutate( CI_ratio = min( MhatWidth[ method.pretty != "Jeffreys2-central" ] ) / MhatWidth[ method.pretty == "Jeffreys2-central" ] )
 
-mean(temp$CI_ratio)
-
-nrow(temp)/nrow(agg2)
-
-temp = agg2 %>% filter(method.pretty %in% methods_to_include) %>%
-  #filter(k.pub <= 5) %>%
-  filter(Ytype == "bin-OR") %>%
-  group_by(scen.name) %>%
-  mutate(jeff_wins1 = MhatCover[method.pretty == "Jeffreys2-central"] >= max( MhatCover[method.pretty != "Jeffreys2-central"] ),
-         jeff_95 = MhatCover[method.pretty == "Jeffreys2-central"] >= .95,
-         REML_95 = MhatCover[method.pretty == "REML-Wald-Qprofile"] >= .95,
-         jeff_wins2 = MhatWidth[method.pretty == "Jeffreys2-central"] <= min(  MhatWidth[method.pretty != "Jeffreys2-central"] ),
-         jeff_wins = jeff_wins1 * jeff_wins2)
-
-mean(temp$jeff_95)
-mean(temp$REML_95)
-mean(temp$jeff_wins1)
-mean(temp$jeff_wins2)
-mean(temp$jeff_wins)
-
-# specifically compare to REML
+# Bin-OR
+# specifically compare to REML since all Wald-Qprofile methods were similar
 x = CI_comparison(.agg = agg2 %>% 
                     #filter(k.pub <= 5) %>%
                     filter(Ytype == "bin-OR"),
                   .target.method.pretty = "Jeffreys2-central",
                   .comparison.method.pretty = "REML-Wald-Qprofile")
 
-
-
-#@UNDERLYING FN NEEDS SANITY CHECKS
-update_result_csv( name = "Sims - Mean perc narrower Jeffreys vs winning other method - Ycont",
-                   value = perc_CI_narrower(.agg = agg2 %>% filter(Ytype == "cont-SMD")),
-                   print = TRUE )
-update_result_csv( name = "Sims - Mean perc narrower Jeffreys vs winning other method - Ycont small metas",
-                   value = perc_CI_narrower(.agg = agg2 %>% filter(k.pub <= 5 & Ytype == "cont-SMD")),
+update_result_csv( name = paste( "Bin-OR ", names(x) ),
+                   value = as.numeric(x),
                    print = TRUE )
 
-
-
-update_result_csv( name = "Sims - Mean perc narrower Jeffreys vs winning other method - Ybin",
-                   value = perc_CI_narrower(.agg = agg2 %>% filter(Ytype == "bin-OR")),
+update_result_csv( name = "Sims - Mean perc narrower Jeffreys vs REML - Ybin",
+                   value = perc_CI_narrower(.agg = agg2 %>% filter(Ytype == "bin-OR"),
+                                            .target.method.pretty = "Jeffreys2-central",
+                                            .comparison.method.pretty = "REML-Wald-Qprofile"),
                    print = TRUE )
 
-update_result_csv( name = "Sims - Mean perc narrower Jeffreys vs winning other method - Ybin small metas",
-                   value = perc_CI_narrower(.agg = agg2 %>% filter(k.pub <= 5 & Ytype == "bin-OR")),
+
+update_result_csv( name = "Sims - Mean perc narrower Jeffreys vs REML - Ybin small metas",
+                   value = perc_CI_narrower(.agg = agg2 %>% filter(Ytype == "bin-OR" & k.pub <= 5),
+                                            .target.method.pretty = "Jeffreys2-central",
+                                            .comparison.method.pretty = "REML-Wald-Qprofile"),
                    print = TRUE )
+
+
+# Cont-SMD
+x = CI_comparison(.agg = agg2 %>% 
+                    filter(k.pub > 5) %>%
+                    filter(Ytype == "cont-SMD"),
+                  .target.method.pretty = "Jeffreys2-central",
+                  .comparison.method.pretty = "REML-Wald-Qprofile")
+
+# **doesn't make sense to use Jeffreys2 for continuous outcomes since, in the k>5 scenarios where its coverage was always okay, it also doesn't improve efficiency
+perc_CI_narrower(.agg = agg2 %>% filter(Ytype == "cont-SMD" & k.pub > 5),
+                 .target.method.pretty = "Jeffreys2-central",
+                 .comparison.method.pretty = "REML-Wald-Qprofile")
+
+
+
 
 
 
