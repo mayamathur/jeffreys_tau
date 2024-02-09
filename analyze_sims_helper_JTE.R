@@ -326,7 +326,7 @@ wrangle_agg_local = function(agg) {
   # other methods not in paper:
   agg$method.pretty[ agg$method == "robu" ] = "RVE"
   agg$method.pretty[ agg$method == "jeffreys-pmode" ] = "jeffreys-joint-pmode"
-
+  
   table(agg$method, agg$method.pretty)
   
   if ( "minN" %in% names(agg) ){
@@ -395,7 +395,7 @@ make_winner_table_col = function(.agg,
   # summarise.fun.name = "worst10th"
   # digits = 2
   
-
+  
   
   # sanity check
   if ( any( is.na( .agg$method.pretty ) ) ) {
@@ -891,7 +891,7 @@ my_violins = function(xName = NA,
   
   # facet by Ytype
   p = p + facet_grid( ~ Ytype.pretty )
-
+  
   
   # write plot
   if ( write == TRUE ) {
@@ -1515,11 +1515,33 @@ init_var_names = function(.agg) {
 }
 
 
-# what percent narrower is the Jeffreys CI than the CI of the narrowest other method?
-perc_CI_narrower = function(.agg) {
-  t = .agg %>% filter(method.pretty %in% methods.to.show) %>%
+# returns percentages
+CI_comparison = function(.agg,
+                         .target.method.pretty,
+                         .comparison.method.pretty) {
+
+  temp = .agg %>% filter(method.pretty %in% c(.target.method.pretty,
+                                              .comparison.method.pretty) ) %>%
     group_by(scen.name) %>%
-    mutate( CI_ratio = min( MhatWidth[ method.pretty != "Jeffreys" ] ) / MhatWidth[ method.pretty == "Jeffreys" ] ) 
+    mutate( target_94 = MhatCover[method.pretty == .target.method.pretty] > .94,
+            compar_94 = MhatCover[method.pretty == .comparison.method.pretty] > .94,
+            target_wins_cover = MhatCover[method.pretty == .target.method.pretty] >= MhatCover[method.pretty == .comparison.method.pretty],
+            target_wins_width = MhatWidth[method.pretty == .target.method.pretty] <= MhatWidth[method.pretty == .comparison.method.pretty],
+            target_wins = target_wins_cover * target_wins_width)
+  
+  temp = temp %>% select(target_94, compar_94, target_wins_cover, target_wins_width, target_wins)
+  
+  return( round( 100 * colMeans(temp) ) )
+}
+
+
+# NOT IN USE? SAVE, THOUGH
+# what percent narrower is the Jeffreys CI than the CI of the narrowest other method?
+# mean of this across all included scens
+perc_CI_narrower = function(.agg, target.method.pretty, methods.pretty.to.show) {
+  t = .agg %>% filter(method.pretty %in% methods.pretty.to.show) %>%
+    group_by(scen.name) %>%
+    mutate( CI_ratio = min( MhatWidth[ method.pretty != target.method.pretty ] ) / MhatWidth[ method.pretty == target.method.pretty ] ) 
   
   # sanity check
   #if (use.View == TRUE ) View( t %>% select(scen.name, method.pretty, MhatWidth, CI_ratio) )

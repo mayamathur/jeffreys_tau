@@ -128,7 +128,7 @@ summary(agg$doParallelSecondsQ95/60^2)
 
 
 
-                        
+
 
 # SANITY CHECKS ON DATA GENERATION -------------------------
 
@@ -160,7 +160,7 @@ t = agg %>% filter(method.pretty %in% c("DL", "RVE")) %>%
 ### Stats about scen parameters
 # one row per scen only
 first = agg[ !duplicated(agg$scen.name), ]
-  
+
 update_result_csv( name = "Num scens Ytype bin",
                    value = sum(first$Ytype == "bin-OR"),
                    print = TRUE )
@@ -217,10 +217,10 @@ if (use.View == TRUE) View(t)
 
 # Bayesian convergence metrics
 ( t = agg %>% filter(method.pretty == "Jeffreys") %>%
-  summarise( mean(MhatRhatGt1.05),
-             mean(ShatRhatGt1.05),
-             max(MhatRhatGt1.05),
-             max(ShatRhatGt1.05) ) )
+    summarise( mean(MhatRhatGt1.05),
+               mean(ShatRhatGt1.05),
+               max(MhatRhatGt1.05),
+               max(ShatRhatGt1.05) ) )
 
 
 update_result_csv( name = paste("Perc Jeffreys", names(t)),
@@ -287,7 +287,7 @@ dput(unique(agg$method))
 
 # create the base dataset from which to filter all winner tables
 methods_for_table = c(
-   "ML", "REML", "DL", "PM", "DL2", "exact","MLE-profile",
+  "ML", "REML", "DL", "PM", "DL2", "exact","MLE-profile",
   #"metaLik",
   "bayesmeta-tau-central", 
   "bayesmeta-tau-shortest",
@@ -450,6 +450,72 @@ make_both_winner_tables(.agg = agge2 %>% filter( Ytype == "bin-OR" ) )
 
 # these use only the k <= 20 scens
 
+#bm: think about how best to present this; coverage can be low 
+# can you report something like: % of these scens where jeffreys coverage was AT LEAST equal to the comparison methods and it was narrower? and average efficiency improvement there?
+temp = agg2 %>% filter(method.pretty == "Jeffreys2-central" & Ytype == "bin-OR") %>%
+  select( all_of( c(param.vars.manip2, "MhatCover") ) )
+View( temp %>% arrange(MhatCover) )
+
+
+
+Qprofile.names = stringsWith(pattern = "Qprofile", unique(agg2$method.pretty))
+methods.pretty.to.show = c("Jeffreys2-central", Qprofile_names)
+
+perc_CI_narrower(.agg = agg2 %>% filter(Ytype == "cont-SMD"),
+                 target.method = "Jeffreys2-central",
+                 methods.pretty.to.show = methods.pretty.to.show)
+
+# SAVE?
+# temp = agg2 %>% filter(method.pretty %in% methods_to_include) %>%
+#   #filter(k.pub <= 5) %>%
+#   filter(Ytype == "bin-OR") %>%
+#   group_by(scen.name) %>%
+#   mutate(jeff_wins1 = MhatCover[method.pretty == "Jeffreys2-central"] >= max(  MhatCover[method.pretty != "Jeffreys2-central"] ),
+#          jeff_95 = MhatCover[method.pretty == "Jeffreys2-central"] >= .95,
+#          jeff_wins2 = MhatWidth[method.pretty == "Jeffreys2-central"] <= min(  MhatWidth[method.pretty != "Jeffreys2-central"] ),
+#          jeff_wins = jeff_wins1 * jeff_wins2)
+# 
+# mean(temp$jeff_95)
+# mean(temp$jeff_wins1)
+# mean(temp$jeff_wins2)
+# mean(temp$jeff_wins)
+
+
+temp = agg2 %>% filter(method.pretty %in% methods_to_include) %>%
+  #filter(k.pub <= 5) %>%
+  filter(Ytype == "bin-OR") %>%
+  group_by(scen.name) %>%
+  filter( MhatCover[method.pretty == "Jeffreys2-central"] >= max( MhatCover[method.pretty != "Jeffreys2-central"] ) ) %>%
+  mutate( CI_ratio = min( MhatWidth[ method.pretty != "Jeffreys2-central" ] ) / MhatWidth[ method.pretty == "Jeffreys2-central" ] )
+
+mean(temp$CI_ratio)
+
+nrow(temp)/nrow(agg2)
+
+temp = agg2 %>% filter(method.pretty %in% methods_to_include) %>%
+  #filter(k.pub <= 5) %>%
+  filter(Ytype == "bin-OR") %>%
+  group_by(scen.name) %>%
+  mutate(jeff_wins1 = MhatCover[method.pretty == "Jeffreys2-central"] >= max( MhatCover[method.pretty != "Jeffreys2-central"] ),
+         jeff_95 = MhatCover[method.pretty == "Jeffreys2-central"] >= .95,
+         REML_95 = MhatCover[method.pretty == "REML-Wald-Qprofile"] >= .95,
+         jeff_wins2 = MhatWidth[method.pretty == "Jeffreys2-central"] <= min(  MhatWidth[method.pretty != "Jeffreys2-central"] ),
+         jeff_wins = jeff_wins1 * jeff_wins2)
+
+mean(temp$jeff_95)
+mean(temp$REML_95)
+mean(temp$jeff_wins1)
+mean(temp$jeff_wins2)
+mean(temp$jeff_wins)
+
+# specifically compare to REML
+x = CI_comparison(.agg = agg2 %>% 
+                    #filter(k.pub <= 5) %>%
+                    filter(Ytype == "bin-OR"),
+                  .target.method.pretty = "Jeffreys2-central",
+                  .comparison.method.pretty = "REML-Wald-Qprofile")
+
+
 
 #@UNDERLYING FN NEEDS SANITY CHECKS
 update_result_csv( name = "Sims - Mean perc narrower Jeffreys vs winning other method - Ycont",
@@ -497,10 +563,10 @@ make_both_winner_tables(.agg = agg2 %>% filter( Ytype == "bin-OR" &
 ### try to reproduce Figure 1, upper left-hand panel
 # this is one scen only
 temp = agg %>% filter( Ytype == "cont-SMD" &
-                        N.expr == "40",
-                        k.pub == 2,
-                        t2a == 0.04,
-                        true.dist == "norm")
+                         N.expr == "40",
+                       k.pub == 2,
+                       t2a == 0.04,
+                       true.dist == "norm")
 expect_equal( nuni(temp$scen.name), 1 )
 make_both_winner_tables(.agg = temp,
                         display = "dataframe" )
@@ -568,8 +634,9 @@ correct.order = c( "Jeffreys2-central",
                    
                    "DL-Wald-Qprofile",
                    "DL2-Wald-Qprofile",
-
-                   "PM-Wald-Qprofile")
+                   
+                   "PM-Wald-Qprofile",
+                   "Exact")
 aggp$method.pretty = factor(aggp$method.pretty, levels = correct.order)
 levels(aggp$method.pretty)
 table(aggp$method.pretty, useNA = "ifany")
@@ -578,6 +645,17 @@ aggp$Ytype.pretty = NA
 aggp$Ytype.pretty[ aggp$Ytype == "cont-SMD" ] = "Continuous Y"
 aggp$Ytype.pretty[ aggp$Ytype == "bin-OR" ] = "Binary Y"
 aggp$Ytype.pretty = factor(aggp$Ytype.pretty, levels = c("Continuous Y", "Binary Y") )
+
+aggp$t2a.pretty = NA
+aggp$t2a.pretty = paste("tau^2 =", aggp$t2a)
+
+aggp$true.dist.pretty = NA
+aggp$true.dist.pretty[aggp$true.dist == "norm"] = "Normal effects"
+aggp$true.dist.pretty[aggp$true.dist == "expo"] = "Exponential effects"
+# reorder them
+aggp$true.dist.pretty = factor( aggp$true.dist.pretty, levels = c("Normal effects", "Exponential effects"))
+
+aggp = droplevels(aggp)
 
 # same colors as in applied example for prettiness
 .colors = c("#F2340E",
@@ -609,56 +687,143 @@ expect_equal(length(.colors), length(methods_for_table))
 expect_equal(length(.lty), length(methods_for_table))
 
 
-# ~ Coverage by k and tau -------------------------------------------------
-
+# ~~ Plots by k and tau -------------------------------------------------
 
 # aggregate within scenarios, but keep the variation in k and tau
 dp = aggp %>% filter(k.pub <= 20 & method %in% methods_for_table ) %>%
   #filter(true.dist == "norm") %>%
-  group_by(k.pub, t2a, method.pretty, Ytype.pretty) %>%
+  group_by(k.pub, t2a, method.pretty, Ytype.pretty, true.dist.pretty) %>%
   summarise_if(is.numeric, meanNA)
 table(dp$method.pretty, useNA = "ifany")
 
-# Mhat coverage
+# ~~ Mhat coverage -------------------------------------------------
 p = ggplot( data = dp, 
-        aes( x = k.pub, 
-             y = MhatCover,
-             color = method.pretty,
-             lty = method.pretty) ) + 
-  geom_hline(yintercept = .95, lty = 2) +
+            aes( x = k.pub, 
+                 y = MhatCover,
+                 color = method.pretty,
+                 lty = method.pretty) ) + 
+  geom_hline(yintercept = .95, lty = 1) +
   
   # slightly dodge line positions to avoid exact overlap:
-  #geom_line( position=position_jitter(w=.8, h=0) ) + 
-  geom_line() +
+  geom_line( position=position_jitter(w=.5, h=0) ) + 
+  #geom_line() +
   
-  scale_linetype_manual(values = .lty) +
-scale_color_manual(values = .colors) +
-  facet_grid(rows = vars(Ytype.pretty), cols = vars(t2a) )
-
+  #scale_linetype_manual(values = .lty, name = "Method") +
+  scale_color_manual(values = .colors) +
+  labs(color  = "Method", linetype = "Method") +
+  
+  coord_cartesian( ylim = c(0.85, 1))  +
+  #scale_y_continuous(breaks=c(0.85, 1, 0.05)) +
+  xlab("k") +
+  ylab( bquote( bold("Coverage of") ~ bold(mu) ) ) +
+  
+  facet_grid(t2a ~ true.dist.pretty + Ytype.pretty,
+             labeller = label_bquote( rows = tau^2 ~ "=" ~ .(t2a) ) ) +
+  
+  #facet_grid(true.dist.pretty + Ytype.pretty ~ t2a,
+  #           labeller = label_bquote( cols = tau^2 ~ "=" ~ .(t2a) ) ) +
+  
+  theme_bw(base_size = 12) +
+  
+  theme( text = element_text(face = "bold"),
+         axis.title = element_text(size = 14),
+         panel.grid.major.x = element_blank(),
+         panel.grid.minor.x = element_blank(),
+         legend.position = "bottom" ) 
 
 p
+my_ggsave( name = "MhatCover_line_plots.pdf",
+           .plot = p,
+           .overleaf.dir = overleaf.dir.figs,
+           .width = 10,
+           .height = 12)
+
 ggplotly(p)
 
 
 
-
-
-# MhatWidth
-# zoom in to k<= 10 for legibility; all methods are basically the same for larger metas
-p = ggplot( data = dp %>% filter(k.pub <=10), 
+# simple version for ggplotly
+p = ggplot( data = dp, 
             aes( x = k.pub, 
-                 y = MhatWidth,
+                 y = MhatCover,
+                 color = method.pretty,
+                 lty = method.pretty) ) + 
+  geom_hline(yintercept = .95, lty = 1) +
+  
+  # slightly dodge line positions to avoid exact overlap:
+  geom_line( position=position_jitter(w=.5, h=0) ) + 
+  #geom_line() +
+  
+  facet_grid(t2a ~ true.dist.pretty + Ytype.pretty )
+
+ggplotly(p)
+
+
+# ~~ Mhat width -------------------------------------------------
+
+# zoom in to k<= 10 for legibility; all methods are basically the same for larger metas
+p = ggplot( data = dp %>% filter(k.pub <= 5), 
+            aes( x = k.pub, 
+                 y = log(MhatWidth),
                  color = method.pretty,
                  lty = method.pretty) ) + 
   
   # slightly dodge line positions to avoid exact overlap:
-  #geom_line( position=position_jitter(w=.8, h=0) ) + 
+  #geom_line( position=position_jitter(w=.5, h=0) ) + 
   geom_line() +
   
-  scale_linetype_manual(values = .lty) +
+  #scale_linetype_manual(values = .lty, name = "Method") +
   scale_color_manual(values = .colors) +
-  facet_grid(rows = vars(Ytype.pretty), cols = vars(t2a) )
+  labs(color  = "Method", linetype = "Method") +
+  
+  #coord_cartesian( ylim = c(0.85, 1))  +
+  #scale_y_continuous(breaks=c(0.85, 1, 0.05)) +
+  xlab("k") +
+  ylab( bquote( bold("Log-width of CI for") ~ bold(mu) ) ) +
+  
+  facet_grid(t2a ~ true.dist.pretty + Ytype.pretty,
+             labeller = label_bquote( rows = tau^2 ~ "=" ~ .(t2a) ) ) +
+  
+  #facet_grid(true.dist.pretty + Ytype.pretty ~ t2a,
+  #           labeller = label_bquote( cols = tau^2 ~ "=" ~ .(t2a) ) ) +
+  
+  theme_bw(base_size = 12) +
+  
+  theme( text = element_text(face = "bold"),
+         axis.title = element_text(size=14),
+         panel.grid.major.x = element_blank(),
+         panel.grid.minor.x = element_blank(),
+         legend.position = "bottom" ) 
+
+p
+my_ggsave( name = "MhatWidth_line_plots.pdf",
+           .plot = p,
+           .overleaf.dir = overleaf.dir.figs,
+           .width = 10,
+           .height = 12)
+
+
+# simple version for ggplotly
+p = ggplot( data = dp %>% filter(k.pub <= 5), 
+            aes( x = k.pub, 
+                 y = log(MhatWidth),
+                 color = method.pretty,
+                 lty = method.pretty) ) + 
+  
+  # slightly dodge line positions to avoid exact overlap:
+  #geom_line( position=position_jitter(w=.5, h=0) ) + 
+  geom_line() +
+  
+  facet_grid(t2a ~ true.dist.pretty + Ytype.pretty )
+
 ggplotly(p)
+
+
+
+
+# ~~ ShatCover -------------------------------------------------
+
+
 
 # Shat coverage
 p = ggplot( data = dp, 
@@ -670,6 +835,8 @@ p = ggplot( data = dp,
   facet_grid(rows = vars(Ytype), cols = vars(t2a) )
 
 ggplotly(p)
+
+
 
 # ShatWidth
 p = ggplot( data = dp, 
@@ -871,12 +1038,12 @@ my_ggsave( name = "scen_1072_CI_asymmetry.pdf",
 
 # parameters, hard-coded in Supplement
 ( scen.1072.params = s2 %>% select( all_of(param.vars.manip2) ) %>%
-  filter( row_number() == 1 ) )
+    filter( row_number() == 1 ) )
 
 
 temp = agg %>% filter(scen.name == 1072 & method.pretty %in% methods.to.show)
 round( 100 * as.numeric( temp %>% filter(method.pretty == "Jeffreys") %>%
-              select(MhatCover) ) )
+                           select(MhatCover) ) )
 
 update_result_csv( name = "Scen 1072 Jeffreys MhatCover",
                    value = round( 100 * as.numeric( temp %>% filter(method.pretty == "Jeffreys") %>%
@@ -888,7 +1055,7 @@ round( 100 * temp$MhatCover[ !temp$method.pretty == "Jeffreys" ] )
 
 update_result_csv( name = "Scen 1072 Jeffreys MhatWidth",
                    value = round( as.numeric( temp %>% filter(method.pretty == "Jeffreys") %>%
-                                                      select(MhatWidth) ), 2 ),
+                                                select(MhatWidth) ), 2 ),
                    print = TRUE )
 
 
