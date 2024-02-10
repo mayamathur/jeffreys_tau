@@ -10,7 +10,7 @@
 # expected.sim.reps: only used for sanity checks
 make_agg_data = function( .s,
                           .averagefn = "median",
-                          badCoverageCutoff = 0.85,
+                          goodCoverageCutoff = 0.94,
                           expected.sim.reps = NA ){
   
   # # TEST ONLY
@@ -170,9 +170,9 @@ make_agg_data = function( .s,
             
             # varies within scenario
             MhatBias = Mhat - Mu,
-            MhatAbsBias = abs(Mhat - Mu),
+            MhatMAE = abs(Mhat - Mu),
             ShatBias = Shat - S,
-            ShatAbsBias = abs(Shat - S),
+            ShatMAE = abs(Shat - S),
             
             # varies within scenario
             MhatCover = covers(truth = Mu, lo = MLo, hi = MHi),
@@ -297,8 +297,8 @@ make_agg_data = function( .s,
   agg = s3[ !duplicated(s3$unique.scen), ]
   
   ##### Create Variables That Are Defined At Scenario Rather Than Iterate Level #####
-  agg = agg %>% mutate( BadMhatCover = MhatCover < badCoverageCutoff,
-                        BadShatCover = ShatCover < badCoverageCutoff )
+  agg = agg %>% mutate( GoodMhatCover = MhatCover > goodCoverageCutoff,
+                        GoodShatCover = ShatCover > goodCoverageCutoff )
   
   return(agg %>% ungroup() )
 }
@@ -396,17 +396,17 @@ make_winner_table_col = function(.agg,
   # digits = 2
   
   
-  
   # sanity check
   if ( any( is.na( .agg$method.pretty ) ) ) {
     stop(".agg has NAs in method.pretty; will mess up group_by")
   }
   
   
-  higherBetterYNames = c("MhatEstConverge", "ShatEstConverge", "MhatTestReject")
+  higherBetterYNames = c("MhatEstConverge", "ShatEstConverge",
+                         "MhatTestReject", "MhatCoverGt94")
   
-  lowerBetterYNames = c("MhatAbsBias", "MhatRMSE", "MhatWidth",
-                        "ShatAbsBias", "ShatRMSE", "ShatWidth")
+  lowerBetterYNames = c("MhatMAE", "MhatRMSE", "MhatWidth",
+                        "ShatMAE", "ShatRMSE", "ShatWidth")
   
   # Y_disp is what will be DISPLAYED in the table (e.g., retaining signs)
   .agg$Y_disp = .agg[[yName]]
@@ -577,8 +577,10 @@ make_winner_table = function( .agg,
 
 # makes both winner tables (medians and worst 10th pctiles)
 make_both_winner_tables = function( .agg,
-                                    .yNames = c("MhatAbsBias", "MhatRMSE", "MhatCover", "MhatWidth", #"MhatTestReject",
-                                                "ShatAbsBias", "ShatRMSE", "ShatCover", "ShatWidth"),
+                                    .yNames = c("MhatMAE", "MhatRMSE", "MhatCover", "MhatCoverGt94",
+                                                "MhatWidth", #"MhatTestReject",
+                                                
+                                                "ShatMAE", "ShatRMSE", "ShatCover", "ShatWidth"),
                                     summarise.fun.name = "mean",  # "mean" or "median"
                                     show.worst10th = FALSE,
                                     display = "dataframe"
@@ -1433,7 +1435,7 @@ performance_regressions = function(.agg,
     
     # which vars are good vs. bad for the outcome?
     # flip coeff signs so that positive means it improves the outcome
-    if ( grepl(pattern = "AbsBias", x = i) | grepl(pattern = "Width", x = i) | grepl(pattern = "RMSE", x = i) ) coefs = -coefs
+    if ( grepl(pattern = "MAE", x = i) | grepl(pattern = "Width", x = i) | grepl(pattern = "RMSE", x = i) ) coefs = -coefs
     good = names( coefs[ coefs > 0 & pvals < 0.01 ] )
     bad = names( coefs[ coefs < 0 & pvals < 0.01 ] )
     
@@ -1469,7 +1471,7 @@ init_var_names = function(.agg) {
   #  upon reading in data
   estNames <<- c("Mhat", "Shat")
   
-  mainYNames <<- c("Bias", "AbsBias", "RMSE", "Cover", "Width", "EmpSE")
+  mainYNames <<- c("Bias", "MAE", "RMSE", "Cover", "Width", "EmpSE")
   
   otherYNames <<- c("EstFail", "CIFail", "RhatGt1.01", "RhatGt1.05")
   

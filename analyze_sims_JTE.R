@@ -284,7 +284,6 @@ update_result_csv( name = paste("Perc Jeffreys", names(t)),
 dput(unique(agg$method))
 
 
-
 # create the base dataset from which to filter all winner tables
 methods_for_table = c(
   "ML", "REML", "DL", "PM", "DL2", "exact","MLE-profile",
@@ -339,6 +338,7 @@ make_both_winner_tables(.agg = agg2 %>% filter( Ytype == "cont-SMD" &
 # again extremely different! 
 make_both_winner_tables(.agg = agg2 %>% filter( Ytype == "cont-SMD" &
                                                   method %in% c("bayesmeta-tau-central", "jeffreys-tau-pmode") ) )
+
 
 # ~ Overall  -------------------------------------------------
 
