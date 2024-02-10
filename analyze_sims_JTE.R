@@ -709,8 +709,6 @@ my_ggsave( name = "MhatCover_line_plots.pdf",
            .width = 10,
            .height = 12)
 
-ggplotly(p)
-
 
 
 # simple version for ggplotly
