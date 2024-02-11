@@ -655,7 +655,7 @@ my_line_plot(.Yname = "MhatRMSE",
              .ggtitle = "",
              .colors = .colors,
              .ylab = 'bquote( bold("RMSE for") ~ bold(mu) )',
-             .jitter.width = 0)
+             .jitter.width = 0.5)
 
 
 # simple version for ggplotly
@@ -674,67 +674,15 @@ p = ggplot( data = dp,
 ggplotly(p)
 
 
-# max variation in RMSE across scens
-t = agg %>% group_by(scen.name, all_of(param.vars.manip2) ) %>%
-  summarise( SD = sd(MhatRMSE, na.rm = TRUE) ) %>%
-  arrange( desc(SD) )
-summary(t$SD)
-quantile(t$SD, 0.95)
-
-View(t %>% filter(SD > 2))
-
-# in plotting dataset (aggregated by some of the scen params)
-t = dp %>% group_by(scen.name) %>%
-  summarise( SD = sd(MhatRMSE, na.rm = TRUE) ) %>%
-  arrange( desc(SD) )
-summary(t$SD)
-quantile(t$SD, 0.95)
-
-
-
-
 
 # ~ Mhat coverage -------------------------------------------------
-p = ggplot( data = dp, 
-            aes( x = k.pub, 
-                 y = MhatCover,
-                 color = method.pretty,
-                 lty = method.pretty) ) + 
-  geom_hline(yintercept = .95, lty = 1) +
-  
-  # slightly dodge line positions to avoid exact overlap:
-  geom_line( position=position_jitter(w=.5, h=0) ) + 
-  #geom_line() +
-  
-  #scale_linetype_manual(values = .lty, name = "Method") +
-  scale_color_manual(values = .colors) +
-  labs(color  = "Method", linetype = "Method") +
-  
-  coord_cartesian( ylim = c(0.85, 1))  +
-  #scale_y_continuous(breaks=c(0.85, 1, 0.05)) +
-  xlab("k") +
-  ylab( bquote( bold("Coverage of") ~ bold(mu) ) ) +
-  
-  facet_grid(t2a ~ true.dist.pretty + Ytype.pretty,
-             labeller = label_bquote( rows = tau^2 ~ "=" ~ .(t2a) ) ) +
-  
-  #facet_grid(true.dist.pretty + Ytype.pretty ~ t2a,
-  #           labeller = label_bquote( cols = tau^2 ~ "=" ~ .(t2a) ) ) +
-  
-  theme_bw(base_size = 12) +
-  
-  theme( text = element_text(face = "bold"),
-         axis.title = element_text(size = 14),
-         panel.grid.major.x = element_blank(),
-         panel.grid.minor.x = element_blank(),
-         legend.position = "bottom" ) 
 
-p
-my_ggsave( name = "MhatCover_line_plots.pdf",
-           .plot = p,
-           .overleaf.dir = overleaf.dir.figs,
-           .width = 10,
-           .height = 12)
+my_line_plot(.Yname = "MhatCover",
+             .dat = dp,
+             .ggtitle = "",
+             .colors = .colors,
+             .ylab = 'bquote( bold("Coverage for") ~ bold(mu) )',
+             .jitter.width = 0.5)
 
 
 
@@ -758,46 +706,12 @@ ggplotly(p)
 # ~ Mhat width -------------------------------------------------
 
 # zoom in to k<= 10 for legibility; all methods are basically the same for larger metas
-p = ggplot( data = dp %>% filter(k.pub <= 5), 
-            aes( x = k.pub, 
-                 y = log(MhatWidth),
-                 color = method.pretty,
-                 lty = method.pretty) ) + 
-  
-  # slightly dodge line positions to avoid exact overlap:
-  #geom_line( position=position_jitter(w=.5, h=0) ) + 
-  geom_line() +
-  
-  #scale_linetype_manual(values = .lty, name = "Method") +
-  scale_color_manual(values = .colors) +
-  labs(color  = "Method", linetype = "Method") +
-  
-  #coord_cartesian( ylim = c(0.85, 1))  +
-  #scale_y_continuous(breaks=c(0.85, 1, 0.05)) +
-  xlab("k") +
-  ylab( bquote( bold("Log-width of CI for") ~ bold(mu) ) ) +
-  
-  facet_grid(t2a ~ true.dist.pretty + Ytype.pretty,
-             labeller = label_bquote( rows = tau^2 ~ "=" ~ .(t2a) ) ) +
-  
-  #facet_grid(true.dist.pretty + Ytype.pretty ~ t2a,
-  #           labeller = label_bquote( cols = tau^2 ~ "=" ~ .(t2a) ) ) +
-  
-  theme_bw(base_size = 12) +
-  
-  theme( text = element_text(face = "bold"),
-         axis.title = element_text(size=14),
-         panel.grid.major.x = element_blank(),
-         panel.grid.minor.x = element_blank(),
-         legend.position = "bottom" ) 
-
-p
-my_ggsave( name = "MhatWidth_line_plots.pdf",
-           .plot = p,
-           .overleaf.dir = overleaf.dir.figs,
-           .width = 10,
-           .height = 12)
-
+my_line_plot(.Yname = "MhatWidth",
+             .dat = dp %>% filter(k.pub <= 5),
+             .ggtitle = "",
+             .colors = .colors,
+             .ylab = 'bquote( bold("Coverage for") ~ bold(mu) )',
+             .jitter.width = 0.5)
 
 # simple version for ggplotly
 p = ggplot( data = dp %>% filter(k.pub <= 5), 
@@ -1104,24 +1018,46 @@ if (use.View = TRUE) View(t)
 
 
 
-# AUTO-FIND INTERESTING SCENS  -------------------------------------------------
+# LOOK FOR SCENS WITH MORE VARIABILITY ON PERFORMANCE METRICS  -------------------------------------------------
 
 # scens with meaningful differences across methods in the outcomes
 
+methods_for_table = c(
+  "ML", "REML", "DL", "PM", "DL2", "exact","MLE-profile",
+  "bayesmeta-tau-central", 
+  "bayesmeta-tau-shortest",
+  "bayesmeta-joint-shortest",
+  "bayesmeta-joint-central")
+
 # alternate: range instead of SD
 t = agg %>% group_by(scen.name) %>%
-  filter(k.pub < 100) %>%
-  summarise( MhatMAERange = diff( range(MhatMAE, na.rm = TRUE) ),
+  # important to avoid bas methods like pmean, pmed, etc.
+  filter(method %in% methods_for_table) %>%
+  filter(k.pub <= 20) %>%
+  summarise( MhatBiasRange = diff( range(MhatBias, na.rm = TRUE) ),
+             MhatMAERange = diff( range(MhatMAE, na.rm = TRUE) ),
              MhatCoverRange = diff( range(MhatCover, na.rm = TRUE) ),
              MhatRMSERange = diff( range(MhatRMSE, na.rm = TRUE) ),
              
+             ShatBiasRange = diff( range(ShatBias, na.rm = TRUE) ),
              ShatMAERange = diff( range(ShatMAE, na.rm = TRUE) ),
              ShatCoverRange = diff( range(ShatCover, na.rm = TRUE) ),
              ShatRMSERange = diff( range(ShatRMSE, na.rm = TRUE) ) )
 
+summary(t$MhatBiasRange)
 summary(t$MhatMAERange)
-summary(t$MhatCoverRange)
 summary(t$MhatRMSERange)
+summary(t$MhatCoverRange)
+
+#**performance metrics for paper
+update_result_csv( name = "Max MhatRMSERange across scens",
+                   value = max(t$MhatRMSERange),
+                   print = TRUE )
+update_result_csv( name = "Max MhatMAERange across scens",
+                   value = max(t$MhatMAERange),
+                   print = TRUE )
+
+
 
 # *much more variability on Shat performance metrics than on Mu
 summary(t$ShatMAERange)
@@ -1156,6 +1092,8 @@ agg = left_join(x = agg,
 
 
 # EXPLORE PREDICTORS OF HIGHER RANGE ON EACH OUTCOME VAR  -------------------------------------------------
+
+# must run code in previous section to get the range variables
 
 regressions.from.scratch = TRUE
 
