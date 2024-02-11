@@ -204,6 +204,8 @@ missed.nums = sbatch_not_run( "/home/groups/manishad/JTE/short_results",
                               .name.prefix = "short_results",
                               .max.sbatch.num = 3120 )
 
+
+
 setwd( paste(path, "/sbatch_files", sep="") )
 for (i in missed.nums) {
   system( paste("sbatch -p qsu,owners,normal /home/groups/manishad/JTE/sbatch_files/", i, ".sbatch", sep="") )

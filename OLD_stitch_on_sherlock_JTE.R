@@ -1,5 +1,6 @@
 
-
+# OLD because this is for stitching long results
+# save for that reason
 
 # run this interactively in ml load R or via:
 #   sbatch -p qsu,owners,normal /home/groups/manishad/JTE/job_stitch.sbatch

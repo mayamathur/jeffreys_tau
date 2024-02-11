@@ -363,8 +363,14 @@ wrangle_agg_local = function(agg) {
     print( table(agg$true.sei.expr, agg$true.sei.expr.pretty ) )
   }
   
-  
+  # add new variables
   agg$MhatEstConverge = 1 - agg$MhatEstFail
+  agg$MhatCoverNominal = agg$MhatCover > .94
+  agg$ShatCoverNominal = agg$ShatCover > .94
+  
+  # rename
+  if ( "MhatAbsBias" %in% names(agg) ) agg = agg %>% dplyr::rename(MhatMAE = MhatAbsBias)
+  if ( "ShatAbsBias" %in% names(agg) ) agg = agg %>% dplyr::rename(ShatMAE = ShatAbsBias)
   
   return(agg)
 }
@@ -406,7 +412,8 @@ make_winner_table_col = function(.agg,
   
   
   higherBetterYNames = c("MhatEstConverge", "ShatEstConverge",
-                         "MhatTestReject", "MhatCoverGt94")
+                         "MhatTestReject", "MhatCoverNominal",
+                         "ShatCoverNominal")
   
   lowerBetterYNames = c("MhatMAE", "MhatRMSE", "MhatWidth",
                         "ShatMAE", "ShatRMSE", "ShatWidth")
@@ -580,10 +587,10 @@ make_winner_table = function( .agg,
 
 # makes both winner tables (medians and worst 10th pctiles)
 make_both_winner_tables = function( .agg,
-                                    .yNames = c("MhatMAE", "MhatRMSE", "MhatCover", "MhatCoverGt94",
+                                    .yNames = c("MhatMAE", "MhatRMSE", "MhatCover", "MhatCoverNominal",
                                                 "MhatWidth", #"MhatTestReject",
                                                 
-                                                "ShatMAE", "ShatRMSE", "ShatCover", "ShatWidth"),
+                                                "ShatMAE", "ShatRMSE", "ShatCover", "ShatCoverNominal", "ShatWidth"),
                                     summarise.fun.name = "mean",  # "mean" or "median"
                                     show.worst10th = FALSE,
                                     display = "dataframe"
@@ -876,7 +883,7 @@ my_violins = function(xName = NA,
            panel.grid.major.x = element_blank(),
            panel.grid.minor.x = element_blank(),
            legend.position = "bottom" ) +
-    guides(color = guide_legend(nrow=1)) +
+    guides(color = guide_legend(nrow=2)) +
     
     xlab(xlab)
   
@@ -907,74 +914,60 @@ my_violins = function(xName = NA,
                .overleaf.dir = overleaf.dir.figs,
                .width = 13,
                .height = 6)
-  } else {
-    p
   }
-  
+  p
 }
 
 
 
 # make a plot with 3 variables: x-axis, y-axis, facets, and colors
 # facet vars allowed be null
-quick_5var_agg_plot = function(.Xname,
-                               .Yname,
-                               .colorVarName,
-                               .facetVar1Name = NULL,
-                               .facetVar2Name = NULL,
-                               
-                               .dat,
-                               .ggtitle = "",
-                               
-                               .y.breaks = NULL,
-                               
-                               .writePlot = FALSE,
-                               .results.dir = NULL) {
-  
-  
-  # TEST
-  # agg$facetVar = paste( "rho=", agg$rho, "; ", agg$true.sei.expr.pretty, sep="")
-  # table(agg$facetVar)
-  # agg$rho.pretty = paste("rho = ", agg$rho, sep = "")
-  # 
-  # .Xname = "k.pub.nonaffirm"
-  # .Yname = "MhatBias"
-  # .colorVarName = "method"
-  # .facetVar1Name = "rho.pretty"
-  # .facetVar2Name = "true.sei.expr.pretty"
-  # .dat = agg
-  # .ggtitle = ""
-  # .writePlot = FALSE
-  # #.results.dir
-  
+my_line_plot = function(
+    .Yname,
+    
+    .dat,
+    .ggtitle = "",
+    .colors,
+    .y.breaks = NULL,
+    .ylab = .Yname,
+    
+    .jitter.width = 0, # 0.5 works well if jittering
+    
+    .writePlot = TRUE) {
   
   .dat$Y = .dat[[.Yname]]
-  .dat$X = .dat[[.Xname]]
-  .dat$colorVar = .dat[[.colorVarName]]
-  # don't try to move these inside conditional statement below
-  #  about facet_wrap b/c then .dat won't contain the facet vars
-  .dat$facetVar1 = .dat[[.facetVar1Name]]
-  .dat$facetVar2 = .dat[[.facetVar2Name]]
+  
   
   # ~ Make base plot ----------
-  p = ggplot( data = .dat,
-              aes( x = X,
+  p = ggplot( data = .dat, 
+              aes( x = k.pub, 
                    y = Y,
-                   color = as.factor(colorVar) ) ) +
+                   color = method.pretty,
+                   lty = method.pretty) ) +
     
-    geom_point() +
-    geom_line() +
+    # slightly dodge line positions to avoid exact overlap:
+    geom_line( position=position_jitter(w=.jitter.width, h=0) ) +
     
-    # use all values of
-    #scale_x_log10( breaks = unique(.dp$n) )
-    # use only some values
-    #scale_x_log10( breaks = c(500, 1000) ) +
+    #scale_linetype_manual(values = .lty, name = "Method") +
+    scale_color_manual(values = .colors) +
+    labs(color  = "Method", linetype = "Method") +
     
-    xlab(.Xname) +
-    ylab(.Yname) +
-    guides( color = guide_legend(title = .colorVarName) ) +
-    ggtitle(.ggtitle) +
-    theme_bw() 
+    #coord_cartesian( ylim = c(0.85, 1))  +
+    #scale_y_continuous(breaks=c(0.85, 1, 0.05)) +
+    xlab("k") +
+    ylab( eval( parse(text = .ylab) ) ) +
+    
+    facet_grid(t2a ~ true.dist.pretty + Ytype.pretty,
+               labeller = label_bquote( rows = tau^2 ~ "=" ~ .(t2a) ) ) +
+    
+    theme_bw(base_size = 12) +
+    
+    theme( text = element_text(face = "bold"),
+           axis.title = element_text(size=14),
+           panel.grid.major.x = element_blank(),
+           panel.grid.minor.x = element_blank(),
+           legend.position = "bottom" ) 
+
   
   # ~ Add reference lines ----------
   if ( str_contains(x = .Yname, pattern = "Cover") ) {
@@ -991,21 +984,14 @@ quick_5var_agg_plot = function(.Xname,
     
   }
   
-  # ~ Add facetting ----------
-  # this block needs to be after adding geom_hlines so that the lines obey the facetting
-  if ( !is.null(.facetVar1Name) & !is.null(.facetVar2Name) ) {
-    p = p + facet_wrap(facetVar1 ~ facetVar2,
-                       nrow = length( unique(.dat$facetVar1) ) ) 
-  }
-  
   
   # ~ Set Y-axis breaks ----------
   # other outcomes follow rules or can just use default axis breaks
   # y.breaks are only still null if none of the above applied
   if ( is.null(.y.breaks) ) {
     # set default breaks
-    if ( grepl(pattern = "Cover", Yname) ){
-      y.breaks = seq(0, 1, .1)
+    if ( grepl(pattern = "Cover", .Yname) ){
+      y.breaks = seq(0.8, 1, .05)
       
     } else {
       # otherwise keep the default limits from ggplot
@@ -1026,11 +1012,11 @@ quick_5var_agg_plot = function(.Xname,
     scale_y_continuous( breaks = y.breaks )
   
   if ( .writePlot == TRUE ) {
-    my_ggsave( name = paste(Yname, "_plot.pdf", sep=""),
+    my_ggsave( name = paste(.Yname, "_lineplot.pdf", sep=""),
                .plot = p,
                .width = 10,
-               .height = 10,
-               .results.dir = .results.dir,
+               .height = 12,
+               .results.dir = results.dir,
                .overleaf.dir = overleaf.dir.figs )
   }
   
@@ -1474,7 +1460,7 @@ init_var_names = function(.agg) {
   #  upon reading in data
   estNames <<- c("Mhat", "Shat")
   
-  mainYNames <<- c("Bias", "MAE", "RMSE", "Cover", "GoodCover", "Width", "EmpSE")
+  mainYNames <<- c("Bias", "MAE", "RMSE", "Cover", "CoverNominal", "Width", "EmpSE")
   
   otherYNames <<- c("EstFail", "CIFail", "RhatGt1.01", "RhatGt1.05")
   
@@ -1524,7 +1510,7 @@ init_var_names = function(.agg) {
 CI_comparison = function(.agg,
                          .target.method.pretty,
                          .comparison.method.pretty) {
-
+  
   temp = .agg %>% filter(method.pretty %in% c(.target.method.pretty,
                                               .comparison.method.pretty) ) %>%
     group_by(scen.name) %>%
