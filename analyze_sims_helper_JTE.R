@@ -1400,19 +1400,13 @@ sim_plot_multiple_outcomes = function(.agg,
 # PROJECT-SPECIFIC HELPERS ----------------------------------
 
 
-
+# which scen params predict greater range across methods?
 performance_regressions = function(.agg,
-                                   Ynames = Ynames,
+                                   Ynames = Ynames,  # range variables
                                    covariates = param.vars.manip.2 ) {
   
   for (i in Ynames) {
-    
-    # # TEST
-    # .agg = agg %>% filter(method == "jeffreys-pmed")
-    # Ynames = Ynames
-    # covariates = param.vars
-    # i = "ShatCover"
-    
+   
     string = paste( i, "~", paste(covariates, collapse = "+"), sep="" )
     mod = lm( eval(parse(text=string)),
               data = .agg )
@@ -1422,18 +1416,18 @@ performance_regressions = function(.agg,
     pvals = summary(mod)$coefficients[,"Pr(>|t|)"]
     pvals = pvals[-1]  # remove intercept
     
-    # which vars are good vs. bad for the outcome?
+    # which vars predict more vs. less variation?
     # flip coeff signs so that positive means it improves the outcome
-    if ( grepl(pattern = "MAE", x = i) | grepl(pattern = "Width", x = i) | grepl(pattern = "RMSE", x = i) ) coefs = -coefs
-    good = names( coefs[ coefs > 0 & pvals < 0.01 ] )
-    bad = names( coefs[ coefs < 0 & pvals < 0.01 ] )
+    # if ( grepl(pattern = "MAE", x = i) | grepl(pattern = "Width", x = i) | grepl(pattern = "RMSE", x = i) ) coefs = -coefs
+    more = names( coefs[ coefs > 0 & pvals < 0.01 ] )
+    less = names( coefs[ coefs < 0 & pvals < 0.01 ] )
     
-    good = paste(good, collapse = ", ")
-    bad = paste(bad, collapse = ", ")
+    more = paste(more, collapse = ", ")
+    less = paste(less, collapse = ", ")
     
     newRow = data.frame( outcome = i,
-                         good = good, 
-                         bad = bad )
+                         more = more, 
+                         less = less )
     
     if (i==Ynames[1]) res = newRow else res = rbind(res, newRow)
     

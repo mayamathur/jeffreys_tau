@@ -228,49 +228,6 @@ update_result_csv( name = paste("Perc Jeffreys", names(t)),
                    print = TRUE )
 
 
-
-
-# AUTO-FIND INTERESTING SCENS  -------------------------------------------------
-
-# scens with meaningful differences across methods in the outcomes
-
-# alternate: range instead of SD
-t = agg %>% group_by(scen.name) %>%
-  summarise( MhatMAERange = diff( range(MhatMAE, na.rm = TRUE) ),
-             MhatCoverRange = diff( range(MhatCover, na.rm = TRUE) ),
-             MhatRMSERange = diff( range(MhatRMSE, na.rm = TRUE) ),
-
-             ShatMAERange = diff( range(ShatMAE, na.rm = TRUE) ),
-             ShatCoverRange = diff( range(ShatCover, na.rm = TRUE) ),
-             ShatRMSERange = diff( range(ShatRMSE, na.rm = TRUE) ) )
-
-summary(t$MhatMAERange)
-summary(t$MhatCoverRange)
-summary(t$MhatRMSERange)
-
-summary(t$ShatMAERange)
-summary(t$ShatCoverRange)
-summary(t$ShatRMSERange)
-
-# *much more variability on Shat performance metrics than on Mu
-
-# mark scens as important if methods vary on any of these characteristics
-t$scen_important_Mhat = t$MhatCoverRange > 0.1 | t$MhatRMSERange > 0.25
-t$scen_important_Shat = t$ShatMAERange > 0.1 | t$ShatCoverRange > 0.1 | t$ShatRMSERange > 0.25
-t$scen_important = t$scen_important_Mhat | t$scen_important_Shat
-
-mean(t$scen_important_Mhat)
-mean(t$scen_important_Shat)
-mean(t$scen_important_Mhat | t$scen_important_Shat)  # the Mhat important ones are mostly a subset of the Shat important ones
-
-important_scens = t$scen.name[ t$scen_important_Mhat | t$scen_important_Shat ]
-
-# **add the importance vars to agg
-agg = left_join(x = agg,
-                y = t %>% select(scen.name, scen_important),
-                by = "scen.name")
-
-
 # WINNER TABLES -------------------------
 
 
@@ -1147,33 +1104,70 @@ if (use.View = TRUE) View(t)
 
 
 
-# EXPLORE PREDICTORS OF PERFORMANCE  -------------------------------------------------
+# AUTO-FIND INTERESTING SCENS  -------------------------------------------------
 
-# not sure how useful this is since what we really care about is relative performance
+# scens with meaningful differences across methods in the outcomes
+
+# alternate: range instead of SD
+t = agg %>% group_by(scen.name) %>%
+  filter(k.pub < 100) %>%
+  summarise( MhatMAERange = diff( range(MhatMAE, na.rm = TRUE) ),
+             MhatCoverRange = diff( range(MhatCover, na.rm = TRUE) ),
+             MhatRMSERange = diff( range(MhatRMSE, na.rm = TRUE) ),
+             
+             ShatMAERange = diff( range(ShatMAE, na.rm = TRUE) ),
+             ShatCoverRange = diff( range(ShatCover, na.rm = TRUE) ),
+             ShatRMSERange = diff( range(ShatRMSE, na.rm = TRUE) ) )
+
+summary(t$MhatMAERange)
+summary(t$MhatCoverRange)
+summary(t$MhatRMSERange)
+
+# *much more variability on Shat performance metrics than on Mu
+summary(t$ShatMAERange)
+summary(t$ShatCoverRange)
+summary(t$ShatRMSERange)
 
 
+# mark scens as important if methods vary on any of these characteristics
+t$scen_important_MhatCoverRange = t$MhatCoverRange > 0.1
+t$scen_important_ShatCoverRange = t$ShatCoverRange > 0.1
 
-# possible figures:
-# x = k.pub
-# colors = methods
-# row panels = Yname
-# column panels = t2a
+t$scen_important_MhatRMSERange = t$MhatRMSERange > 0.25
+t$scen_important_ShatRMSERange = t$ShatRMSERange > 0.25
 
-# average over: true.dist, true.sei.expr, Mu?
+t$scen_important_MhatMAERange = t$MhatMAERange > 0.1
+t$scen_important_ShatMAERange = t$ShatMAERange > 0.1
+
+# percent of scens that were important by each metric
+as.data.frame( t %>% select( namesWith("scen_important", t) ) %>%
+  summarise_all(meanNA) )
+
+
+# # **add the importance vars to agg
+# agg = left_join(x = agg,
+#                 y = t %>% select(scen.name, scen_important),
+#                 by = "scen.name")
+
+# add these vars to agg
+agg = left_join(x = agg,
+                y = t %>% select(scen.name, namesWith("Range", t) ),
+                by = "scen.name")
+
+
+# EXPLORE PREDICTORS OF HIGHER RANGE ON EACH OUTCOME VAR  -------------------------------------------------
 
 regressions.from.scratch = TRUE
 
 # remove p0 because causes error "contrasts can be applied only to factors with 2 or more levels" in lm
 #  because p0 doesn't vary conditional on Ytype = cont
 param.vars.manip3 = drop_vec_elements(param.vars.manip2, "p0")
+param.vars.manip3[ param.vars.manip3 == "N.expr" ] = "N.pretty"
 
+( range_names = namesWith("scen_important", agg) )
 
-( t1 = performance_regressions(.agg = agg %>% filter(method == "jeffreys-max-lp-iterate"),
-                               Ynames = Ynames,
+( t1 = performance_regressions(.agg = agg,
+                               Ynames = range_names,
                                covariates = param.vars.manip3 ) )
-
-
-( t2 = performance_regressions(.agg = agg %>% filter(method == "EB"),
-                               Ynames = Ynames,
-                               covariates = param.vars.manip3) )
+View(t1)
 
