@@ -130,29 +130,64 @@ summary(agg$doParallelSecondsQ95/60^2)
 
 
 
-# SANITY CHECKS ON DATA GENERATION -------------------------
+# SANITY CHECKS -------------------------
 
-# ~ metaLik should be equivalent to MLE-profile  -------------------------------------------------
+# ~ Compare methods that should be similar or identical  -------------------------------------------------
+
+# ~~ MLE-profile vs. ML-Wald-Qprofile  -------------------------------------------------
+
+# CIs are quite different for these two
+# shouldn't CIs for mu be the same for these two?
+t = agg %>% filter(method.pretty %in% c("MLE-Wald-Qprofile", "MLE-profile")) %>%
+  group_by(scen.name) %>%
+  summarise( sd(Mhat),
+             sd(Shat),
+             sd(MLo))
+
+summary(t$`sd(Mhat)`)
+summary(t$`sd(Shat)`)
+summary(t$`sd(MLo)`)  # CIs are NOT always the same
+
+
+# ~~ metaLik should be equivalent to MLE-profile  -------------------------------------------------
 # are they always the same?
-#@no, not exact agreement; return to this later
+# very close, but not exact
 t = agg %>% filter(method.pretty %in% c("metaLik", "MLE-profile")) %>%
   group_by(scen.name) %>%
   summarise( sd(Mhat),
              sd(Shat),
              sd(MLo))
 
+summary(t$`sd(Mhat)`)
+summary(t$`sd(Shat)`)
+summary(t$`sd(MLo)`)  
+
 # their average performances are the same, though:
 make_both_winner_tables(.agg = agg2 %>% filter( Ytype == "cont-SMD" & method.pretty %in% c("metaLik", "MLE-profile") ) )
 make_both_winner_tables(.agg = agg2 %>% filter( Ytype == "bin-OR" & method.pretty %in% c("metaLik", "MLE-profile") ) )
 
 
-# ~ RVE should be equivalent to DL since no clustering  -------------------------------------------------
-# is RVE always same as DL?
-t = agg %>% filter(method.pretty %in% c("DL", "RVE")) %>%
+# ~~ Bayesian methods -------------------------------------------------
+
+t = agg %>% filter(method %in% c("bayesmeta-joint-central", "bayesmeta-joint-shortest")) %>%
   group_by(scen.name) %>%
   summarise( sd(Mhat),
              sd(Shat),
              sd(MLo))
+
+summary(t$`sd(Mhat)`)
+summary(t$`sd(Shat)`)
+summary(t$`sd(MLo)`) 
+
+t = agg %>% filter(method %in% c("bayesmeta-tau-central", "bayesmeta-tau-shortest")) %>%
+  group_by(scen.name) %>%
+  summarise( sd(Mhat),
+             sd(Shat),
+             sd(MLo))
+
+summary(t$`sd(Mhat)`)
+summary(t$`sd(Shat)`)
+summary(t$`sd(MLo)`) 
 
 
 # ~ One-off stats for paper -------------------------------------------------
@@ -234,36 +269,16 @@ update_result_csv( name = paste("Perc Jeffreys", names(t)),
 dput(unique(agg$method))
 
 
-# # create the base dataset from which to filter all winner tables
+# fewer BY methods
 # methods_for_table = c(
 #   "ML", "REML", "DL", "PM", "DL2", "exact","MLE-profile",
-#   #"metaLik",
 #   "bayesmeta-tau-central", 
 #   "bayesmeta-tau-shortest",
 #   "bayesmeta-joint-shortest",
-#   "bayesmeta-joint-central",
-#   # "jeffreys-tau-pmean", 
-#   # "jeffreys-tau-pmed",
-#   # "jeffreys-tau-max-lp-iterate",
-#   "jeffreys-tau-hdi", 
-#   "jeffreys-tau-pmode",
-#   
-#   # "jeffreys-pmean", 
-#   # "jeffreys-pmed",
-#   # "jeffreys-max-lp-iterate",
-#   "jeffreys-hdi",
-#   "jeffreys-pmode"
-# )
+#   "bayesmeta-joint-central")
 
-
-# fewer BY methods
-methods_for_table = c(
-  "ML", "REML", "DL", "PM", "DL2", "exact","MLE-profile",
-  "bayesmeta-tau-central", 
-  "bayesmeta-tau-shortest",
-  "bayesmeta-joint-shortest",
-  "bayesmeta-joint-central")
-agg2 = agg %>% filter( k.pub <= 20 & method %in% methods_for_table )
+# # create the base dataset from which to filter all winner tables
+agg2 = agg %>% filter( k.pub <= 20 )
 
 
 dim(agg2); nuni(agg2$scen.name)
@@ -705,13 +720,13 @@ ggplotly(p)
 
 # ~ Mhat width -------------------------------------------------
 
-# zoom in to k<= 10 for legibility; all methods are basically the same for larger metas
+# zoom in to small k for legibility; all methods are basically the same for larger metas
 my_line_plot(.Yname = "MhatWidth",
              .dat = dp %>% filter(k.pub <= 5),
              .ggtitle = "",
              .colors = .colors,
-             .ylab = 'bquote( bold("Coverage for") ~ bold(mu) )',
-             .jitter.width = 0.5)
+             .ylab = 'bquote( bold("Width of CI for") ~ bold(mu) )',
+             .jitter.width = 0.1)
 
 # simple version for ggplotly
 p = ggplot( data = dp %>% filter(k.pub <= 5), 
@@ -1056,6 +1071,9 @@ update_result_csv( name = "Max MhatRMSERange across scens",
 update_result_csv( name = "Max MhatMAERange across scens",
                    value = max(t$MhatMAERange),
                    print = TRUE )
+update_result_csv( name = "Max MhatBiasRange across scens",
+                   value = max(t$MhatBiasRange),
+                   print = TRUE )
 
 
 
@@ -1063,6 +1081,7 @@ update_result_csv( name = "Max MhatMAERange across scens",
 summary(t$ShatMAERange)
 summary(t$ShatCoverRange)
 summary(t$ShatRMSERange)
+summary(t$ShatBiasRange)
 
 
 # mark scens as important if methods vary on any of these characteristics

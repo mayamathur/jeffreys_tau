@@ -313,9 +313,9 @@ make_agg_data = function( .s,
 wrangle_agg_local = function(agg) {
   ##### Make New Variables At Scenario Level ##### 
   
-  # label methods more intelligently for use in plots
-  agg$method.pretty = agg$method # temporarily not relabeling them
-  # methods to include in paper:
+  ### method.pretty: label methods more intelligently for use in plots
+  # this version does not combine any methods
+  agg$method.pretty = agg$method 
   agg$method.pretty[ agg$method == "bayesmeta-joint-central" ] = "Jeffreys2-central"
   agg$method.pretty[ agg$method == "bayesmeta-joint-shortest" ] = "Jeffreys2-shortest"
   agg$method.pretty[ agg$method == "bayesmeta-tau-central" ] = "Jeffreys1-central"
@@ -331,6 +331,57 @@ wrangle_agg_local = function(agg) {
   agg$method.pretty[ agg$method == "jeffreys-pmode" ] = "jeffreys-joint-pmode"
   
   table(agg$method, agg$method.pretty)
+  
+  
+  ### method.pretty.est: group methods that are identical when considering mu or tau estimation only
+  agg$method.pretty.est = agg$method 
+  agg$method.pretty.est[ agg$method == "bayesmeta-joint-central" ] = "Jeffreys2"
+  agg$method.pretty.est[ agg$method == "bayesmeta-joint-shortest" ] = NA  # same as above
+  
+  agg$method.pretty.est[ agg$method == "bayesmeta-tau-central" ] = "Jeffreys1"
+  agg$method.pretty.est[ agg$method == "bayesmeta-tau-shortest" ] = NA  # same as above
+  
+  agg$method.pretty.est[ agg$method == "ML" ] = "MLE"
+  agg$method.pretty.est[ agg$method == "MLE-profile" ] = NA  # same as above
+  # other methods, like PM, DL, etc., will retain same name
+  
+  table(agg$method, agg$method.pretty.est)
+  
+  ### method.pretty.mu.inf: group methods that are identical when considering mu inference only
+  # note that central and shortest intervals are identical for mu because normal posterior
+  # same for MLE-Wald and MLE-profile?
+  agg$method.pretty.mu.inf = agg$method 
+  agg$method.pretty.mu.inf[ agg$method == "bayesmeta-joint-central" ] = "Jeffreys2"
+  agg$method.pretty.mu.inf[ agg$method == "bayesmeta-joint-shortest" ] = NA  # same as above
+  
+  agg$method.pretty.mu.inf[ agg$method == "bayesmeta-tau-central" ] = "Jeffreys1"
+  agg$method.pretty.mu.inf[ agg$method == "bayesmeta-tau-shortest" ] = NA  # same as above
+  
+  agg$method.pretty.mu.inf[ agg$method == "ML" ] = "MLE-Wald"
+  agg$method.pretty.mu.inf[ agg$method == "PM" ] = "PM-Wald"
+  agg$method.pretty.mu.inf[ agg$method == "DL" ] = "DL-Wald"
+  agg$method.pretty.mu.inf[ agg$method == "DL2" ] = "DL2-Wald"
+  agg$method.pretty.mu.inf[ agg$method == "REML" ] = "REML-Wald"
+  agg$method.pretty.mu.inf[ agg$method == "exact" ] = "Exact"
+  
+  ### method.pretty.tau.inf: group methods that are identical when considering mu inference only
+  # note that central and shortest intervals are identical for mu because normal posterior
+  # same for MLE-Wald and MLE-profile?
+  agg$method.pretty.tau.inf = agg$method 
+  agg$method.pretty.tau.inf[ agg$method == "bayesmeta-joint-central" ] = "Jeffreys2-central"
+  agg$method.pretty.tau.inf[ agg$method == "bayesmeta-joint-shortest" ] = "Jeffreys2-shortest"
+  
+  agg$method.pretty.tau.inf[ agg$method == "bayesmeta-tau-central" ] = "Jeffreys1-central"
+  agg$method.pretty.tau.inf[ agg$method == "bayesmeta-tau-shortest" ] = "Jeffreys1-shortest"  # same as above
+  
+  agg$method.pretty.tau.inf[ agg$method == "ML" ] = "MLE-Qprofile"
+  agg$method.pretty.tau.inf[ agg$method == "PM" ] = "PM-Qprofile"
+  agg$method.pretty.tau.inf[ agg$method == "DL" ] = "DL-Qprofile"
+  agg$method.pretty.tau.inf[ agg$method == "DL2" ] = "DL2-Qprofile"
+  agg$method.pretty.tau.inf[ agg$method == "REML" ] = "REML-Qprofile"
+  agg$method.pretty.tau.inf[ agg$method == "exact" ] = "Exact"
+  
+  
   
   if ( "minN" %in% names(agg) ){
     agg$N.pretty = NA
@@ -383,7 +434,7 @@ wrangle_agg_local = function(agg) {
 
 make_winner_table_col = function(.agg,
                                  yName,
-                                 methods = unique(.agg$method),
+                                 #methods = unique(.agg$method),
                                  summarise.fun.name = "median",
                                  digits = 2) {
   
@@ -411,6 +462,32 @@ make_winner_table_col = function(.agg,
   }
   
   
+  # keep only methods that are relevant to this particular Yname
+  if ( yName %in% c("MhatMAE", "MhatRMSE",
+                    "ShatMAE", "ShatRMSE") ) {
+    .agg = .agg %>% filter(method.pretty.est %in% methods_pretty_est)
+    
+    # temporary variable for ease below
+    .agg$method.pretty.temp = .agg$method.pretty.est
+  }
+  
+  if ( yName %in% c("MhatCover", "MhatCoverNominal",
+                    "MhatWidth", "MhatTestReject") ) {
+    .agg = .agg %>% filter(method.pretty.mu.inf %in% methods_pretty_mu_inf)
+    
+    # temporary variable for ease below
+    .agg$method.pretty.temp = .agg$method.pretty.mu.inf
+  }
+  
+  if ( yName %in% c("ShatCover", "ShatCoverNominal",
+                    "ShatWidth") ) {
+    .agg = .agg %>% filter(method.pretty.tau.inf %in% methods_pretty_tau_inf)
+    
+    # temporary variable for ease below
+    .agg$method.pretty.temp = .agg$method.pretty.tau.inf
+  }
+  
+  
   higherBetterYNames = c("MhatEstConverge", "ShatEstConverge",
                          "MhatTestReject", "MhatCoverNominal",
                          "ShatCoverNominal")
@@ -426,34 +503,39 @@ make_winner_table_col = function(.agg,
   
   ##### Summarize Y_disp #####
   if ( summarise.fun.name == "mean" ) {
-    .t = .agg %>% filter(method %in% methods) %>%
-      group_by(method.pretty) %>%
+    .t = .agg %>%
+      #filter(method %in% methods) %>%
+      group_by(method.pretty.temp) %>%
       summarise( Y_disp = round( mean(Y_disp), digits = digits ) )
   }
   
   if ( summarise.fun.name == "median" ) {
-    .t = .agg %>% filter(method %in% methods) %>%
-      group_by(method.pretty) %>%
+    .t = .agg %>%
+      #filter(method %in% methods) %>%
+      group_by(method.pretty.temp) %>%
       summarise( Y_disp = round( median(Y_disp), digits = digits ) )
   }
   
   if ( summarise.fun.name == "worst10th" & yName %in% higherBetterYNames ) {
-    .t = .agg %>% filter(method %in% methods) %>%
-      group_by(method.pretty) %>%
+    .t = .agg %>%
+      #filter(method %in% methods) %>%
+      group_by(method.pretty.temp) %>%
       summarise( Y_disp = round( quantile(Y_disp, probs = 0.10, na.rm = TRUE), digits = digits ) )
   }
   
   if ( summarise.fun.name == "worst10th" & yName %in% lowerBetterYNames ) {
-    .t = .agg %>% filter(method %in% methods) %>%
-      group_by(method.pretty) %>%
+    .t = .agg %>%
+      #filter(method %in% methods) %>%
+      group_by(method.pretty.temp) %>%
       summarise( Y_disp = round( quantile(Y_disp, probs = 0.90, na.rm = TRUE), digits = digits ) )
   }
   
   # for bias, worst 10% performance is in terms of absolute value of bias
   # note this isn't abs bias
   if ( summarise.fun.name == "worst10th" & yName %in% c("MhatBias", "ShatBias") ) {
-    .t = .agg %>% filter(method %in% methods) %>%
-      group_by(method.pretty) %>%
+    .t = .agg %>%
+      #filter(method %in% methods) %>%
+      group_by(method.pretty.temp) %>%
       summarise( Y_disp = round( bias_worst10th(Y_disp), digits = digits ) )
   }
   # sanity check
@@ -461,8 +543,9 @@ make_winner_table_col = function(.agg,
   
   # MhatCover gets summarized simply as 10th percentile
   if ( summarise.fun.name == "worst10th" & yName %in% c("MhatCover", "ShatCover") ) {
-    .t = .agg %>% filter(method %in% methods) %>%
-      group_by(method.pretty) %>%
+    .t = .agg %>%
+      #filter(method %in% methods) %>%
+      group_by(method.pretty.temp) %>%
       summarise( Y_disp = round( quantile(Y_disp, probs = 0.10, na.rm = TRUE), digits = digits ) )
   }
   # sanity check
@@ -499,7 +582,7 @@ make_winner_table_col = function(.agg,
   #  in that case, the column will still say "All"
   if ( nuni( .t$Y_disp[ !is.na(.t$Y_disp) ] ) == 1 ) {
     
-    .t$method.pretty = c( "All", rep( NA, nrow(.t) - 1 ) )
+    .t$method.pretty.temp = c( "All", rep( NA, nrow(.t) - 1 ) )
     .t$Y_disp = c( .t$Y_disp[1], rep( NA, nrow(.t) - 1 ) )
     
   } else {
@@ -549,15 +632,26 @@ make_winner_table = function( .agg,
     stop( paste( "\nThe following .yNames aren't in .agg: ", not_here) )
   } 
   
-  #browser()
   for ( .yName in .yNames ){
     newCol = make_winner_table_col(.agg = .agg,
                                    yName = .yName,
                                    summarise.fun.name = summarise.fun.name )
     
-    if ( .yName == .yNames[1] ) t.all = newCol else t.all = suppressMessages( bind_cols(t.all, newCol) )
+    
+    if ( .yName == .yNames[1] ){
+      t.all = newCol
+    } else {
+      
+      # fix possible dimension mismatches
+      # can happen when different cols (e.g., estimation vs. inference) have different numbers of methods
+      n1 = nrow(t.all)
+      n2 = nrow(newCol)
+      # fill in extra "NA" rows so they can be bound
+      if (n1 < n2) t.all[ n1:n2, ] = NA
+      
+      t.all = suppressMessages( bind_cols(t.all, newCol) )
+    }
   }
-  
   
   cat( paste("\n\n**** WINNER TABLE", summarise.fun.name) )
   
@@ -967,7 +1061,7 @@ my_line_plot = function(
            panel.grid.major.x = element_blank(),
            panel.grid.minor.x = element_blank(),
            legend.position = "bottom" ) 
-
+  
   
   # ~ Add reference lines ----------
   if ( str_contains(x = .Yname, pattern = "Cover") ) {
@@ -983,6 +1077,8 @@ my_line_plot = function(
                         color = "black" ) 
     
   }
+  
+  
   
   
   # ~ Set Y-axis breaks ----------
@@ -1010,6 +1106,12 @@ my_line_plot = function(
   #  rather than completely omitted
   p = p + coord_cartesian( ylim = c( min(y.breaks), max(y.breaks) ) ) +
     scale_y_continuous( breaks = y.breaks )
+  
+  
+  # ~ Log axis --------
+  if ( .Yname %in% c("MhatWidth", "ShatWidth") ) {
+    p = p + scale_y_log10()
+  }
   
   if ( .writePlot == TRUE ) {
     my_ggsave( name = paste(.Yname, "_lineplot.pdf", sep=""),
@@ -1406,7 +1508,7 @@ performance_regressions = function(.agg,
                                    covariates = param.vars.manip.2 ) {
   
   for (i in Ynames) {
-   
+    
     string = paste( i, "~", paste(covariates, collapse = "+"), sep="" )
     mod = lm( eval(parse(text=string)),
               data = .agg )
@@ -1449,24 +1551,55 @@ performance_regressions = function(.agg,
 # initialize global variables that describe estimate and outcome names, etc.
 init_var_names = function(.agg) {
   
-  ### Names of statistical metrics ###
-  # used later to create plots and tables, but needed to check var types 
-  #  upon reading in data
-  estNames <<- c("Mhat", "Shat")
-  
-  mainYNames <<- c("Bias", "MAE", "RMSE", "Cover", "CoverNominal", "Width", "EmpSE")
-  
-  otherYNames <<- c("EstFail", "CIFail", "RhatGt1.01", "RhatGt1.05")
-  
-  # these ones don't fit in nicely because the "Mhat" is in the middle of string
-  #"OptimxPropAgreeConvergersMhatWinner", "OptimxNAgreeOfConvergersMhatWinner"
-  MhatMainYNames <<- paste( "Mhat", c(mainYNames), sep = "" )
-  MhatYNames <<- c( paste( "Mhat", c(mainYNames, otherYNames), sep = "" ) )
-  #"OptimxPropAgreeConvergersMhatWinner", "OptimxNAgreeOfConvergersMhatWinner" )
+  # ### Names of statistical metrics ###
+  # # used later to create plots and tables, but needed to check var types 
+  # #  upon reading in data
+  # estNames <<- c("Mhat", "Shat")
+  # 
+  # mainYNames <<- c("Bias", "MAE", "RMSE", "Cover", "CoverNominal", "Width", "EmpSE")
+  # 
+  # otherYNames <<- c("EstFail", "CIFail", "RhatGt1.01", "RhatGt1.05")
+  # 
+  # # these ones don't fit in nicely because the "Mhat" is in the middle of string
+  # #"OptimxPropAgreeConvergersMhatWinner", "OptimxNAgreeOfConvergersMhatWinner"
+  # MhatMainYNames <<- paste( "Mhat", c(mainYNames), sep = "" )
+  # MhatYNames <<- c( paste( "Mhat", c(mainYNames, otherYNames), sep = "" ) )
+  # #"OptimxPropAgreeConvergersMhatWinner", "OptimxNAgreeOfConvergersMhatWinner" )
   
   ### Methods of interest for plots ###
   # i.e., not jeffreys-pmean, jeffreys-pmed, etc.
-  methods.to.show <<- c("REML", "DL", "PM", "DL2", "RVE", "Jeffreys")
+  # methods.to.show <<- c("REML", "DL", "PM", "DL2", "RVE", "Jeffreys")
+  
+  methods_pretty_est <<- c("MLE",
+                           "REML",
+                           "DL",
+                           "PM",
+                           "DL2",
+                           "MLE",
+                           "Jeffreys1",
+                           "Jeffreys2")
+  
+  
+  methods_pretty_mu_inf <<- c("MLE-Wald",
+                              "REML-Wald",
+                              "DL-Wald",
+                              "PM-Wald",
+                              "DL2-Wald",
+                              "exact",
+                              "MLE-profile",
+                              "Jeffreys1", 
+                              "Jeffreys2")
+  
+  methods_pretty_tau_inf <<- c("MLE-Qprofile",
+                               "REML-Qprofile",
+                               "DL-Qprofile",
+                               "PM-Qprofile",
+                               "DL2-Qprofile",
+                               "MLE-profile",
+                               "Jeffreys1-central", 
+                               "Jeffreys1-shortest", 
+                               "Jeffreys2-central", 
+                               "Jeffreys2-shortest")
   
   
   ### Names of parameter variables ###
