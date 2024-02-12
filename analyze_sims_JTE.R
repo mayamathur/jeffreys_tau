@@ -99,6 +99,9 @@ file.info("agg.csv")$mtime
 dim(agg) / nuni(agg$method)
 
 
+agg2 = agg %>% filter(k.pub <= 20)
+
+
 # # drop any "NA" methods (i.e., ones that didn't get labeled in wrangle_agg_local)
 # agg = agg %>% filter( method.pretty != "" )
 # table(agg$method.pretty)
@@ -578,68 +581,8 @@ construct( as.data.frame(x3) )
 
 # PLOTS -------------------------------------------------
 
-methods_for_table = c(
-  "ML", "REML", "DL", "PM", "DL2", "exact","MLE-profile",
-  "bayesmeta-tau-central", 
-  "bayesmeta-tau-shortest",
-  "bayesmeta-joint-shortest",
-  "bayesmeta-joint-central")
-agg2 = agg %>% filter( k.pub <= 20 & method %in% methods_for_table )
-aggp = agg2
 
-# reorder methods
-correct.order = c( "Jeffreys2-central", 
-                   "Jeffreys2-shortest",
-                   
-                   "Jeffreys1-central",
-                   "Jeffreys1-shortest",
-                   
-                   "MLE-profile",
-                   "MLE-Wald-Qprofile",
-                   "REML-Wald-Qprofile",
-                   
-                   "DL-Wald-Qprofile",
-                   "DL2-Wald-Qprofile",
-                   
-                   "PM-Wald-Qprofile",
-                   "Exact")
-aggp$method.pretty = factor(aggp$method.pretty, levels = correct.order)
-levels(aggp$method.pretty)
-table(aggp$method.pretty, useNA = "ifany")
 
-aggp$Ytype.pretty = NA
-aggp$Ytype.pretty[ aggp$Ytype == "cont-SMD" ] = "Continuous Y"
-aggp$Ytype.pretty[ aggp$Ytype == "bin-OR" ] = "Binary Y"
-aggp$Ytype.pretty = factor(aggp$Ytype.pretty, levels = c("Continuous Y", "Binary Y") )
-
-aggp$t2a.pretty = NA
-aggp$t2a.pretty = paste("tau^2 =", aggp$t2a)
-
-aggp$true.dist.pretty = NA
-aggp$true.dist.pretty[aggp$true.dist == "norm"] = "Normal effects"
-aggp$true.dist.pretty[aggp$true.dist == "expo"] = "Exponential effects"
-# reorder them
-aggp$true.dist.pretty = factor( aggp$true.dist.pretty, levels = c("Normal effects", "Exponential effects"))
-
-aggp = droplevels(aggp)
-
-# same colors as in applied example for prettiness
-.colors = c("#F2340E",
-            "#F2340E",
-            
-            "#E075DB",
-            "#E075DB",
-            
-            "#0F5A8C",
-            "#0E96F0",
-            "black",
-            
-            "#246105",
-            "#8CB876",
-            
-            "#845699",
-            
-            "#D18350")
 
 # # dashed lines = shortest intervals
 # .lty = c("solid",
@@ -655,20 +598,20 @@ expect_equal(length(.colors), length(methods_for_table))
 
 # ~ Plots by k and tau -------------------------------------------------
 
-# aggregate within scenarios, but keep the variation in k and tau
-dp = aggp %>% filter(k.pub <= 20 & method %in% methods_for_table ) %>%
-  #filter(true.dist == "norm") %>%
-  group_by(k.pub, t2a, method.pretty, Ytype.pretty, true.dist.pretty) %>%
-  summarise_if(is.numeric, meanNA)
-table(dp$method.pretty, useNA = "ifany")
+# # aggregate within scenarios, but keep the variation in k and tau
+# dp = aggp %>% filter(k.pub <= 20 & method %in% methods_for_table ) %>%
+#   #filter(true.dist == "norm") %>%
+#   group_by(k.pub, t2a, method.pretty, Ytype.pretty, true.dist.pretty) %>%
+#   summarise_if(is.numeric, meanNA)
+# table(dp$method.pretty, useNA = "ifany")
 
 
 # ~ Mhat RMSE -------------------------------------------------
 
+
 my_line_plot(.Yname = "MhatRMSE",
-             .dat = dp,
+             .agg = agg2,
              .ggtitle = "",
-             .colors = .colors,
              .ylab = 'bquote( bold("RMSE for") ~ bold(mu) )',
              .jitter.width = 0.5)
 
@@ -693,9 +636,8 @@ ggplotly(p)
 # ~ Mhat coverage -------------------------------------------------
 
 my_line_plot(.Yname = "MhatCover",
-             .dat = dp,
+             .agg = agg2,
              .ggtitle = "",
-             .colors = .colors,
              .ylab = 'bquote( bold("Coverage for") ~ bold(mu) )',
              .jitter.width = 0.5)
 
@@ -718,13 +660,12 @@ p = ggplot( data = dp,
 ggplotly(p)
 
 
-# ~ Mhat width -------------------------------------------------
+# ~ MhatWidth -------------------------------------------------
 
 # zoom in to small k for legibility; all methods are basically the same for larger metas
 my_line_plot(.Yname = "MhatWidth",
-             .dat = dp %>% filter(k.pub <= 5),
+             .agg = agg2 %>% filter(k.pub <= 10),
              .ggtitle = "",
-             .colors = .colors,
              .ylab = 'bquote( bold("Width of CI for") ~ bold(mu) )',
              .jitter.width = 0.1)
 
@@ -748,7 +689,11 @@ ggplotly(p)
 
 # ~ ShatCover -------------------------------------------------
 
-
+my_line_plot(.Yname = "ShatCover",
+             .agg = agg2,
+             .ggtitle = "",
+             .ylab = 'bquote( bold("Coverage for") ~ bold(tau) )',
+             .jitter.width = 0.5)
 
 # Shat coverage
 p = ggplot( data = dp, 
@@ -764,6 +709,12 @@ ggplotly(p)
 
 
 # ShatWidth
+my_line_plot(.Yname = "ShatWidth",
+             .agg = agg2 %>% filter(k.pub <= 10),
+             .ggtitle = "",
+             .ylab = 'bquote( bold("Width of CI for") ~ bold(mu) )',
+             .jitter.width = 0.1)
+
 p = ggplot( data = dp, 
             aes( x = k.pub, 
                  y = ShatWidth,
@@ -772,6 +723,8 @@ p = ggplot( data = dp,
   facet_grid(rows = vars(Ytype), cols = vars(t2a) )
 
 ggplotly(p)
+
+# bm: you just successfully redid a lot of the plots :) now see how they look on Overleaf. 
 
 
 # ~ Boxplots for (signed) bias -------------------------------------------------

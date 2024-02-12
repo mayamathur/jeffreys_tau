@@ -382,6 +382,23 @@ wrangle_agg_local = function(agg) {
   agg$method.pretty.tau.inf[ agg$method == "exact" ] = "Exact"
   
   
+  agg$Ytype.pretty = NA
+  agg$Ytype.pretty[ agg$Ytype == "cont-SMD" ] = "Continuous Y"
+  agg$Ytype.pretty[ agg$Ytype == "bin-OR" ] = "Binary Y"
+  agg$Ytype.pretty = factor(agg$Ytype.pretty, levels = c("Continuous Y", "Binary Y") )
+  
+  agg$t2a.pretty = NA
+  agg$t2a.pretty = paste("tau^2 =", agg$t2a)
+  
+  agg$true.dist.pretty = NA
+  agg$true.dist.pretty[agg$true.dist == "norm"] = "Normal effects"
+  agg$true.dist.pretty[agg$true.dist == "expo"] = "Exponential effects"
+  # reorder them
+  agg$true.dist.pretty = factor( agg$true.dist.pretty, levels = c("Normal effects", "Exponential effects"))
+  
+  agg = droplevels(agg)
+  
+  
   
   if ( "minN" %in% names(agg) ){
     agg$N.pretty = NA
@@ -1019,9 +1036,9 @@ my_violins = function(xName = NA,
 my_line_plot = function(
     .Yname,
     
-    .dat,
+    .agg,
     .ggtitle = "",
-    .colors,
+    #.colors,
     .y.breaks = NULL,
     .ylab = .Yname,
     
@@ -1029,15 +1046,172 @@ my_line_plot = function(
     
     .writePlot = TRUE) {
   
-  .dat$Y = .dat[[.Yname]]
+  .agg$Y = .agg[[.Yname]]
+  
+  # ~ Aggregate data  ----------
+
+  # keep only methods that are relevant to this particular Yname
+  if ( .Yname %in% c("MhatMAE", "MhatRMSE",
+                    "ShatMAE", "ShatRMSE") ) {
+    .agg = .agg %>% filter(method.pretty.est %in% methods_pretty_est)
+    
+    # temporary variable for ease below
+    .agg$method.pretty.temp = .agg$method.pretty.est
+    
+    # reorder methods
+    correct.order = c( "Jeffreys2", 
+                       "Jeffreys1",
+
+                       "MLE",
+                       "REML",
+                       
+                       "DL",
+                       "DL2",
+                       
+                       "PM")
+    .agg$method.pretty.temp = factor(.agg$method.pretty.temp, levels = correct.order)
+    # levels(.agg$method.pretty.temp)
+    # table(.agg$method.pretty.temp, useNA = "ifany")
+    
+    # must be in same order as methods_pretty_est
+    .colors = c("#F2340E",
+                
+                "#E075DB",
+              
+              
+                "#0E96F0",
+                "black",
+                
+                "#246105",
+                "#8CB876",
+                
+                "#845699")
+
+  }
+  
+  
+  if ( .Yname %in% c("MhatCover", "MhatCoverNominal",
+                    "MhatWidth", "MhatTestReject") ) {
+    .agg = .agg %>% filter(method.pretty.mu.inf %in% methods_pretty_mu_inf)
+    
+    # temporary variable for ease below
+    .agg$method.pretty.temp = .agg$method.pretty.mu.inf
+    
+    # reorder methods
+    correct.order = c( "Jeffreys2", 
+                       "Jeffreys1",
+                       
+                       "MLE-Wald",
+                       "MLE-profile",
+                       
+                       "REML-Wald",
+                       
+                       "DL-Wald",
+                       "DL2-Wald",
+                       
+                       "PM-Wald",
+                       "Exact")
+    .agg$method.pretty.temp = factor(.agg$method.pretty.temp, levels = correct.order)
+    # levels(.agg$method.pretty.temp)
+    # table(.agg$method.pretty.temp, useNA = "ifany")
+    
+    # must be in same order as methods_pretty_est
+    .colors = c("#F2340E",
+                
+                "#E075DB",
+                
+                
+                "#0E96F0",
+                "#1A1AF0",
+                
+                "black",
+                
+                "#246105",
+                "#8CB876",
+                
+                "#845699",
+                
+                "#CC9808")
+  }
+  
+  if ( .Yname %in% c("ShatCover", "ShatCoverNominal",
+                    "ShatWidth") ) {
+    .agg = .agg %>% filter(method.pretty.tau.inf %in% methods_pretty_tau_inf)
+    
+    # temporary variable for ease below
+    .agg$method.pretty.temp = .agg$method.pretty.tau.inf
+    
+    
+    # reorder methods
+    correct.order = c( "Jeffreys2-central", 
+                       "Jeffreys2-shortest",
+                       
+                       "Jeffreys1-central",
+                       "Jeffreys1-shortest",
+                       
+                       "MLE-Qprofile",
+                       "MLE-profile",
+                       
+                       "REML-Qprofile",
+                       
+                       "DL-Qprofile",
+                       "DL2-Qprofile",
+                       
+                       "PM-Qprofile")
+    .agg$method.pretty.temp = factor(.agg$method.pretty.temp, levels = correct.order)
+    # levels(.agg$method.pretty.temp)
+    # table(.agg$method.pretty.temp, useNA = "ifany")
+    
+    # must be in same order as methods_pretty_est
+    .colors = c("#F2340E",
+                "#F2340E",
+                
+                "#E075DB",
+                "#E075DB",
+                
+                "#0E96F0",
+                "#1A1AF0",
+                
+                "black",
+                
+                "#246105",
+                "#8CB876",
+                
+                "#845699")
+  }
+  
+  # ~ Make pretty plotting variables ----------
+  # .agg$Ytype.pretty = NA
+  # .agg$Ytype.pretty[ .agg$Ytype == "cont-SMD" ] = "Continuous Y"
+  # .agg$Ytype.pretty[ .agg$Ytype == "bin-OR" ] = "Binary Y"
+  # .agg$Ytype.pretty = factor(.agg$Ytype.pretty, levels = c("Continuous Y", "Binary Y") )
+  # 
+  # .agg$t2a.pretty = NA
+  # .agg$t2a.pretty = paste("tau^2 =", .agg$t2a)
+  # 
+  # .agg$true.dist.pretty = NA
+  # .agg$true.dist.pretty[.agg$true.dist == "norm"] = "Normal effects"
+  # .agg$true.dist.pretty[.agg$true.dist == "expo"] = "Exponential effects"
+  # # reorder them
+  # .agg$true.dist.pretty = factor( .agg$true.dist.pretty, levels = c("Normal effects", "Exponential effects"))
+  # 
+  # .agg = droplevels(.agg)
+  
+  
+  
+  # ~ Aggregate within scenarios ------------
+  # aggregate within scenarios, but keep the variation in k and tau
+  dp = .agg %>% group_by(k.pub, t2a, method.pretty.temp, Ytype.pretty, true.dist.pretty) %>%
+    summarise_if(is.numeric, meanNA)
+  
   
   
   # ~ Make base plot ----------
-  p = ggplot( data = .dat, 
+  p = ggplot( data = dp, 
               aes( x = k.pub, 
                    y = Y,
-                   color = method.pretty,
-                   lty = method.pretty) ) +
+                   color = method.pretty.temp,
+                   lty = method.pretty.temp) ) +
     
     # slightly dodge line positions to avoid exact overlap:
     geom_line( position=position_jitter(w=.jitter.width, h=0) ) +
@@ -1101,9 +1275,10 @@ my_line_plot = function(
     y.breaks = .y.breaks
   }
   
-  
   # use coord_cartesian so that lines/points that go outside limits look cut off
   #  rather than completely omitted
+  # avoid taking log of 0:
+  if ( 0 %in% y.breaks & .Yname %in% c("MhatWidth", "ShatWidth") ) y.breaks[ y.breaks == 0 ] = 1 
   p = p + coord_cartesian( ylim = c( min(y.breaks), max(y.breaks) ) ) +
     scale_y_continuous( breaks = y.breaks )
   
@@ -1575,7 +1750,6 @@ init_var_names = function(.agg) {
                            "DL",
                            "PM",
                            "DL2",
-                           "MLE",
                            "Jeffreys1",
                            "Jeffreys2")
   
