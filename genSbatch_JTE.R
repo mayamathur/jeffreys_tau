@@ -160,7 +160,7 @@ sbatch_params <- data.frame(jobname,
                             # for RSM_1 sims with sim.env=stefan, n.reps.per.scen=500, and n.reps.in.doParallel=20 (1750 files):
                             # how to specify job times: https://www.sherlock.stanford.edu/docs/advanced-topics/job-management/#job-submission-limits
                             # days-hh:mm:ss
-                            jobtime = "1-00:00:00",  # 1 day
+                            jobtime = "2-00:00:00",  # 2 day
                             #jobtime = "04:00:00",  # when running all methods, 4:00:00 is enough for all k EXCEPT k=100, which needs 1 day
                             quality = "normal",
                             node_number = 1,

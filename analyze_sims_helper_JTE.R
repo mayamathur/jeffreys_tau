@@ -50,8 +50,8 @@ make_agg_data = function( .s,
     "MhatCover",
     "ShatCover",
     
-    "MhatCoverNominal",
-    "ShatCoverNominal",
+    # "MhatCoverNominal",
+    # "ShatCoverNominal",
     
     "MhatWidth",
     "ShatWidth",
@@ -299,9 +299,9 @@ make_agg_data = function( .s,
   #  combination of scenario name and calib.method
   agg = s3[ !duplicated(s3$unique.scen), ]
   
-  ##### Create Variables That Are Defined At Scenario Rather Than Iterate Level #####
-  agg = agg %>% mutate( MhatCoverNominal = MhatCover > goodCoverageCutoff,
-                        ShatCoverNominal = ShatCover > goodCoverageCutoff )
+  # ##### Create Variables That Are Defined At Scenario Rather Than Iterate Level #####
+  # agg = agg %>% mutate( MhatCoverNominal = MhatCover > goodCoverageCutoff,
+  #                       ShatCoverNominal = ShatCover > goodCoverageCutoff )
   
   return(agg %>% ungroup() )
 }
@@ -385,7 +385,7 @@ wrangle_agg_local = function(agg) {
   agg$Ytype.pretty = NA
   agg$Ytype.pretty[ agg$Ytype == "cont-SMD" ] = "Continuous Y"
   agg$Ytype.pretty[ agg$Ytype == "bin-OR" ] = "Binary Y"
-  agg$Ytype.pretty = factor(agg$Ytype.pretty, levels = c("Continuous Y", "Binary Y") )
+
   
   agg$t2a.pretty = NA
   agg$t2a.pretty = paste("tau^2 =", agg$t2a)
@@ -393,8 +393,7 @@ wrangle_agg_local = function(agg) {
   agg$true.dist.pretty = NA
   agg$true.dist.pretty[agg$true.dist == "norm"] = "Normal effects"
   agg$true.dist.pretty[agg$true.dist == "expo"] = "Exponential effects"
-  # reorder them
-  agg$true.dist.pretty = factor( agg$true.dist.pretty, levels = c("Normal effects", "Exponential effects"))
+
   
   agg = droplevels(agg)
   
@@ -704,6 +703,7 @@ make_both_winner_tables = function( .agg,
                                                 "ShatMAE", "ShatRMSE", "ShatCover", "ShatCoverNominal", "ShatWidth"),
                                     summarise.fun.name = "mean",  # "mean" or "median"
                                     show.worst10th = FALSE,
+                                    #display = "xtable"
                                     display = "dataframe"
                                     #display = c("dataframe", "xtable")
 ){
@@ -961,7 +961,6 @@ my_violins = function(xName = NA,
                       xlab = NA,
                       ylab,
                       yTicks = NA,
-                      colors = NA,
                       
                       prefix = NA,
                       write = TRUE,
@@ -975,11 +974,51 @@ my_violins = function(xName = NA,
   .agg$X = as.factor( .agg[[xName]] )
   string = paste( "plot_", xName, "_vs_", yName, ".pdf", sep = "" )
   
+  
+  
+  if (yName %in% c("MhatBias", "ShatBias") ) {
+    .agg = .agg %>% filter(method.pretty.est %in% methods_pretty_est)
+    
+    # temporary variable for ease below
+    .agg$method.pretty.temp = .agg$method.pretty.est
+    
+    # reorder methods
+    correct.order = c( "Jeffreys2", 
+                       "Jeffreys1",
+                       
+                       "MLE",
+                       "REML",
+                       
+                       "DL",
+                       "DL2",
+                       
+                       "PM")
+    .agg$method.pretty.temp = factor(.agg$method.pretty.temp, levels = correct.order)
+    # levels(.agg$method.pretty.temp)
+    # table(.agg$method.pretty.temp, useNA = "ifany")
+    
+    # must be in same order as methods_pretty_est
+    colors = c("#F2340E",
+               
+               "#E075DB",
+               
+               
+               "#0E96F0",
+               "black",
+               
+               "#246105",
+               "#8CB876",
+               
+               "#845699")
+  } else {
+    stop("That yName isn't implemented yet (need to set up the colors)")
+  }
+  
   p = ggplot( data = .agg,
               aes(x = X,
                   y = Y,
-                  color = method.pretty,
-                  fill = method.pretty) ) +
+                  color = method.pretty.temp,
+                  fill = method.pretty.temp) ) +
     
     geom_boxplot(width=0.6,
                  alpha = .5,
@@ -1260,9 +1299,12 @@ my_line_plot = function(
   # y.breaks are only still null if none of the above applied
   if ( is.null(.y.breaks) ) {
     # set default breaks
-    if ( grepl(pattern = "Cover", .Yname) ){
+    #if ( grepl(pattern = "Cover", .Yname) ){
+    
+    if (.Yname == "MhatCover") {
       y.breaks = seq(0.8, 1, .05)
-      
+    } else if (.Yname == "ShatCover") {
+      y.breaks = seq(0.7, 1, .05)
     } else {
       # otherwise keep the default limits from ggplot
       y.breaks = ggplot_build(p)$layout$panel_params[[1]]$y$breaks
@@ -1759,7 +1801,7 @@ init_var_names = function(.agg) {
                               "DL-Wald",
                               "PM-Wald",
                               "DL2-Wald",
-                              "exact",
+                              "Exact",
                               "MLE-profile",
                               "Jeffreys1", 
                               "Jeffreys2")
@@ -1801,6 +1843,9 @@ init_var_names = function(.agg) {
     param.vars.manip2 <<- c(param.vars.manip2, "N.pretty")
   }
   
+  
+  Wald_methods_pretty <<- stringsWith(pattern =  "Wald", unique(.agg$method.pretty.mu.inf))
+  
   cat( paste("\n\nManipulated parameter vars: ",
              paste(param.vars.manip2, collapse= ", ") ) )
   
@@ -1817,8 +1862,13 @@ CI_comparison = function(.agg,
     group_by(scen.name) %>%
     mutate( target_94 = MhatCover[method.pretty == .target.method.pretty] > .94,
             compar_94 = MhatCover[method.pretty == .comparison.method.pretty] > .94,
-            target_wins_cover = MhatCover[method.pretty == .target.method.pretty] >= MhatCover[method.pretty == .comparison.method.pretty],
-            target_wins_width = MhatWidth[method.pretty == .target.method.pretty] <= MhatWidth[method.pretty == .comparison.method.pretty],
+            
+            target_wins_cover = MhatCover[method.pretty == .target.method.pretty] >=
+              MhatCover[method.pretty == .comparison.method.pretty],
+            
+            target_wins_width = MhatWidth[method.pretty == .target.method.pretty] <=
+              MhatWidth[method.pretty == .comparison.method.pretty],
+            
             target_wins = target_wins_cover * target_wins_width)
   
   temp = temp %>% select(target_94, compar_94, target_wins_cover, target_wins_width, target_wins)

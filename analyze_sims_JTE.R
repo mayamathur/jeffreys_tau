@@ -37,6 +37,7 @@ library(tmvtnorm)
 library(RColorBrewer)
 library(sjmisc)
 library(tableone)
+library(constructive)
 
 # prevent masking
 select = dplyr::select
@@ -98,7 +99,14 @@ file.info("agg.csv")$mtime
 
 dim(agg) / nuni(agg$method)
 
+# reorder factors for ggplot
+agg$Ytype.pretty = factor(agg$Ytype.pretty, levels = c("Continuous Y", "Binary Y") )
+# reorder them
+agg$true.dist.pretty = factor( agg$true.dist.pretty, levels = c("Normal effects", "Exponential effects"))
 
+
+
+# main analysis dataset
 agg2 = agg %>% filter(k.pub <= 20)
 
 
@@ -237,7 +245,7 @@ summary( abs( agg$sancheck_mean_nY1 - agg$sancheck_mean_nY1_theory) )
 # ~ Convergence stats by method -------------------------
 
 # convergence rates
-t = agg %>% group_by(method) %>%
+t = agg %>% group_by(method.pretty) %>%
   summarise( mean(1-MhatEstFail), 
              min(1-MhatEstFail),
              
@@ -317,40 +325,52 @@ make_both_winner_tables(.agg = agg2 %>% filter( Ytype == "cont-SMD" ) )
 make_both_winner_tables(.agg = agg2 %>% filter( Ytype == "bin-OR" ) )
 
 # **MAIN TEXT TABLES 6-10
-make_both_winner_tables(.agg = agg2 %>% filter( Ytype == "cont-SMD" & k.pub <= 5 ) )
-make_both_winner_tables(.agg = agg2 %>% filter( Ytype == "bin-OR" & k.pub <= 5 ) )
+make_both_winner_tables(.agg = agg2 %>% filter( Ytype == "cont-SMD" & k.pub < 10 ) )
+make_both_winner_tables(.agg = agg2 %>% filter( Ytype == "bin-OR" & k.pub < 10 ) )
+
+# # **MAIN TEXT?
+# # larger metas (interested in CI width here)
+# make_both_winner_tables(.agg = agg2 %>% filter( Ytype == "cont-SMD" &
+#                                                   k.pub >= 10 & k.pub <= 20))
+# make_both_winner_tables(.agg = agg2 %>% filter( Ytype == "bin-OR" &
+#                                                   k.pub >= 10 & k.pub <= 20))
 
 
-
-# ~ k  -------------------------------------------------
+# ~ k=100  -------------------------------------------------
 
 #**SUPP TABLES S1 - S4
 # very large metas
 make_both_winner_tables(.agg = agg %>% filter( Ytype == "cont-SMD" &
-                                                 method %in% methods_for_table &
                                                  k.pub == 100))
 make_both_winner_tables(.agg = agg %>% filter( Ytype == "bin-OR" &
-                                                 method %in% methods_for_table &
                                                  k.pub == 100))
 
+# sanity check: I think the reason Jeffreys has better MhatCoverNominal is only due to scens with expo population effects
+#bm: not true??
+make_both_winner_tables(.agg = agg %>% filter( Ytype == "cont-SMD" &
+                                                 k.pub == 100 &
+                                                 true.dist == "norm"))
+make_both_winner_tables(.agg = agg %>% filter( Ytype == "bin-OR" &
+                                                 k.pub == 100 &
+                                                 true.dist == "norm"))
 
-# ~ Tau^2  -------------------------------------------------
-
-# tau near zero
-make_both_winner_tables(.agg = agg2 %>% filter(Ytype == "cont-SMD", t2a == 0.0001))
-make_both_winner_tables(.agg = agg2 %>% filter(Ytype == "bin-OR", t2a == 0.0001))
-
-
-# tau not near zero
-make_both_winner_tables(.agg = agg2 %>% filter(Ytype == "cont-SMD", t2a > 0.0001))
-make_both_winner_tables(.agg = agg2 %>% filter(Ytype == "bin-OR", t2a > 0.0001))
-
-#**SUPP TABLES S5 - S10
-make_both_winner_tables(.agg = agg2 %>% filter(Ytype == "cont-SMD", t2a <= 0.01))
-make_both_winner_tables(.agg = agg2 %>% filter(Ytype == "cont-SMD", t2a > 0.01))
-
-make_both_winner_tables(.agg = agg2 %>% filter(Ytype == "bin-OR", t2a <= 0.01))
-make_both_winner_tables(.agg = agg2 %>% filter(Ytype == "bin-OR", t2a > 0.01))
+# # ~ Tau^2  -------------------------------------------------
+# 
+# # tau near zero
+# make_both_winner_tables(.agg = agg2 %>% filter(Ytype == "cont-SMD", t2a == 0.0001))
+# make_both_winner_tables(.agg = agg2 %>% filter(Ytype == "bin-OR", t2a == 0.0001))
+# 
+# 
+# # tau not near zero
+# make_both_winner_tables(.agg = agg2 %>% filter(Ytype == "cont-SMD", t2a > 0.0001))
+# make_both_winner_tables(.agg = agg2 %>% filter(Ytype == "bin-OR", t2a > 0.0001))
+# 
+# #**SUPP TABLES S5 - S10
+# make_both_winner_tables(.agg = agg2 %>% filter(Ytype == "cont-SMD", t2a <= 0.01))
+# make_both_winner_tables(.agg = agg2 %>% filter(Ytype == "cont-SMD", t2a > 0.01))
+# 
+# make_both_winner_tables(.agg = agg2 %>% filter(Ytype == "bin-OR", t2a <= 0.01))
+# make_both_winner_tables(.agg = agg2 %>% filter(Ytype == "bin-OR", t2a > 0.01))
 
 
 
@@ -360,20 +380,6 @@ make_both_winner_tables(.agg = agg2 %>% filter(Ytype == "bin-OR", t2a > 0.01))
 # make_both_winner_tables(.agg = agg2 %>% filter(t2a == 0.04)) 
 
 
-# ~ True effect distribution  -------------------------------------------------
-# makes little difference for all methods
-make_both_winner_tables(.agg = agg2 %>% filter(Ytype == "cont-SMD", true.dist == "norm"))
-make_both_winner_tables(.agg = agg2 %>% filter(Ytype == "cont-SMD", true.dist == "expo"))
-
-make_both_winner_tables(.agg = agg2 %>% filter(Ytype == "bin-OR", true.dist == "norm"))
-make_both_winner_tables(.agg = agg2 %>% filter(Ytype == "bin-OR", true.dist == "expo"))
-
-# # what about high-t2a scens? that's where I'd expect dist to matter more
-# make_both_winner_tables(.agg = agg2 %>% filter(Ytype == "cont-SMD", true.dist == "norm", t2a == 0.25))
-# make_both_winner_tables(.agg = agg2 %>% filter(Ytype == "cont-SMD", true.dist == "expo", t2a == 0.25))
-# 
-# make_both_winner_tables(.agg = agg2 %>% filter(Ytype == "bin-OR", true.dist == "norm", t2a == 0.25))
-# make_both_winner_tables(.agg = agg2 %>% filter(Ytype == "bin-OR", true.dist == "expo", t2a == 0.25))
 
 # ~ N.expr  -------------------------------------------------
 
@@ -434,39 +440,76 @@ make_both_winner_tables(.agg = agge2 %>% filter( Ytype == "bin-OR" ) )
 
 # ~ Proportion of scens with nominal coverage  -------------------------------------------------
 
-( Wald_methods = stringsWith(pattern =  "Wald", unique(agg$method.pretty)) )
 
 
+# Mhat
 update_result_csv( name = paste( "Perc normal scens MhatCoverNominal Wald methods" ),
-                   value = 100 * round( mean( agg$MhatCoverNominal[ agg$method.pretty %in% Wald_methods &
-                                                                      agg$true.dist == "norm" ] ), 2 ),
+                   value = 100 * round( mean( agg2$MhatCoverNominal[ agg2$method.pretty %in% Wald_methods_pretty &
+                                                                      agg2$true.dist == "norm" ] ), 2 ),
                    print = TRUE )
 
 
 update_result_csv( name = paste( "Perc normal scens MhatCoverNominal MLE-profile" ),
-                   value = 100 * round( mean( agg$MhatCoverNominal[ agg$method.pretty == "MLE-profile" &
-                                                                      agg$true.dist == "norm" ] ), 2 ),
+                   value = 100 * round( mean( agg2$MhatCoverNominal[ agg2$method.pretty == "MLE-profile" &
+                                                                      agg2$true.dist == "norm" ] ), 2 ),
                    print = TRUE )
 
 
 update_result_csv( name = paste( "Perc normal scens MhatCoverNominal Jeffreys1-central" ),
-                   value = 100 * round( mean( agg$MhatCoverNominal[ agg$method.pretty == "Jeffreys1-central" &
-                                                                      agg$true.dist == "norm" ] ), 2 ),
+                   value = 100 * round( mean( agg2$MhatCoverNominal[ agg2$method.pretty == "Jeffreys1-central" &
+                                                                      agg2$true.dist == "norm" ] ), 2 ),
                    print = TRUE )
 
 
 update_result_csv( name = paste( "Perc normal scens MhatCoverNominal Jeffreys2-central" ),
-                   value = 100 * round( mean( agg$MhatCoverNominal[ agg$method.pretty == "Jeffreys2-central" &
-                                                                      agg$true.dist == "norm" ] ), 2 ),
+                   value = 100 * round( mean( agg2$MhatCoverNominal[ agg2$method.pretty == "Jeffreys2-central" &
+                                                                      agg2$true.dist == "norm" ] ), 2 ),
                    print = TRUE )
 
+
+
+# Shat
+( Q_methods = stringsWith(pattern =  "Qprofile", unique(agg2$method.pretty)) )
+update_result_csv( name = paste( "Perc normal scens ShatCoverNominal Qprofile methods" ),
+                   value = 100 * round( mean( agg2$ShatCoverNominal[ agg2$method.pretty %in% Q_methods &
+                                                                      agg2$true.dist == "norm" ] ), 2 ),
+                   print = TRUE )
+
+
+update_result_csv( name = paste( "Perc normal scens ShatCoverNominal MLE-profile" ),
+                   value = 100 * round( mean( agg2$ShatCoverNominal[ agg2$method.pretty == "MLE-profile" &
+                                                                      agg2$true.dist == "norm" ] ), 2 ),
+                   print = TRUE )
+
+
+update_result_csv( name = paste( "Perc normal scens ShatCoverNominal Jeffreys1-shortest" ),
+                   value = 100 * round( mean( agg2$ShatCoverNominal[ agg2$method.pretty == "Jeffreys1-shortest" &
+                                                                      agg2$true.dist == "norm" ] ), 2 ),
+                   print = TRUE )
+
+
+update_result_csv( name = paste( "Perc normal scens ShatCoverNominal Jeffreys2-shortest" ),
+                   value = 100 * round( mean( agg2$ShatCoverNominal[ agg2$method.pretty == "Jeffreys2-shortest" &
+                                                                      agg2$true.dist == "norm" ] ), 2 ),
+                   print = TRUE )
+
+update_result_csv( name = paste( "Perc normal scens ShatCoverNominal Jeffreys1-central" ),
+                   value = 100 * round( mean( agg2$ShatCoverNominal[ agg2$method.pretty == "Jeffreys1-central" &
+                                                                      agg2$true.dist == "norm" ] ), 2 ),
+                   print = TRUE )
+
+
+update_result_csv( name = paste( "Perc normal scens ShatCoverNominal Jeffreys2-central" ),
+                   value = 100 * round( mean( agg2$ShatCoverNominal[ agg2$method.pretty == "Jeffreys2-central" &
+                                                                      agg2$true.dist == "norm" ] ), 2 ),
+                   print = TRUE )
 
 
 
 # ~ CI coverage and width comparisons: Bin-OR  -------------------------------------------------
 # specifically compare to REML since all Wald-Qprofile methods were similar
 x = CI_comparison(.agg = agg2 %>% 
-                    #filter(k.pub <= 5) %>%
+                    filter(true.dist == "norm") %>%
                     filter(Ytype == "bin-OR"),
                   .target.method.pretty = "Jeffreys2-central",
                   .comparison.method.pretty = "REML-Wald-Qprofile")
@@ -476,14 +519,14 @@ update_result_csv( name = paste( "Bin-OR ", names(x) ),
                    print = TRUE )
 
 update_result_csv( name = "Sims - Mean perc narrower Jeffreys vs REML - Ybin",
-                   value = perc_CI_narrower(.agg = agg2 %>% filter(Ytype == "bin-OR"),
+                   value = perc_CI_narrower(.agg = agg2 %>% filter(Ytype == "bin-OR" & true.dist == "norm"),
                                             .target.method.pretty = "Jeffreys2-central",
                                             .comparison.method.pretty = "REML-Wald-Qprofile"),
                    print = TRUE )
 
 
 update_result_csv( name = "Sims - Mean perc narrower Jeffreys vs REML - Ybin small metas",
-                   value = perc_CI_narrower(.agg = agg2 %>% filter(Ytype == "bin-OR" & k.pub <= 5),
+                   value = perc_CI_narrower(.agg = agg2 %>% filter(Ytype == "bin-OR" & true.dist == "norm" & k.pub <= 5),
                                             .target.method.pretty = "Jeffreys2-central",
                                             .comparison.method.pretty = "REML-Wald-Qprofile"),
                    print = TRUE )
@@ -491,13 +534,13 @@ update_result_csv( name = "Sims - Mean perc narrower Jeffreys vs REML - Ybin sma
 
 # ~ CI coverage and width comparisons: Cont-SMD  -------------------------------------------------
 x = CI_comparison(.agg = agg2 %>% 
-                    filter(k.pub > 5) %>%
+                    filter(k.pub > 5 & true.dist == "norm") %>%
                     filter(Ytype == "cont-SMD"),
                   .target.method.pretty = "Jeffreys2-central",
                   .comparison.method.pretty = "REML-Wald-Qprofile")
 
 # **doesn't make sense to use Jeffreys2 for continuous outcomes since, in the k>5 scenarios where its coverage was always okay, it also doesn't improve efficiency
-perc_CI_narrower(.agg = agg2 %>% filter(Ytype == "cont-SMD" & k.pub > 5),
+perc_CI_narrower(.agg = agg2 %>% filter(Ytype == "cont-SMD" & true.dist == "norm" & k.pub > 5),
                  .target.method.pretty = "Jeffreys2-central",
                  .comparison.method.pretty = "REML-Wald-Qprofile")
 
@@ -581,32 +624,30 @@ construct( as.data.frame(x3) )
 
 # PLOTS -------------------------------------------------
 
+# for the simple ggplotly versions
+dp = agg2 %>% group_by(k.pub, t2a, method.pretty, Ytype.pretty, true.dist.pretty) %>%
+  summarise_if(is.numeric, meanNA)
 
-
-
-# # dashed lines = shortest intervals
-# .lty = c("solid",
-#          "dashed",
-#          "solid",
-#          "dashed",
-#          
-#          rep("solid", 7) )
-
-expect_equal(length(.colors), length(methods_for_table))
-#expect_equal(length(.lty), length(methods_for_table))
-
+# includes k=100
+dp100 = agg %>%
+  #filter(k.pub == 100) %>%
+  group_by(k.pub, t2a, method.pretty, Ytype.pretty, true.dist.pretty) %>%
+  summarise_if(is.numeric, meanNA)
 
 # ~ Plots by k and tau -------------------------------------------------
 
-# # aggregate within scenarios, but keep the variation in k and tau
-# dp = aggp %>% filter(k.pub <= 20 & method %in% methods_for_table ) %>%
-#   #filter(true.dist == "norm") %>%
-#   group_by(k.pub, t2a, method.pretty, Ytype.pretty, true.dist.pretty) %>%
-#   summarise_if(is.numeric, meanNA)
-# table(dp$method.pretty, useNA = "ifany")
+
+# ~ MhatMAE -------------------------------------------------
 
 
-# ~ Mhat RMSE -------------------------------------------------
+my_line_plot(.Yname = "MhatMAE",
+             .agg = agg2,
+             .ggtitle = "",
+             .ylab = 'bquote( bold("MAE for") ~ bold(mu) )',
+             .jitter.width = 0.5)
+
+
+# ~ MhatRMSE -------------------------------------------------
 
 
 my_line_plot(.Yname = "MhatRMSE",
@@ -633,13 +674,13 @@ ggplotly(p)
 
 
 
-# ~ Mhat coverage -------------------------------------------------
+# ~ MhatCover -------------------------------------------------
 
 my_line_plot(.Yname = "MhatCover",
              .agg = agg2,
              .ggtitle = "",
              .ylab = 'bquote( bold("Coverage for") ~ bold(mu) )',
-             .jitter.width = 0.5)
+             .jitter.width = 0)
 
 
 
@@ -660,19 +701,110 @@ p = ggplot( data = dp,
 ggplotly(p)
 
 
+# sanity check: understand coverage differences for k=100
+# very interesting!
+p = ggplot( data = dp100, 
+            aes( x = k.pub, 
+                 y = MhatCover,
+                 color = method.pretty,
+                 lty = method.pretty) ) + 
+  geom_hline(yintercept = .95, lty = 1) +
+  
+  # slightly dodge line positions to avoid exact overlap:
+  geom_line( position=position_jitter(w=.5, h=0) ) + 
+  #geom_line() +
+  
+  facet_grid(t2a ~ true.dist.pretty + Ytype.pretty )
+
+ggplotly(p)
+
 # ~ MhatWidth -------------------------------------------------
 
 # zoom in to small k for legibility; all methods are basically the same for larger metas
 my_line_plot(.Yname = "MhatWidth",
-             .agg = agg2 %>% filter(k.pub <= 10),
+             #.agg = agg2 %>% filter(k.pub <= 10),
+             .agg = agg2,
              .ggtitle = "",
              .ylab = 'bquote( bold("Width of CI for") ~ bold(mu) )',
-             .jitter.width = 0.1)
+             .jitter.width = 0)
 
 # simple version for ggplotly
-p = ggplot( data = dp %>% filter(k.pub <= 5), 
+
+
+p = ggplot( data = dp %>% filter(k.pub <= 10), 
             aes( x = k.pub, 
-                 y = log(MhatWidth),
+                 y = MhatWidth,
+                 color = method.pretty,
+                 lty = method.pretty) ) + 
+  
+  # slightly dodge line positions to avoid exact overlap:
+  #geom_line( position=position_jitter(w=.5, h=0) ) + 
+  geom_line() +
+  scale_y_log10() +
+  facet_grid(t2a ~ true.dist.pretty + Ytype.pretty )
+
+ggplotly(p)
+
+
+# sanity check
+agg2 %>% filter( Ytype == "cont-SMD" &
+                   k.pub >= 10 & k.pub <= 20) %>%
+  group_by(method.pretty.mu.inf) %>%
+  summarise(meanNA(MhatWidth))
+
+agg2 %>% filter( Ytype == "bin-OR" &
+                   k.pub >= 10 & k.pub <= 20) %>%
+  group_by(method.pretty.mu.inf) %>%
+  summarise(meanNA(MhatWidth))
+
+# SAVE - reproduce a single point (per method) on plot
+agg2 %>% filter( Ytype == "bin-OR" &
+                   k.pub == 10 &
+                   t2a == 0.01) %>%
+  group_by(method.pretty.mu.inf) %>%
+  summarise(meanNA(MhatWidth))
+
+
+# ~ ShatMAE -------------------------------------------------
+
+
+my_line_plot(.Yname = "ShatMAE",
+             .agg = agg2,
+             .ggtitle = "",
+             .ylab = 'bquote( bold("MAE for") ~ bold(tau) )',
+             .jitter.width = 0.5)
+
+
+# simple version for ggplotly
+p = ggplot( data = dp, 
+            aes( x = k.pub, 
+                 y = ShatMAE,
+                 color = method.pretty,
+                 lty = method.pretty) ) + 
+  
+  # slightly dodge line positions to avoid exact overlap:
+  #geom_line( position=position_jitter(w=.5, h=0) ) + 
+  geom_line() +
+  scale_y_continuous(limits = c(0, .4)) +
+  facet_grid(t2a ~ true.dist.pretty + Ytype.pretty )
+
+ggplotly(p)
+
+
+# ~ ShatRMSE -------------------------------------------------
+
+
+my_line_plot(.Yname = "ShatRMSE",
+             .agg = agg2,
+             .ggtitle = "",
+             .ylab = 'bquote( bold("RMSE for") ~ bold(tau) )',
+             .jitter.width = 0.5)
+
+
+# simple version for ggplotly
+p = ggplot( data = dp, 
+            aes( x = k.pub, 
+                 y = ShatRMSE,
                  color = method.pretty,
                  lty = method.pretty) ) + 
   
@@ -680,10 +812,11 @@ p = ggplot( data = dp %>% filter(k.pub <= 5),
   #geom_line( position=position_jitter(w=.5, h=0) ) + 
   geom_line() +
   
+  scale_y_continuous(limits = c(0, 0.4)) +
+  
   facet_grid(t2a ~ true.dist.pretty + Ytype.pretty )
 
 ggplotly(p)
-
 
 
 
@@ -693,63 +826,54 @@ my_line_plot(.Yname = "ShatCover",
              .agg = agg2,
              .ggtitle = "",
              .ylab = 'bquote( bold("Coverage for") ~ bold(tau) )',
-             .jitter.width = 0.5)
+             .jitter.width = 0)
 
-# Shat coverage
+
+
+# simple version for ggplotly
 p = ggplot( data = dp, 
             aes( x = k.pub, 
                  y = ShatCover,
-                 color = method.pretty ) ) + 
-  geom_hline(yintercept = .95, lty = 2) +
-  geom_line() + 
-  facet_grid(rows = vars(Ytype), cols = vars(t2a) )
+                 color = method.pretty,
+                 lty = method.pretty) ) + 
+  geom_hline(yintercept = .95, lty = 1) +
+  
+  # slightly dodge line positions to avoid exact overlap:
+  #geom_line( position=position_jitter(w=.5, h=0) ) + 
+  geom_line() +
+  scale_y_continuous(limits = c(0.75, 1)) +
+  
+  facet_grid(t2a ~ true.dist.pretty + Ytype.pretty )
 
 ggplotly(p)
 
 
+# ~ ShatWidth -------------------------------------------------
 
-# ShatWidth
+#bm: rescale this one; it gets cut off at the bottom
+# zoom in to small k for legibility; all methods are basically the same for larger metas
 my_line_plot(.Yname = "ShatWidth",
              .agg = agg2 %>% filter(k.pub <= 10),
              .ggtitle = "",
-             .ylab = 'bquote( bold("Width of CI for") ~ bold(mu) )',
-             .jitter.width = 0.1)
+             .ylab = 'bquote( bold("Width of CI for") ~ bold(tau) )',
+             .jitter.width = 0)
 
-p = ggplot( data = dp, 
+# simple version for ggplotly
+p = ggplot( data = dp %>% filter(k.pub <= 10), 
             aes( x = k.pub, 
                  y = ShatWidth,
-                 color = method.pretty ) ) +
-  geom_line() + 
-  facet_grid(rows = vars(Ytype), cols = vars(t2a) )
+                 color = method.pretty,
+                 lty = method.pretty) ) + 
+  
+  # slightly dodge line positions to avoid exact overlap:
+  #geom_line( position=position_jitter(w=.5, h=0) ) + 
+  geom_line() +
+  scale_y_log10() +
+  facet_grid(t2a ~ true.dist.pretty + Ytype.pretty )
 
 ggplotly(p)
 
-# bm: you just successfully redid a lot of the plots :) now see how they look on Overleaf. 
-
-
-# ~ Boxplots for (signed) bias -------------------------------------------------
-# 
-# aggp = agg2 %>% filter(method.pretty %in% methods.to.show )
-# unique(aggp$method.pretty)
-# 
-# # reorder methods
-# correct.order = c( "Jeffreys", "DL", "DL2", "REML", "PM", "RVE")
-# aggp$method.pretty = factor(aggp$method.pretty, levels = correct.order)
-# levels(aggp$method.pretty)
-# 
-# aggp$Ytype.pretty = NA
-# aggp$Ytype.pretty[ aggp$Ytype == "cont-SMD" ] = "Continuous Y"
-# aggp$Ytype.pretty[ aggp$Ytype == "bin-OR" ] = "Binary Y"
-# aggp$Ytype.pretty = factor(aggp$Ytype.pretty, levels = c("Continuous Y", "Binary Y") )
-# 
-# # same colors as in applied example for prettiness
-# .colors = c("#F2340E",
-#             "#0E96F0",
-#             "#845699",
-#             "#0F5A8C",
-#             "#6D9956",
-#             "#D18350")
-
+# ~ Bias boxplots -------------------------------------------------
 
 my_violins(xName = "k.pub",
            yName = "MhatBias",
@@ -758,26 +882,10 @@ my_violins(xName = "k.pub",
            ylab = bquote( bold( hat(mu) ~ " bias") ),
            yTicks = round( seq(-0.04, 0.04, 0.01), 2 ),
            prefix = NA,
-           colors = .colors,
            
            write = TRUE,
            # by default, use all scenarios:
-           .agg = aggp )
-
-my_violins(xName = "k.pub",
-           yName = "MhatWidth",
-           hline = 0,
-           xlab = "k",
-           ylab = bquote( bold( hat(mu) ~ " CI width") ),
-           #yTicks = round( seq(-0.04, 0.04, 0.01), 2 ),
-           prefix = NA,       
-           colors = .colors,
-           write = TRUE,
-           # by default, use all scenarios:
-           .agg = aggp )
-
-
-
+           .agg = agg2 )
 
 
 my_violins(xName = "k.pub",
@@ -785,70 +893,76 @@ my_violins(xName = "k.pub",
            hline = 0,
            xlab = "k",
            ylab = bquote( bold( hat(tau) ~ " bias") ),
-           yTicks = round( seq(-0.40, 0.60, 0.1), 2 ),
+           yTicks = round( seq(-0.1, 0.1, 0.02), 2 ),
            prefix = NA,
-           colors = .colors,
+           
            write = TRUE,
            # by default, use all scenarios:
-           .agg = aggp )
+           .agg = agg2 )
 
 
 
-# ~ Plots and stats for scen 1072 (CI overcoverage despite better efficiency) -------------------------------------------------
+# SCEN 708: Plots and stats (CI overcoverage despite better efficiency) -------------------------------------------------
 
 # for binary Y, investigate the surprising finding that Jeffreys slightly over-covers, yet its CI is much narrower
+
+### Look for scens exhibiting this property
+# wide form wrt methods:
+wide_agg <- pivot_wider(agg2 %>% filter(method.pretty.mu.inf %in% methods_pretty_mu_inf),
+                        names_from = method.pretty.mu.inf,
+                        values_from = c(MhatCover, MhatWidth, MhatBias, MhatMAE,
+                                        MLo, MHi),
+                        names_sep = "_",
+                        id_cols = all_of( c( "scen.name", param.vars.manip2 ) ) )
+
+expect_equal( nrow(wide_agg), nuni(agg2$scen.name) )
+
+# scens where Jeffreys over-covered but was narrower than REML:
+scens = wide_agg$scen.name[ wide_agg$`MhatCover_Jeffreys2` > 0.95 & 
+                              wide_agg$`MhatCover_REML-Wald` < 0.95 & 
+                              wide_agg$`MhatWidth_Jeffreys2` < wide_agg$`MhatWidth_REML-Wald` ]
+
+t = wide_agg %>% select( all_of( c( "scen.name", param.vars.manip2 ) ),
+                         `MhatCover_Jeffreys2`, 
+                         `MhatCover_REML-Wald`,
+                         
+                         `MhatWidth_Jeffreys2`, 
+                         `MhatWidth_REML-Wald`,
+                         
+                         `MhatBias_Jeffreys2`, 
+                         `MhatBias_REML-Wald`,
+                         
+                         `MhatMAE_Jeffreys2`, 
+                         `MhatMAE_REML-Wald`,
+                         
+                         `MLo_Jeffreys2`, 
+                         `MLo_REML-Wald`,
+                         
+                         `MHi_Jeffreys2`, 
+                         `MHi_REML-Wald`) %>%
+  filter(scen.name %in% scens) %>%
+  arrange(`MhatCover_REML-Wald`) 
+  #filter(scen.name == 708)
+
+if (use.View == TRUE) View(t)
+
+# scen 708 is striking; extract its scen params:
+x = agg2 %>% filter(scen.name==708)
+x2 = x[1, 1:12] 
+( scen_708_params = constructive::construct( as.data.frame(x2) ) )
+
+# I ran this scenario again locally for 100 sim reps to get iterate-level data
+
+
+### Look at individual iterates for scen 1072
+
+
 
 # scen 1072 data
 setwd(data.dir)
 s2 = fread("stitched_scen_1072.csv")
 levels( as.factor(s2$method.pretty) )
 
-
-### Look for scens exhibiting this property
-# wide form wrt methods:
-w = pivot_wider(agg, names_from = method, values_from = MhatCover)
-
-wide_agg <- pivot_wider(agg,
-                        names_from = method,
-                        values_from = c(MhatCover, MhatWidth, MhatBias, MhatMAE,
-                                        MLo, MHi),
-                        names_sep = "_",
-                        id_cols = all_of( c( "scen.name", param.vars.manip2 ) ) )
-
-expect_equal( nrow(wide_agg), nuni(agg$scen.name) )
-
-# scens where Jeffreys over-covered but was narrower than REML:
-scens = wide_agg$scen.name[ wide_agg$`MhatCover_jeffreys-pmode` > 0.95 & 
-                              wide_agg$`MhatCover_REML` < 0.95 & 
-                              wide_agg$`MhatWidth_jeffreys-pmode` < wide_agg$`MhatWidth_REML` ]
-
-t = wide_agg %>% select( all_of( c( "scen.name", param.vars.manip2 ) ),
-                         `MhatCover_jeffreys-pmode`, 
-                         `MhatCover_REML`,
-                         
-                         `MhatWidth_jeffreys-pmode`, 
-                         `MhatWidth_REML`,
-                         
-                         `MhatBias_jeffreys-pmode`, 
-                         `MhatBias_REML`,
-                         
-                         `MhatMAE_jeffreys-pmode`, 
-                         `MhatMAE_REML`,
-                         
-                         `MLo_jeffreys-pmode`, 
-                         `MLo_REML`,
-                         
-                         `MHi_jeffreys-pmode`, 
-                         `MHi_REML`) %>%
-  filter(scen.name %in% scens) 
-#filter(scen.name == 1072)
-
-if (use.View = TRUE) View(t)
-# scen 1072 is striking
-
-
-
-### Look at individual iterates for scen 1072
 
 # MhatBias vs. MhatWidth
 # **super interesting!!
@@ -915,23 +1029,23 @@ my_ggsave( name = "scen_1072_CI_asymmetry.pdf",
 ### One-off stats about this scenario
 
 # parameters, hard-coded in Supplement
-( scen.1072.params = s2 %>% select( all_of(param.vars.manip2) ) %>%
-    filter( row_number() == 1 ) )
+scen_708_params
 
 
-temp = agg %>% filter(scen.name == 1072 & method.pretty %in% methods.to.show)
-round( 100 * as.numeric( temp %>% filter(method.pretty == "Jeffreys") %>%
-                           select(MhatCover) ) )
+temp = agg2 %>% filter(scen.name == 708 & method.pretty.mu.inf %in% methods_pretty_mu_inf)
 
-update_result_csv( name = "Scen 1072 Jeffreys MhatCover",
-                   value = round( 100 * as.numeric( temp %>% filter(method.pretty == "Jeffreys") %>%
-                                                      select(MhatCover) ) ),
+
+update_result_csv( name = "Scen 708 Jeffreys MhatCover",
+                   value = round( 100 * as.numeric( temp %>% filter(method.pretty.mu.inf == "Jeffreys2") %>%
+                                                      select(MhatCover) ), 6 ) ),
                    print = TRUE )
 
 # all other methods have 95% coverage
-round( 100 * temp$MhatCover[ !temp$method.pretty == "Jeffreys" ] )
+round( 100 * temp$MhatCover[ !temp$method.pretty.mu.inf == "Jeffreys2" ] )
+temp$method.pretty.mu.inf
 
-update_result_csv( name = "Scen 1072 Jeffreys MhatWidth",
+
+update_result_csv( name = "Scen 708 Jeffreys MhatWidth",
                    value = round( as.numeric( temp %>% filter(method.pretty == "Jeffreys") %>%
                                                 select(MhatWidth) ), 2 ),
                    print = TRUE )
@@ -998,10 +1112,9 @@ methods_for_table = c(
   "bayesmeta-joint-central")
 
 # alternate: range instead of SD
-t = agg %>% group_by(scen.name) %>%
+t = agg2 %>% group_by(scen.name) %>%
   # important to avoid bas methods like pmean, pmed, etc.
   filter(method %in% methods_for_table) %>%
-  filter(k.pub <= 20) %>%
   summarise( MhatBiasRange = diff( range(MhatBias, na.rm = TRUE) ),
              MhatMAERange = diff( range(MhatMAE, na.rm = TRUE) ),
              MhatCoverRange = diff( range(MhatCover, na.rm = TRUE) ),
@@ -1012,10 +1125,6 @@ t = agg %>% group_by(scen.name) %>%
              ShatCoverRange = diff( range(ShatCover, na.rm = TRUE) ),
              ShatRMSERange = diff( range(ShatRMSE, na.rm = TRUE) ) )
 
-summary(t$MhatBiasRange)
-summary(t$MhatMAERange)
-summary(t$MhatRMSERange)
-summary(t$MhatCoverRange)
 
 #**performance metrics for paper
 update_result_csv( name = "Max MhatRMSERange across scens",
