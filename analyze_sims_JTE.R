@@ -647,6 +647,23 @@ my_line_plot(.Yname = "MhatMAE",
              .jitter.width = 0.5)
 
 
+# simple version for ggplotly
+summary(dp$MhatMAE)
+p = ggplot( data = dp, 
+            aes( x = k.pub, 
+                 y = MhatMAE,
+                 color = method.pretty,
+                 lty = method.pretty) ) + 
+  
+  # slightly dodge line positions to avoid exact overlap:
+  #geom_line( position=position_jitter(w=.5, h=0) ) + 
+  geom_line() +
+  scale_y_continuous(limits = c(0, .2)) +
+  
+  facet_grid(t2a ~ true.dist.pretty + Ytype.pretty )
+
+ggplotly(p)
+
 # ~ MhatRMSE -------------------------------------------------
 
 
@@ -658,6 +675,7 @@ my_line_plot(.Yname = "MhatRMSE",
 
 
 # simple version for ggplotly
+summary(dp$MhatRMSE)
 p = ggplot( data = dp, 
             aes( x = k.pub, 
                  y = MhatRMSE,
@@ -666,7 +684,8 @@ p = ggplot( data = dp,
   
   # slightly dodge line positions to avoid exact overlap:
   #geom_line( position=position_jitter(w=.5, h=0) ) + 
-  #geom_line() +
+  geom_line() +
+  scale_y_continuous(limits = c(0, 1)) +
   
   facet_grid(t2a ~ true.dist.pretty + Ytype.pretty )
 
@@ -717,6 +736,7 @@ p = ggplot( data = dp100,
   facet_grid(t2a ~ true.dist.pretty + Ytype.pretty )
 
 ggplotly(p)
+
 
 # ~ MhatWidth -------------------------------------------------
 
@@ -875,6 +895,7 @@ ggplotly(p)
 
 # ~ Bias boxplots -------------------------------------------------
 
+# ~~ MhatBias -----
 my_violins(xName = "k.pub",
            yName = "MhatBias",
            hline = 0,
@@ -887,7 +908,35 @@ my_violins(xName = "k.pub",
            # by default, use all scenarios:
            .agg = agg2 )
 
+# simple version for ggplotly with all methods:
+quantile(agg2$MhatBias, c(0.05, 0.95), na.rm = TRUE)
+p = ggplot( data = agg2 %>% filter(!is.na(method.pretty.est)),
+            aes(x = k.pub,
+                y = MhatBias,
+                color = method.pretty.est,
+                fill = method.pretty.est) ) +
+  
+  geom_boxplot(width=0.6,
+               alpha = .5,
+               outlier.shape = NA) +
+  labs(color  = "Method", fill = "Method") +
+  
+  scale_y_continuous(limits = c(-0.04, 0.04)) +
+  
+  theme_bw(base_size = 16) +
+  
+  theme( text = element_text(face = "bold"),
+         axis.title = element_text(size=16),
+         panel.grid.major.x = element_blank(),
+         panel.grid.minor.x = element_blank(),
+         legend.position = "bottom" ) +
+  guides(color = guide_legend(nrow=2)) 
+p
 
+
+
+
+# ~~ ShatBias -------
 my_violins(xName = "k.pub",
            yName = "ShatBias",
            hline = 0,
@@ -900,6 +949,94 @@ my_violins(xName = "k.pub",
            # by default, use all scenarios:
            .agg = agg2 )
 
+
+# simple version for ggplotly with all methods:
+quantile(agg2$ShatBias, c(0.05, 0.95), na.rm = TRUE)
+p = ggplot( data = agg2 %>% filter(!is.na(method.pretty.est)),
+            
+            aes(x = as.factor(k.pub),
+                y = ShatBias,
+                color = method.pretty.est,
+                fill = method.pretty.est) ) +
+  
+  geom_boxplot(width=0.6,
+               alpha = .5,
+               outlier.shape = NA) +
+  labs(color  = "Method", fill = "Method") +
+  
+  scale_y_continuous(limits = c(-0.2, 0.6)) +
+  
+  theme_bw(base_size = 16) +
+  
+  theme( text = element_text(face = "bold"),
+         axis.title = element_text(size=16),
+         panel.grid.major.x = element_blank(),
+         panel.grid.minor.x = element_blank(),
+         legend.position = "bottom" ) +
+  guides(color = guide_legend(nrow=2)) +
+  facet_grid( ~ Ytype.pretty )
+p
+ggplotly(p) %>% layout(boxmode = "group")
+
+
+# **compare Jeffreys2 pmode, pmed, pmean:
+p = ggplot( data = agg2 %>% filter(method %in% c("jeffreys-pmode", "jeffreys-pmean", "jeffreys-pmed")),
+            
+            aes(x = as.factor(k.pub),
+                y = ShatBias,
+                color = method.pretty.est,
+                fill = method.pretty.est) ) +
+  
+  geom_hline(yintercept = 0,
+             lty = 2) +
+  
+  geom_boxplot(width=0.6,
+               alpha = .5,
+               outlier.shape = NA) +
+  labs(color  = "Method", fill = "Method") +
+  
+  scale_y_continuous(limits = c(-0.2, 0.6)) +
+  
+  theme_bw(base_size = 16) +
+  
+  theme( text = element_text(face = "bold"),
+         axis.title = element_text(size=16),
+         panel.grid.major.x = element_blank(),
+         panel.grid.minor.x = element_blank(),
+         legend.position = "bottom" ) +
+  guides(color = guide_legend(nrow=2)) +
+  facet_grid( ~ Ytype.pretty )
+p
+
+#**pmode clearly wins for MAE and RMSE
+# same, but for MAE:
+p = ggplot( data = agg2 %>% filter(method %in% c("jeffreys-pmode", "jeffreys-pmean", "jeffreys-pmed")),
+            
+            aes(x = as.factor(k.pub),
+                y = ShatRMSE,
+                color = method.pretty.est,
+                fill = method.pretty.est) ) +
+  
+  geom_hline(yintercept = 0,
+             lty = 2) +
+  
+  geom_boxplot(width=0.6,
+               alpha = .5,
+               outlier.shape = NA) +
+  labs(color  = "Method", fill = "Method") +
+  
+  scale_y_continuous(limits = c(0, 1.5)) +
+  
+  theme_bw(base_size = 16) +
+  
+  theme( text = element_text(face = "bold"),
+         axis.title = element_text(size=16),
+         panel.grid.major.x = element_blank(),
+         panel.grid.minor.x = element_blank(),
+         legend.position = "bottom" ) +
+  guides(color = guide_legend(nrow=2)) +
+  facet_grid( ~ Ytype.pretty )
+p
 
 
 # SCEN 708: Plots and stats (CI overcoverage despite better efficiency) -------------------------------------------------
@@ -1035,24 +1172,27 @@ scen_708_params
 temp = agg2 %>% filter(scen.name == 708 & method.pretty.mu.inf %in% methods_pretty_mu_inf)
 
 
-update_result_csv( name = "Scen 708 Jeffreys MhatCover",
+update_result_csv( name = "Scen 708 Jeffreys2 MhatCover",
                    value = round( 100 * as.numeric( temp %>% filter(method.pretty.mu.inf == "Jeffreys2") %>%
-                                                      select(MhatCover) ), 6 ) ),
+                                                      select(MhatCover) ), 6 ),
                    print = TRUE )
 
-# all other methods have 95% coverage
-round( 100 * temp$MhatCover[ !temp$method.pretty.mu.inf == "Jeffreys2" ] )
-temp$method.pretty.mu.inf
+# all Wald
+coverages = round( 100 * temp$MhatCover[ temp$method.pretty.mu.inf %in% Wald_methods_pretty ] )
+expect_equal( nuni(coverages), 1 )  # otherwise doesn't make to summarize by a single number as below
+update_result_csv( name = "Scen 708 Wald methods MhatCover",
+                   value = unique(coverages),
+print = TRUE )
 
 
-update_result_csv( name = "Scen 708 Jeffreys MhatWidth",
-                   value = round( as.numeric( temp %>% filter(method.pretty == "Jeffreys") %>%
+update_result_csv( name = "Scen 708 Jeffreys2 MhatWidth",
+                   value = round( as.numeric( temp %>% filter(method.pretty.mu.inf == "Jeffreys2") %>%
                                                 select(MhatWidth) ), 2 ),
                    print = TRUE )
 
 
 # all other methods
-round( temp$MhatWidth[ !temp$method.pretty == "Jeffreys" ], 2 )
+round( temp$MhatWidth[ temp$method.pretty.mu.inf %in% Wald_methods_pretty ], 2 )
 
 
 # ~ Line plots of multiple outcomes (not in use)  -------------------------------------------------

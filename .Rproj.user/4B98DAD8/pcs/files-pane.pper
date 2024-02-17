@@ -2,7 +2,7 @@
     "sortOrder": [
         {
             "columnIndex": 2,
-            "ascending": true
+            "ascending": false
         }
     ],
     "path": "~/Dropbox/Personal computer/Independent studies/2024/JTE (Jeffreys estimation of tau)/Simulation study/Code (git)"
