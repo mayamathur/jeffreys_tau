@@ -1008,6 +1008,7 @@ p = ggplot( data = agg2 %>% filter(method %in% c("jeffreys-pmode", "jeffreys-pme
   facet_grid( ~ Ytype.pretty )
 p
 
+#@ put these plots in supplement?
 #**pmode clearly wins for MAE and RMSE
 # same, but for MAE:
 p = ggplot( data = agg2 %>% filter(method %in% c("jeffreys-pmode", "jeffreys-pmean", "jeffreys-pmed")),
