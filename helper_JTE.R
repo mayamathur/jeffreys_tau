@@ -469,11 +469,13 @@ report_meta = function(.mod,
 
 # structured as in phacking pkg
 
-get_lprior <- function(mu, tau, sei) {
+get_lprior <- function(mu, tau, sei, prior_name = "Jeffreys2") {
   e_fisher_i <- function(se) {
     si <- sqrt(tau ^ 2 + se ^ 2)
     
-    kmm <- -si ^ (-2)
+    if ( prior_name == "Jeffreys2" ) kmm <- -si ^ (-2)
+    if ( prior_name == "Jeffreys1" ) kmm <- 0  # Bodnar 2017, PDF pg 18
+    
     kms <- 0
     kss <- -2 * tau ^ 2 * si ^ (-4)
     
