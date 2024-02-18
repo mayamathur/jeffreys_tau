@@ -385,7 +385,7 @@ wrangle_agg_local = function(agg) {
   agg$Ytype.pretty = NA
   agg$Ytype.pretty[ agg$Ytype == "cont-SMD" ] = "Continuous Y"
   agg$Ytype.pretty[ agg$Ytype == "bin-OR" ] = "Binary Y"
-
+  
   
   agg$t2a.pretty = NA
   agg$t2a.pretty = paste("tau^2 =", agg$t2a)
@@ -393,7 +393,7 @@ wrangle_agg_local = function(agg) {
   agg$true.dist.pretty = NA
   agg$true.dist.pretty[agg$true.dist == "norm"] = "Normal effects"
   agg$true.dist.pretty[agg$true.dist == "expo"] = "Exponential effects"
-
+  
   
   agg = droplevels(agg)
   
@@ -750,10 +750,7 @@ prior_plot_one_k = function(.k,
                             N.pretty = c("N = 40",
                                          "N = 400",
                                          "N ~ U(40, 400)",
-                                         "N ~ U(2000, 3000)") 
-                            
-                            
-) {
+                                         "N ~ U(2000, 3000)") ) {
   
   # test only
   if (FALSE) {
@@ -802,20 +799,22 @@ prior_plot_one_k = function(.k,
   tau_vec = c( seq(0, 0.1, 0.001), seq(0.1, 0.25, 0.01), seq(0.25, 1, 0.05) )
   dp2 = expand_grid( .mu = 0,
                      .tau = tau_vec,
-                     .sei = c("sei[[1]]", "sei[[2]]", "sei[[3]]", "sei[[4]]") )
+                     .sei = c("sei[[1]]", "sei[[2]]", "sei[[3]]", "sei[[4]]"),
+                     prior_name = c("Jeffreys1", "Jeffreys2") )
   
   dp2 = dp2 %>% rowwise() %>%
-    mutate( prior.val = get_lprior(mu = .mu,
-                                   tau = .tau,
-                                   sei = eval( parse( text = .sei ) ) )  )
+    mutate( prior.val = exp( get_lprior(mu = .mu,
+                                        tau = .tau,
+                                        sei = eval( parse( text = .sei ) ),
+                                        prior_name = prior_name )  ) )
   
   # sanity check
-  temp1 = dp2 %>% filter( .mu == 0, .tau == 0.05, .sei == "sei[[3]]" ) %>% select(prior.val)
-  temp2 = get_lprior(mu = 0,
+  temp1 = dp2 %>% filter( .mu == 0, .tau == 0.05, .sei == "sei[[3]]", prior_name == "Jeffreys1" ) %>% select(prior.val)
+  temp2 = exp( get_lprior(mu = 0,
                      tau = 0.05,
-                     sei = sei[[3]] )
+                     sei = sei[[3]],
+                     prior_name = "Jeffreys1") )
   expect_equal( as.numeric(temp1), temp2)
-  
   
   ### Prettify plotting dataframe
   
@@ -832,8 +831,17 @@ prior_plot_one_k = function(.k,
   dp2$N.pretty = factor(dp2$N.pretty, levels = correct.order)
   levels(dp2$N.pretty)
   
+  ### Rescale each individual curve so that the priors have the same height
+  dp2$prior.val.scaled = NA
+  
+  for ( j in c("Jeffreys1", "Jeffreys2"))
+  for ( n in 1:4 ){
+    dp2$prior.val.scaled[ dp2$N.pretty == N.pretty[n] & dp2$prior_name == j ] = dp2$prior.val[ dp2$N.pretty == N.pretty[n] & dp2$prior_name == j ] / max(dp2$prior.val[ dp2$N.pretty == N.pretty[n] & dp2$prior_name == j ])
+  }
+  
+  
   ### Points that maximize each curve
-  dp2 = dp2 %>% group_by(N.pretty) %>%
+  dp2 = dp2 %>% group_by(N.pretty, prior_name) %>%
     mutate( is.max = ifelse( prior.val == max(prior.val), TRUE, FALSE ) )
   max.points = dp2 %>% filter(is.max == TRUE)
   
@@ -848,19 +856,19 @@ prior_plot_one_k = function(.k,
   
   plot = ggplot( data = dp2, 
                  aes(x = .tau,
-                     y = prior.val,
+                     y = prior.val.scaled,
                      color = N.pretty ) ) +
     
     geom_line(size = 1.1) +
     
     geom_point( data = max.points, 
                 aes(x = .tau,
-                    y = prior.val,
+                    y = prior.val.scaled,
                     color = N.pretty ),
                 size = 3) +
     
     xlab( bquote(tau) ) +
-    ylab( "Log prior" ) +
+    ylab( bquote(p(tau)) ) +
     
     geom_vline( xintercept = 0, lty = 2 ) +
     
@@ -876,9 +884,13 @@ prior_plot_one_k = function(.k,
     theme_bw(base_size = 16) +
     ggtitle( paste("k = ", .k) ) +
     
+    facet_grid(prior_name ~ .) +
+    
     theme(text = element_text(face = "bold"),
           axis.title = element_text(size=20),
-          legend.position = "bottom" )
+          legend.position = "bottom",
+          axis.text.y=element_blank(),
+          axis.ticks.y=element_blank() )
   
   
   ### Return
@@ -1088,10 +1100,10 @@ my_line_plot = function(
   .agg$Y = .agg[[.Yname]]
   
   # ~ Aggregate data  ----------
-
+  
   # keep only methods that are relevant to this particular Yname
   if ( .Yname %in% c("MhatMAE", "MhatRMSE",
-                    "ShatMAE", "ShatRMSE") ) {
+                     "ShatMAE", "ShatRMSE") ) {
     .agg = .agg %>% filter(method.pretty.est %in% methods_pretty_est)
     
     # temporary variable for ease below
@@ -1100,7 +1112,7 @@ my_line_plot = function(
     # reorder methods
     correct.order = c( "Jeffreys2", 
                        "Jeffreys1",
-
+                       
                        "MLE",
                        "REML",
                        
@@ -1116,8 +1128,8 @@ my_line_plot = function(
     .colors = c("#F2340E",
                 
                 "#E075DB",
-              
-              
+                
+                
                 "#0E96F0",
                 "black",
                 
@@ -1125,12 +1137,12 @@ my_line_plot = function(
                 "#8CB876",
                 
                 "#845699")
-
+    
   }
   
   
   if ( .Yname %in% c("MhatCover", "MhatCoverNominal",
-                    "MhatWidth", "MhatTestReject") ) {
+                     "MhatWidth", "MhatTestReject") ) {
     .agg = .agg %>% filter(method.pretty.mu.inf %in% methods_pretty_mu_inf)
     
     # temporary variable for ease below
@@ -1174,7 +1186,7 @@ my_line_plot = function(
   }
   
   if ( .Yname %in% c("ShatCover", "ShatCoverNominal",
-                    "ShatWidth") ) {
+                     "ShatWidth") ) {
     .agg = .agg %>% filter(method.pretty.tau.inf %in% methods_pretty_tau_inf)
     
     # temporary variable for ease below

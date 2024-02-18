@@ -470,20 +470,28 @@ report_meta = function(.mod,
 # structured as in phacking pkg
 
 get_lprior <- function(mu, tau, sei, prior_name = "Jeffreys2") {
-  e_fisher_i <- function(se) {
-    si <- sqrt(tau ^ 2 + se ^ 2)
+  
+  if ( prior_name == "Jeffreys2" ) {
     
-    if ( prior_name == "Jeffreys2" ) kmm <- -si ^ (-2)
-    if ( prior_name == "Jeffreys1" ) kmm <- 0  # Bodnar 2017, PDF pg 18
+    e_fisher_i <- function(se) {
+      si <- sqrt(tau ^ 2 + se ^ 2)
+      kmm <- -si ^ (-2)
+      kms <- 0
+      kss <- -2 * tau ^ 2 * si ^ (-4)
+      
+      matrix(c(-kmm, -kms, -kms, -kss), nrow = 2, ncol = 2)
+    }
     
-    kms <- 0
-    kss <- -2 * tau ^ 2 * si ^ (-4)
-    
-    matrix(c(-kmm, -kms, -kms, -kss), nrow = 2, ncol = 2)
+    e_fisher <- purrr::map(sei, e_fisher_i) |> purrr::reduce(`+`)
+    return( log(sqrt(det(e_fisher))) )
   }
   
-  e_fisher <- purrr::map(sei, e_fisher_i) |> purrr::reduce(`+`)
-  log(sqrt(det(e_fisher)))
+  
+  if ( prior_name == "Jeffreys1" ) {
+    # Bodnar 2017, PDF pg 18
+    si <- sqrt(tau ^ 2 + sei ^ 2)
+    return( log( tau * sqrt( sum( si^(-4) ) ) ) )
+  }
 }
 
 get_nll <- function(mu, tau, yi, sei) {

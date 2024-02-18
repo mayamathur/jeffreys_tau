@@ -97,32 +97,47 @@ resl = list()
 # list of plots (one for each k.pub)
 pl = list()
 
+
 for ( i in 1:length(k.pub) ) {
   res = prior_plot_one_k(.k = k.pub[i])
   resl[[i]] = res
   pl[[i]] = res$plot
 }
 
-# prior shape is really almost the same regardless of k
+# shape of Jeffreys2 doesn't seem to depend on k, but shape of Jeffreys1 does (a little)
 pl[[1]]
 pl[[2]]
 pl[[3]]
 pl[[4]]
 
 
-
-# save just one of them, since k doesn't really matter
+# save just one of them (k=10)
 # rescale y-axis
 current.y.lims = layer_scales(pl[[3]])$y$range$range
 plot = pl[[3]] + ggtitle("") + 
   scale_y_continuous( limits = c(0, current.y.lims[2] ) )
 
-my_ggsave(name = "prior_plot.pdf",
+my_ggsave(name = "prior_plot_simulated.pdf",
           .plot = plot,
           .width = 10,
-          .height = 6,
+          .height = 10,
           .results.dir = results.dir,
           .overleaf.dir = overleaf.dir.figs)
+
+
+
+
+
+
+# compare the priors
+# hmmm
+
+prior_plot_one_k(.k = 10)
+
+
+#bm: next try it for the applied example with both get_lprior and bayesmeta
+
+
 
 
 # # CONTOUR PLOT - not super useful -------------------------------------------------
