@@ -63,11 +63,20 @@ code.dir = here()
 
 ( data.dir = str_replace( string = here(),
                           pattern = "Code \\(git\\)",
-                          replacement = "Results/Working dataset") )
+                          replacement = "Results/*2024-01-31 - as in RSM_0/Datasets") )
 
 ( results.dir = str_replace( string = here(),
                              pattern = "Code \\(git\\)",
-                             replacement = "Results/Working results") )
+                             replacement = "Results/*2024-01-31 - as in RSM_0/Results") )
+
+# # generic directories (SAVE):
+# ( data.dir = str_replace( string = here(),
+#                           pattern = "Code \\(git\\)",
+#                           replacement = "Results/Working dataset") )
+# 
+# ( results.dir = str_replace( string = here(),
+#                              pattern = "Code \\(git\\)",
+#                              replacement = "Results/Working results") )
 
 # check that they're specified correctly
 setwd(data.dir)
@@ -121,11 +130,11 @@ expect_equal( unique(agg$sim.reps.actual), 500 )
 # this must be after calling wrangle_agg_local
 init_var_names(.agg = agg)
 
-# summarize scen params
-CreateTableOne( dat = agg,
-                vars = param.vars.manip2,
-                factorVars = param.vars.manip2,
-                strata = "Ytype" )
+# # summarize scen params
+# CreateTableOne( dat = agg,
+#                 vars = param.vars.manip2,
+#                 factorVars = param.vars.manip2,
+#                 strata = "Ytype" )
 
 
 
@@ -136,8 +145,6 @@ summary(agg$doParallelSeconds/60^2)
 
 # 95th quantile of runtime within scens - HOURS
 summary(agg$doParallelSecondsQ95/60^2) 
-
-
 
 
 
@@ -643,7 +650,7 @@ dp100 = agg %>%
 my_line_plot(.Yname = "MhatMAE",
              .agg = agg2,
              .ggtitle = "",
-             .ylab = 'bquote( bold("MAE for") ~ bold(mu) )',
+             .ylab = 'bquote( bold( hat(mu) ~ " MAE") )',
              .jitter.width = 0.5)
 
 
@@ -670,7 +677,7 @@ ggplotly(p)
 my_line_plot(.Yname = "MhatRMSE",
              .agg = agg2,
              .ggtitle = "",
-             .ylab = 'bquote( bold("RMSE for") ~ bold(mu) )',
+             .ylab = 'bquote( bold( hat(mu) ~ " RMSE") )',
              .jitter.width = 0.5)
 
 
@@ -698,7 +705,7 @@ ggplotly(p)
 my_line_plot(.Yname = "MhatCover",
              .agg = agg2,
              .ggtitle = "",
-             .ylab = 'bquote( bold("Coverage for") ~ bold(mu) )',
+             .ylab = 'bquote( bold( hat(mu) ~ " CI coverage") )',
              .jitter.width = 0)
 
 
@@ -745,7 +752,7 @@ my_line_plot(.Yname = "MhatWidth",
              #.agg = agg2 %>% filter(k.pub <= 10),
              .agg = agg2,
              .ggtitle = "",
-             .ylab = 'bquote( bold("Width of CI for") ~ bold(mu) )',
+             .ylab = 'bquote( bold( hat(mu) ~ " CI width") )',
              .jitter.width = 0)
 
 # simple version for ggplotly
@@ -791,7 +798,7 @@ agg2 %>% filter( Ytype == "bin-OR" &
 my_line_plot(.Yname = "ShatMAE",
              .agg = agg2,
              .ggtitle = "",
-             .ylab = 'bquote( bold("MAE for") ~ bold(tau) )',
+             .ylab = 'bquote( bold( hat(tau) ~ " MAE") )',
              .jitter.width = 0.5)
 
 
@@ -817,7 +824,7 @@ ggplotly(p)
 my_line_plot(.Yname = "ShatRMSE",
              .agg = agg2,
              .ggtitle = "",
-             .ylab = 'bquote( bold("RMSE for") ~ bold(tau) )',
+             .ylab = 'bquote( bold( hat(tau) ~ " RMSE") )',
              .jitter.width = 0.5)
 
 
@@ -845,7 +852,7 @@ ggplotly(p)
 my_line_plot(.Yname = "ShatCover",
              .agg = agg2,
              .ggtitle = "",
-             .ylab = 'bquote( bold("Coverage for") ~ bold(tau) )',
+             .ylab = 'bquote( bold( hat(tau) ~ " CI coverage") )',
              .jitter.width = 0)
 
 
@@ -875,7 +882,7 @@ ggplotly(p)
 my_line_plot(.Yname = "ShatWidth",
              .agg = agg2 %>% filter(k.pub <= 10),
              .ggtitle = "",
-             .ylab = 'bquote( bold("Width of CI for") ~ bold(tau) )',
+             .ylab = 'bquote( bold( hat(tau) ~ " CI width") )',
              .jitter.width = 0)
 
 # simple version for ggplotly
@@ -896,7 +903,7 @@ ggplotly(p)
 # ~ Bias boxplots -------------------------------------------------
 
 # ~~ MhatBias -----
-my_violins(xName = "k.pub",
+my_boxplots(xName = "k.pub",
            yName = "MhatBias",
            hline = 0,
            xlab = "k",
@@ -937,12 +944,12 @@ p
 
 
 # ~~ ShatBias -------
-my_violins(xName = "k.pub",
+my_boxplots(xName = "k.pub",
            yName = "ShatBias",
            hline = 0,
            xlab = "k",
            ylab = bquote( bold( hat(tau) ~ " bias") ),
-           yTicks = round( seq(-0.1, 0.1, 0.02), 2 ),
+           yTicks = round( seq(-0.4, 0.5, 0.02), 2 ),
            prefix = NA,
            
            write = TRUE,
@@ -979,13 +986,25 @@ p
 ggplotly(p) %>% layout(boxmode = "group")
 
 
-# **compare Jeffreys2 pmode, pmed, pmean:
-p = ggplot( data = agg2 %>% filter(method %in% c("jeffreys-pmode", "jeffreys-pmean", "jeffreys-pmed")),
+# ~~ Compare Jeffreys2 pmode, pmed, pmean  -------------------------------------------------
+
+dp = agg2
+
+dp$method.pretty = NA
+dp$method.pretty[ dp$method == "jeffreys-pmode" ] = "Jeffreys2-mode"
+dp$method.pretty[ dp$method == "jeffreys-pmean" ] = "Jeffreys2-mean"
+dp$method.pretty[ dp$method == "jeffreys-pmed" ] = "Jeffreys2-median"
+
+dp = dp %>% filter( !is.na(method.pretty) ) %>% droplevels()
+
+
+### ShatBias
+p = ggplot( data = dp,
             
             aes(x = as.factor(k.pub),
                 y = ShatBias,
-                color = method.pretty.est,
-                fill = method.pretty.est) ) +
+                color = method.pretty,
+                fill = method.pretty) ) +
   
   geom_hline(yintercept = 0,
              lty = 2) +
@@ -993,9 +1012,12 @@ p = ggplot( data = agg2 %>% filter(method %in% c("jeffreys-pmode", "jeffreys-pme
   geom_boxplot(width=0.6,
                alpha = .5,
                outlier.shape = NA) +
-  labs(color  = "Method", fill = "Method") +
+  labs(color  = "Measure of central tendency", fill = "Measure of central tendency") +
   
-  scale_y_continuous(limits = c(-0.2, 0.6)) +
+  xlab("k") +
+  ylab( bquote( bold( hat(tau) ~ " bias") ) ) +
+  
+  coord_cartesian(ylim = c(-0.5, 1.6)) +
   
   theme_bw(base_size = 16) +
   
@@ -1008,15 +1030,22 @@ p = ggplot( data = agg2 %>% filter(method %in% c("jeffreys-pmode", "jeffreys-pme
   facet_grid( ~ Ytype.pretty )
 p
 
-#@ put these plots in supplement?
-#**pmode clearly wins for MAE and RMSE
-# same, but for MAE:
-p = ggplot( data = agg2 %>% filter(method %in% c("jeffreys-pmode", "jeffreys-pmean", "jeffreys-pmed")),
+my_ggsave( name = "jeffreys2_ShatBias_point_estimates_comparison.pdf",
+           .plot = p,
+           .overleaf.dir = overleaf.dir.figs,
+           .results.dir = results.dir,
+           .width = 10,
+           .height = 8)
+
+
+
+### ShatRMSE
+p = ggplot( data = dp,
             
             aes(x = as.factor(k.pub),
                 y = ShatRMSE,
-                color = method.pretty.est,
-                fill = method.pretty.est) ) +
+                color = method.pretty,
+                fill = method.pretty) ) +
   
   geom_hline(yintercept = 0,
              lty = 2) +
@@ -1024,9 +1053,12 @@ p = ggplot( data = agg2 %>% filter(method %in% c("jeffreys-pmode", "jeffreys-pme
   geom_boxplot(width=0.6,
                alpha = .5,
                outlier.shape = NA) +
-  labs(color  = "Method", fill = "Method") +
+  labs(color  = "Measure of central tendency", fill = "Measure of central tendency") +
   
-  scale_y_continuous(limits = c(0, 1.5)) +
+  coord_cartesian(ylim = c(0, 1.6)) +
+  
+  xlab("k") +
+  ylab( bquote( bold( hat(tau) ~ " RMSE") ) ) +
   
   theme_bw(base_size = 16) +
   
@@ -1040,11 +1072,62 @@ p = ggplot( data = agg2 %>% filter(method %in% c("jeffreys-pmode", "jeffreys-pme
 p
 
 
-# SCEN 708: Plots and stats (CI overcoverage despite better efficiency) -------------------------------------------------
+my_ggsave( name = "jeffreys2_ShatRMSE_point_estimates_comparison.pdf",
+           .plot = p,
+           .overleaf.dir = overleaf.dir.figs,
+           .results.dir = results.dir,
+           .width = 10,
+           .height = 8)
+
+
+### ShatMAE
+p = ggplot( data = dp,
+            
+            aes(x = as.factor(k.pub),
+                y = ShatMAE,
+                color = method.pretty,
+                fill = method.pretty) ) +
+  
+  geom_hline(yintercept = 0,
+             lty = 2) +
+  
+  # hide outliers:
+  geom_boxplot(width=0.6,
+               alpha = .5,
+               outlier.shape = NA) +
+  
+  labs(color  = "Measure of central tendency", fill = "Measure of central tendency") +
+  
+  coord_cartesian(ylim = c(0, 1.5)) +
+  
+  xlab("k") +
+  ylab( bquote( bold( hat(tau) ~ " MAE") ) ) +
+  
+  theme_bw(base_size = 16) +
+  
+  theme( text = element_text(face = "bold"),
+         axis.title = element_text(size=16),
+         panel.grid.major.x = element_blank(),
+         panel.grid.minor.x = element_blank(),
+         legend.position = "bottom" ) +
+  guides(color = guide_legend(nrow=2)) +
+  facet_grid( ~ Ytype.pretty )
+p
+
+
+my_ggsave( name = "jeffreys2_ShatMAE_point_estimates_comparison.pdf",
+           .plot = p,
+           .overleaf.dir = overleaf.dir.figs,
+           .results.dir = results.dir,
+           .width = 10,
+           .height = 8)
+
+
+# SCEN 1384: Plots and stats (CI overcoverage despite better efficiency) -------------------------------------------------
 
 # for binary Y, investigate the surprising finding that Jeffreys slightly over-covers, yet its CI is much narrower
 
-### Look for scens exhibiting this property
+# ~ Look for scens exhibiting this property  -------------------------------------------------
 # wide form wrt methods:
 wide_agg <- pivot_wider(agg2 %>% filter(method.pretty.mu.inf %in% methods_pretty_mu_inf),
                         names_from = method.pretty.mu.inf,
@@ -1080,41 +1163,91 @@ t = wide_agg %>% select( all_of( c( "scen.name", param.vars.manip2 ) ),
                          `MHi_REML-Wald`) %>%
   filter(scen.name %in% scens) %>%
   arrange(`MhatCover_REML-Wald`) 
-  #filter(scen.name == 708)
+  #filter(scen.name == 1384)
 
 if (use.View == TRUE) View(t)
 
-# scen 708 is striking; extract its scen params:
-x = agg2 %>% filter(scen.name==708)
+# scen 1384 is striking; extract its scen params:
+x = agg2 %>% filter(scen.name==1384)
 x2 = x[1, 1:12] 
-( scen_708_params = constructive::construct( as.data.frame(x2) ) )
+( scen_1384_params = constructive::construct( as.data.frame(x2) ) )
 
 # I ran this scenario again locally for 100 sim reps to get iterate-level data
 
+#$k=3$, binary $Y$,  $\mu = 0.5$, $\tau^2 = 0.04$,  normal population effects, $P(Y = 1 \mid X=0) = 0.05$,  and $N \sim U(2000, 4000)$
+# temp: find a different scen
+# this one was in the manuscript previously
+temp = agg %>% filter(k.pub == 3 &
+                 Mu == 0.5 &
+                 t2a == 0.04 &
+                 true.dist == "norm" &
+                 p0 == 0.05 &
+                 Ytype == "bin-OR" &
+                 N.pretty == "N ~ U(2000, 4000)")
 
-### Look at individual iterates for scen 1072
+nrow(temp)
+temp$scen.name
 
 
+# ~ Look at individual iterates for scen 1384  -------------------------------------------------
 
-# scen 1072 data
+# scen 1384 data
 setwd(data.dir)
-s2 = fread("stitched_scen_1072.csv")
-levels( as.factor(s2$method.pretty) )
+s2 = fread("pretty_long_results_job_1384.csv")
 
 
-# MhatBias vs. MhatWidth
+### MhatBias vs. MhatWidth
 # **super interesting!!
-p = ggplot( data = s2, 
+
+mean(is.na(s2$MhatCover))
+
+# plotting df
+methods_for_plot = rev( c("DL-Wald", "REML-Wald", "Exact", "Jeffreys2", "Jeffreys1") )
+
+s2p = s2 %>% filter( !is.na(MhatCover) &
+                       !is.na(method.pretty.mu.inf) &
+                       method.pretty.mu.inf %in% methods_for_plot ) %>%
+  droplevels()
+  
+# reorder methods
+correct.order = rev( c("DL-Wald", "REML-Wald", "Exact", "Jeffreys1", "Jeffreys2") )
+s2p$method.pretty.mu.inf = factor(s2p$method.pretty.mu.inf, levels = correct.order)
+any(is.na(s2p$method.pretty.mu.inf))
+
+# find good x-axis limits
+summary( s2p$MhatBias )
+quantile(s2p$MhatBias, 0.95, na.rm = TRUE)
+xmin = -0.10
+xmax = 0.20
+
+# find good y-axis limits
+summary( s2p$MhatWidth )
+ymin = 0
+ymax = 5
+
+# same colors as in analyze_sims_helper.R for prettiness
+.colors = rev( c("#246105",
+                 "black",
+                 "#CC9808",
+                 "#F2340E",
+                 "#E075DB" ) )
+
+
+p = ggplot( data = s2p, 
             aes( x = MhatBias,
                  y = MhatWidth,
-                 color = MhatCover) ) +
+                 color = as.factor(MhatCover) ) ) +
   geom_point(alpha = 0.5) +
-  facet_wrap( ~ method.pretty,
+  facet_wrap( ~ method.pretty.mu.inf,
               nrow = 2) +
   
   scale_color_manual( values = c("red", "black") ) +
-  scale_y_continuous( limits = c(0, 2.6),
-                      breaks = seq(0, 3, .5) ) +
+  
+  scale_x_continuous(limits = c(xmin, xmax), 
+                     breaks = seq(xmin, xmax, 0.05) ) +
+  
+  scale_y_continuous( limits = c(ymin, ymax),
+                      breaks = seq(ymin, ymax, .5) ) +
   
   labs(color  = bquote(CI ~ includes ~ mu) ) +
   xlab( bquote(hat(mu) ~ bias) ) +
@@ -1127,8 +1260,12 @@ p = ggplot( data = s2,
          panel.grid.major.x = element_blank(),
          panel.grid.minor.x = element_blank(),
          legend.position = "bottom" ) 
+p
 
-my_ggsave( name = "scen_1072_bias_vs_CI_width.pdf",
+
+
+
+my_ggsave( name = "scen_1384_bias_vs_CI_width.pdf",
            .plot = p,
            .overleaf.dir = overleaf.dir.figs,
            .results.dir = results.dir,
@@ -1156,7 +1293,7 @@ p = ggplot( data = s2 %>% filter(method.pretty == "Jeffreys"),
          panel.grid.minor.x = element_blank(),
          legend.position = "bottom" ) 
 
-my_ggsave( name = "scen_1072_CI_asymmetry.pdf",
+my_ggsave( name = "scen_1384_CI_asymmetry.pdf",
            .plot = p,
            .overleaf.dir = overleaf.dir.figs,
            .results.dir = results.dir,
@@ -1167,13 +1304,13 @@ my_ggsave( name = "scen_1072_CI_asymmetry.pdf",
 ### One-off stats about this scenario
 
 # parameters, hard-coded in Supplement
-scen_708_params
+scen_1384_params
 
 
-temp = agg2 %>% filter(scen.name == 708 & method.pretty.mu.inf %in% methods_pretty_mu_inf)
+temp = agg2 %>% filter(scen.name == 1384 & method.pretty.mu.inf %in% methods_pretty_mu_inf)
 
 
-update_result_csv( name = "Scen 708 Jeffreys2 MhatCover",
+update_result_csv( name = "Scen 1384 Jeffreys2 MhatCover",
                    value = round( 100 * as.numeric( temp %>% filter(method.pretty.mu.inf == "Jeffreys2") %>%
                                                       select(MhatCover) ), 6 ),
                    print = TRUE )
@@ -1181,12 +1318,12 @@ update_result_csv( name = "Scen 708 Jeffreys2 MhatCover",
 # all Wald
 coverages = round( 100 * temp$MhatCover[ temp$method.pretty.mu.inf %in% Wald_methods_pretty ] )
 expect_equal( nuni(coverages), 1 )  # otherwise doesn't make to summarize by a single number as below
-update_result_csv( name = "Scen 708 Wald methods MhatCover",
+update_result_csv( name = "Scen 1384 Wald methods MhatCover",
                    value = unique(coverages),
 print = TRUE )
 
 
-update_result_csv( name = "Scen 708 Jeffreys2 MhatWidth",
+update_result_csv( name = "Scen 1384 Jeffreys2 MhatWidth",
                    value = round( as.numeric( temp %>% filter(method.pretty.mu.inf == "Jeffreys2") %>%
                                                 select(MhatWidth) ), 2 ),
                    print = TRUE )

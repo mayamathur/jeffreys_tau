@@ -967,7 +967,7 @@ prior_plot_one_k = function(.k,
 # }
 
 
-my_violins = function(xName = NA,
+my_boxplots = function(xName = NA,
                       yName,
                       hline = NA,
                       xlab = NA,
@@ -1060,8 +1060,11 @@ my_violins = function(xName = NA,
                                           lty = 2,
                                           color = "gray")
   
-  if ( any( !is.na(yTicks) ) ) p = p + scale_y_continuous( breaks = yTicks,
-                                                           limits = c( min(yTicks), max(yTicks) ) )
+  # # can't use this because truncates the y-axis:
+  # if ( any( !is.na(yTicks) ) ) p = p + scale_y_continuous( breaks = yTicks,
+  #                                                          limits = c( min(yTicks), max(yTicks) ) )
+  
+  if ( any( !is.na(yTicks) ) ) p = p + coord_cartesian( ylim = c( min(yTicks), max(yTicks) ) )
   
   # facet by Ytype
   p = p + facet_grid( ~ Ytype.pretty )

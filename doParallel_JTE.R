@@ -897,7 +897,7 @@ if ( run.local == TRUE ) {
 
 # ~ WRITE LONG AND SHORT RESULTS ------------------------------
 if ( run.local == FALSE ) {
-  # setwd("/home/groups/manishad/JTE/long_results")
+  setwd("/home/groups/manishad/JTE/long_results")
   fwrite( rs, paste( "long_results", jobname, ".csv", sep="_" ) )
   
   # pre-aggregate 

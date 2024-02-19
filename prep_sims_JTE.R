@@ -143,34 +143,41 @@ fwrite(agg, "agg.csv")
 fwrite(agg_bad, "agg_just_the_excluded_scens_biased_yi.csv")
 
 
-# SAVE:# (will need to be run separately on the cluster, saving long results)
-# # PREP ITERATE-LEVEL DATA FOR SCEN 1072  -------------------------------------------------
-# 
-# # this will be a little slow (1-2 min)
-# setwd(data.dir)
-# s = fread("stitched.csv")
-# 
-# # similar prep work to wrangle_agg_local
-# s2 = s %>% filter(scen.name == 1072 &
-#                     method %in% c("REML", "DL", "PM", "DL2", "robu", "jeffreys-pmode") )
-# 
-# 
-# s2 = s2 %>% mutate( CI_asy = (MHi - Mhat) / (Mhat - MLo),
-#                     MhatBias = Mhat - Mu,
-#                     MhatWidth = MHi - MLo,
-#                     MhatCover = (MHi >= Mu & MLo <= Mu) )
-# 
-# s2$method.pretty = s2$method 
-# s2$method.pretty[ s2$method == "robu" ] = "RVE"
-# s2$method.pretty[ s2$method == "jeffreys-pmode" ] = "Jeffreys"
-# table(s2$method, s2$method.pretty)
-# 
-# correct.order = c( "Jeffreys", "DL", "DL2", "REML", "PM", "RVE")
-# s2$method.pretty = factor(s2$method.pretty, levels = correct.order)
-# levels(s2$method.pretty)
-# 
-# 
-# fwrite( s2, "stitched_scen_1072.csv" )
+SAVE:# (will need to be run separately on the cluster, saving long results)
+  
+  
+  # PREP ITERATE-LEVEL DATA FOR SCEN 1384  -------------------------------------------------
+
+# this will be a little slow (1-2 min)
+setwd(data.dir)
+s2 = fread("long_results_job_1384.csv")
+
+expect_equal( 500, nrow(s2) / nuni(s2$method) )
+
+# make analysis vars
+s2 = s2 %>% rowwise() %>%
+  mutate( CI_asy = (MHi - Mhat) / (Mhat - MLo),
+          MhatBias = Mhat - Mu,
+          MhatWidth = MHi - MLo,
+          MhatCover = (MHi >= Mu & MLo <= Mu) )
+
+# recode variables
+s2$method.pretty.mu.inf = s2$method 
+s2$method.pretty.mu.inf[ s2$method == "bayesmeta-joint-central" ] = "Jeffreys2"
+s2$method.pretty.mu.inf[ s2$method == "bayesmeta-joint-shortest" ] = NA  # same as above
+
+s2$method.pretty.mu.inf[ s2$method == "bayesmeta-tau-central" ] = "Jeffreys1"
+s2$method.pretty.mu.inf[ s2$method == "bayesmeta-tau-shortest" ] = NA  # same as above
+
+s2$method.pretty.mu.inf[ s2$method == "ML" ] = "MLE-Wald"
+s2$method.pretty.mu.inf[ s2$method == "PM" ] = "PM-Wald"
+s2$method.pretty.mu.inf[ s2$method == "DL" ] = "DL-Wald"
+s2$method.pretty.mu.inf[ s2$method == "DL2" ] = "DL2-Wald"
+s2$method.pretty.mu.inf[ s2$method == "REML" ] = "REML-Wald"
+s2$method.pretty.mu.inf[ s2$method == "exact" ] = "Exact"
+
+
+fwrite( s2, "pretty_long_results_job_1384.csv" )
 
 
 
