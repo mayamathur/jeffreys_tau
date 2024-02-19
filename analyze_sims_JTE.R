@@ -998,6 +998,41 @@ dp$method.pretty[ dp$method == "jeffreys-pmed" ] = "Jeffreys2-median"
 dp = dp %>% filter( !is.na(method.pretty) ) %>% droplevels()
 
 
+### MhatBias
+# expect the measures of central tendency to be the same
+p = ggplot( data = dp,
+            
+            aes(x = as.factor(k.pub),
+                y = MhatBias,
+                color = method.pretty,
+                fill = method.pretty) ) +
+  
+  geom_hline(yintercept = 0,
+             lty = 2) +
+  
+  geom_boxplot(width=0.6,
+               alpha = .5,
+               outlier.shape = NA) +
+  labs(color  = "Measure of central tendency", fill = "Measure of central tendency") +
+  
+  xlab("k") +
+  ylab( bquote( bold( hat(tau) ~ " bias") ) ) +
+  
+  coord_cartesian(ylim = c(-0.05, 0.05)) +
+  
+  theme_bw(base_size = 16) +
+  
+  theme( text = element_text(face = "bold"),
+         axis.title = element_text(size=16),
+         panel.grid.major.x = element_blank(),
+         panel.grid.minor.x = element_blank(),
+         legend.position = "bottom" ) +
+  guides(color = guide_legend(nrow=2)) +
+  facet_grid( ~ Ytype.pretty )
+p
+
+
+
 ### ShatBias
 p = ggplot( data = dp,
             
@@ -1034,8 +1069,8 @@ my_ggsave( name = "jeffreys2_ShatBias_point_estimates_comparison.pdf",
            .plot = p,
            .overleaf.dir = overleaf.dir.figs,
            .results.dir = results.dir,
-           .width = 10,
-           .height = 8)
+           .width = 13,
+           .height = 6)
 
 
 
@@ -1076,8 +1111,8 @@ my_ggsave( name = "jeffreys2_ShatRMSE_point_estimates_comparison.pdf",
            .plot = p,
            .overleaf.dir = overleaf.dir.figs,
            .results.dir = results.dir,
-           .width = 10,
-           .height = 8)
+           .width = 13,
+           .height = 6)
 
 
 ### ShatMAE
@@ -1119,8 +1154,8 @@ my_ggsave( name = "jeffreys2_ShatMAE_point_estimates_comparison.pdf",
            .plot = p,
            .overleaf.dir = overleaf.dir.figs,
            .results.dir = results.dir,
-           .width = 10,
-           .height = 8)
+           .width = 13,
+           .height = 6)
 
 
 # SCEN 1384: Plots and stats (CI overcoverage despite better efficiency) -------------------------------------------------
