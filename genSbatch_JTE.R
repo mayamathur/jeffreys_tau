@@ -38,26 +38,11 @@ lapply( allPackages,
 # - I think a similar thing will be true with the Rhats if you omit jeffreys-mcmc?
 
 
-### 2024-01-31 - boundary tau ###
-
-# scen.params = data.frame(
-#   k.pub = 10,
-#   t2a = 0.0001,
-#   Mu = 0,
-#   true.dist = "norm",
-#   p0 = 0.05,
-#   Ytype = "cont-SMD",
-#   N.expr = "40",
-#   stan.adapt_delta = 0.995,
-#   stan.maxtreedepth = 25,
-#   rep.methods = c("ML ; bayesmeta ; bayesmeta-shortest ; mybayesmeta-shortest ; jeffreys")
-#   #rep.methods = c("bayesmeta ; jeffreys ; jeffreys-tau")
-# )
-
-### 2024-01-31 - full set ###
+### 2024-02-20 - full set ###
 scen.params = tidyr::expand_grid(
   # full list (save):
-  rep.methods = "ML ; MLE-profile ; metaLik ; exact ; REML ; DL ; DL2 ; PM ; bayesmeta-tau-central ; bayesmeta-tau-shortest ; bayesmeta-joint-central ; bayesmeta-joint-shortest ; jeffreys-tau ; jeffreys",
+  #rep.methods = "ML ; MLE-profile ; metaLik ; exact ; REML ; DL ; DL2 ; PM ; bayesmeta-tau-central ; bayesmeta-tau-shortest ; bayesmeta-joint-central ; bayesmeta-joint-shortest ; jeffreys-tau ; jeffreys",
+  rep.methods = "ML ; MLE-profile ; exact ; REML ; DL ; DL2 ; PM ; bayesmeta-tau-central ; bayesmeta-tau-shortest ; bayesmeta-joint-central ; bayesmeta-joint-shortest",
 
   # *If you reorder the args, need to adjust wrangle_agg_local
   ### args shared between sim environments
@@ -186,7 +171,7 @@ n.files
 # 2024-02-01: 3120
 path = "/home/groups/manishad/JTE"
 setwd( paste(path, "/sbatch_files", sep="") )
-for (i in 1384:1384) {
+for (i in 1:1000) {
   system( paste("sbatch -p qsu,owners,normal /home/groups/manishad/JTE/sbatch_files/", i, ".sbatch", sep="") )
 }
 

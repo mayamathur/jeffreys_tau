@@ -738,6 +738,7 @@ doParallel.seconds = system.time({
     
     cat("\ndoParallel flag: Before adding sanity checks to rep.res")
     rep.res$sancheck_mean_yi = mean(d$mean_yi)
+    rep.res$sancheck_corr_yi_vi = cor(d$yi, d$vi)
     rep.res$sancheck_mean_pY0 = mean(d$pY0)
     rep.res$sancheck_mean_pY1 = mean(d$pY1)
     rep.res$sancheck_mean_pY = mean(d$pY)
@@ -854,8 +855,12 @@ if ( run.local == TRUE ) {
 
 # ~ WRITE LONG AND SHORT RESULTS ------------------------------
 if ( run.local == FALSE ) {
-  setwd("/home/groups/manishad/JTE/long_results")
-  fwrite( rs, paste( "long_results", jobname, ".csv", sep="_" ) )
+  
+  # write long results for one job only
+  if ( jobname == 1384 ) {
+    setwd("/home/groups/manishad/JTE/long_results")
+    fwrite( rs, paste( "long_results", jobname, ".csv", sep="_" ) )
+  }
   
   # pre-aggregate 
   agg_job = make_agg_data(rs)
