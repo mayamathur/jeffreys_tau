@@ -182,7 +182,8 @@ if ( run.local == TRUE ) {
   # this is one where Shat behavior was horrible for Jeffreys, but reasonable for other methods
   scen.params = data.frame(
     scen.name = 708L,
-    rep.methods = "ML ; MLE-profile ; exact ; REML ; DL ; DL2 ; PM ; bayesmeta-tau-central ; bayesmeta-tau-shortest ; bayesmeta-joint-central ; bayesmeta-joint-shortest",
+    #rep.methods = "ML ; MLE-profile ; exact ; REML ; DL ; DL2 ; PM ; bayesmeta-tau-central ; bayesmeta-tau-shortest ; bayesmeta-joint-central ; bayesmeta-joint-shortest",
+    rep.methods = "bayesmeta-tau-central ; bayesmeta-tau-shortest ; bayesmeta-joint-central ; bayesmeta-joint-shortest",
     k.pub = 2L,
     t2a = 0.01,
     Mu = 2.3,
@@ -230,9 +231,9 @@ if ( run.local == TRUE ) setwd(code.dir)
 
 if ( run.local == FALSE ) setwd(path)
 
-source("init_stan_model_JTE.R")
-source("init_stan_model_tau.R")  # only needed if running method "jeffreys-tau"
-source("bayesmeta_edited.R")
+#source("init_stan_model_JTE.R")
+#source("init_stan_model_tau.R")  # only needed if running method "jeffreys-tau"
+#source("bayesmeta_edited.R")
 source("analyze_sims_helper_JTE.R")  # for make_agg_data
 
 
@@ -331,7 +332,7 @@ doParallel.seconds = system.time({
     }
     
     
-    # NOTE: if doing run.local, this will break if you didn't run naive
+    
     if (run.local == TRUE) srr(rep.res)
     
     
@@ -361,7 +362,7 @@ doParallel.seconds = system.time({
     }
     
     
-    # NOTE: if doing run.local, this will break if you didn't run naive
+    
     if (run.local == TRUE) srr(rep.res)
     
     
@@ -385,33 +386,22 @@ doParallel.seconds = system.time({
       
     }
     
-    # NOTE: if doing run.local, this will break if you didn't run naive
+    
     if (run.local == TRUE) srr(rep.res)
     
     
     # ~~ bayesmeta-tau-central -------------------------------------------------
     
     if ( "bayesmeta-tau-central" %in% all.methods ) {
-      rep.res = run_method_safe(method.label = c("bayesmeta-tau-central"),
+      rep.res = run_method_safe(method.label = c("bayesmeta-tau-central-jointpmode",
+                                                 "bayesmeta-tau-central-margpmode",
+                                                 "bayesmeta-tau-central-margpmean",
+                                                 "bayesmeta-tau-central-margpmode"),
                                 method.fn = function() {
                                   
-                                  m = bayesmeta(y = d$yi,
-                                                sigma = d$sei,
-                                                tau.prior = "Jeffreys",
-                                                interval.type = "central")
-                                  
-                                  # marginal (not joint) intervals
-                                  tau_ci = as.numeric( m$post.interval(tau.level=0.95) ) 
-                                  mu_ci = as.numeric( m$post.interval(mu.level=0.95) )
-                                  
-                                  # this method doesn't do point estimation of inference for tau
-                                  return( list( stats = data.frame( 
-                                    Mhat = m$MAP["joint", "mu"],
-                                    Shat = m$MAP["joint", "tau"],
-                                    MLo = mu_ci[1],
-                                    MHi = mu_ci[2],
-                                    SLo = tau_ci[1],
-                                    SHi = tau_ci[2] ) ) )
+                                  pretty_bayesmeta(.dat = d,
+                                                   tau.prior = "Jeffreys",
+                                                   interval.type = "central")
                                   
                                   
                                 },
@@ -419,35 +409,24 @@ doParallel.seconds = system.time({
       
     }
     
-    # NOTE: if doing run.local, this will break if you didn't run naive
+    
     if (run.local == TRUE) srr(rep.res)
     
     
-    
+
     
     # ~~ bayesmeta-tau-shortest -------------------------------------------------
     # this is the package's default
     if ( "bayesmeta-tau-shortest" %in% all.methods ) {
-      rep.res = run_method_safe(method.label = c("bayesmeta-tau-shortest"),
+      rep.res = run_method_safe(method.label = c("bayesmeta-tau-shortest-jointpmode",
+                                                 "bayesmeta-tau-shortest-margpmode",
+                                                 "bayesmeta-tau-shortest-margpmean",
+                                                 "bayesmeta-tau-shortest-margpmode"),
                                 method.fn = function() {
                                   
-                                  m = bayesmeta(y = d$yi,
-                                                sigma = d$sei,
-                                                tau.prior = "Jeffreys",
-                                                interval.type = "shortest")
-                                  
-                                  # marginal (not joint) intervals
-                                  tau_ci = as.numeric( m$post.interval(tau.level=0.95) ) 
-                                  mu_ci = as.numeric( m$post.interval(mu.level=0.95) )
-                                  
-                                  # this method doesn't do point estimation of inference for tau
-                                  return( list( stats = data.frame( 
-                                    Mhat = m$MAP["joint", "mu"],
-                                    Shat = m$MAP["joint", "tau"],
-                                    MLo = mu_ci[1],
-                                    MHi = mu_ci[2],
-                                    SLo = tau_ci[1],
-                                    SHi = tau_ci[2] ) ) )
+                                  pretty_bayesmeta(.dat = d,
+                                                   tau.prior = "Jeffreys",
+                                                   interval.type = "shortest")
                                   
                                   
                                 },
@@ -455,7 +434,7 @@ doParallel.seconds = system.time({
       
     }
     
-    # NOTE: if doing run.local, this will break if you didn't run naive
+    
     if (run.local == TRUE) srr(rep.res)
     
     
@@ -463,26 +442,15 @@ doParallel.seconds = system.time({
     
     # from mybayesmeta()
     if ( "bayesmeta-joint-shortest" %in% all.methods ) {
-      rep.res = run_method_safe(method.label = c("bayesmeta-joint-shortest"),
+      rep.res = run_method_safe(method.label = c("bayesmeta-joint-shortest-jointpmode",
+                                                 "bayesmeta-joint-shortest-margpmode",
+                                                 "bayesmeta-joint-shortest-margpmean",
+                                                 "bayesmeta-joint-shortest-margpmode"),
                                 method.fn = function() {
                                   
-                                  m = mybayesmeta(y = d$yi,
-                                                  sigma = d$sei,
-                                                  tau.prior = "Jeffreys2",
-                                                  interval.type = "shortest")
-                                  
-                                  # marginal (not joint) intervals
-                                  tau_ci = as.numeric( m$post.interval(tau.level=0.95) ) 
-                                  mu_ci = as.numeric( m$post.interval(mu.level=0.95) )
-                                  
-                                  # this method doesn't do point estimation of inference for tau
-                                  return( list( stats = data.frame( 
-                                    Mhat = m$MAP["joint", "mu"],
-                                    Shat = m$MAP["joint", "tau"],
-                                    MLo = mu_ci[1],
-                                    MHi = mu_ci[2],
-                                    SLo = tau_ci[1],
-                                    SHi = tau_ci[2] ) ) )
+                                  pretty_bayesmeta(.dat = d,
+                                                   tau.prior = "overallJeffreys",
+                                                   interval.type = "shortest")
                                   
                                   
                                 },
@@ -490,7 +458,7 @@ doParallel.seconds = system.time({
       
     }
     
-    # NOTE: if doing run.local, this will break if you didn't run naive
+    
     if (run.local == TRUE) srr(rep.res)
     
     
@@ -498,26 +466,15 @@ doParallel.seconds = system.time({
     
     # from mybayesmeta()
     if ( "bayesmeta-joint-central" %in% all.methods ) {
-      rep.res = run_method_safe(method.label = c("bayesmeta-joint-central"),
+      rep.res = run_method_safe(method.label = c("bayesmeta-joint-central-jointpmode",
+                                                 "bayesmeta-joint-central-margpmode",
+                                                 "bayesmeta-joint-central-margpmean",
+                                                 "bayesmeta-joint-central-margpmode"),
                                 method.fn = function() {
                                   
-                                  m = mybayesmeta(y = d$yi,
-                                                  sigma = d$sei,
-                                                  tau.prior = "Jeffreys2",
-                                                  interval.type = "central")
-                                  
-                                  # marginal (not joint) intervals
-                                  tau_ci = as.numeric( m$post.interval(tau.level=0.95) ) 
-                                  mu_ci = as.numeric( m$post.interval(mu.level=0.95) )
-                                  
-                                  # this method doesn't do point estimation of inference for tau
-                                  return( list( stats = data.frame( 
-                                    Mhat = m$MAP["joint", "mu"],
-                                    Shat = m$MAP["joint", "tau"],
-                                    MLo = mu_ci[1],
-                                    MHi = mu_ci[2],
-                                    SLo = tau_ci[1],
-                                    SHi = tau_ci[2] ) ) )
+                                  pretty_bayesmeta(.dat = d,
+                                                   tau.prior = "overallJeffreys",
+                                                   interval.type = "central")
                                   
                                   
                                 },
@@ -525,7 +482,7 @@ doParallel.seconds = system.time({
       
     }
     
-    # NOTE: if doing run.local, this will break if you didn't run naive
+    
     if (run.local == TRUE) srr(rep.res)
     
     # ~~ jeffreys-tau (own MCMC) ------------------------------
@@ -592,7 +549,7 @@ doParallel.seconds = system.time({
       cat("\n doParallel flag: Done jeffreys-tau if applicable")
     }
     
-    # NOTE: if doing run.local, this will break if you didn't run naive
+    
     if (run.local == TRUE) srr(rep.res)
     
     
@@ -632,7 +589,7 @@ doParallel.seconds = system.time({
       
     }
     
-    # NOTE: if doing run.local, this will break if you didn't run naive
+    
     if (run.local == TRUE) srr(rep.res)
     
     
@@ -671,7 +628,7 @@ doParallel.seconds = system.time({
       
     }
     
-    # NOTE: if doing run.local, this will break if you didn't run naive
+    
     if (run.local == TRUE) srr(rep.res)
     
     # ~~ Robust Variance Estimation ------------------------------
@@ -693,7 +650,7 @@ doParallel.seconds = system.time({
     }
     
     
-    # NOTE: if doing run.local, this will break if you didn't run naive
+    
     if (run.local == TRUE) srr(rep.res)
     
     
@@ -763,7 +720,7 @@ doParallel.seconds = system.time({
       cat("\n doParallel flag: Done jeffreys if applicable")
     }
     
-    # NOTE: if doing run.local, this will break if you didn't run naive
+    
     if (run.local == TRUE) srr(rep.res)
     
     

@@ -333,6 +333,35 @@ report_meta = function(.mod,
 
 
 
+
+# returns 4 rows: joint MAPs, marginal MAPs, marginal mean, marginal median
+pretty_bayesmeta = function(.dat,
+                            tau.prior,
+                            interval.type) {
+  
+  
+  m = bayesmeta(y = .dat$yi,
+                sigma =.dat$sei,
+                tau.prior = tau.prior,
+                interval.type = interval.type)
+  
+  # marginal (not joint) intervals
+  tau_ci = as.numeric( m$post.interval(tau.level=0.95) ) 
+  mu_ci = as.numeric( m$post.interval(mu.level=0.95) )
+  
+  # this method doesn't do point estimation of inference for tau
+  return( list( stats = data.frame( 
+    Mhat = c( m$MAP["joint", "mu"], m$MAP["marginal", "mu"], m$summary["mean", "mu"], m$summary["median", "mu"] ),
+    Shat = c( m$MAP["joint", "tau"], m$MAP["marginal", "tau"], m$summary["mean", "tau"], m$summary["median", "tau"] ),
+    MLo = rep( mu_ci[1], 4 ),
+    MHi = rep( mu_ci[2], 4 ),
+    SLo = rep( tau_ci[1], 4 ),
+    SHi = rep( tau_ci[2], 4 ) ) ) )
+}
+
+
+
+
 # FNS FOR FUTURE R PACKAGE ----------------------------
 
 # structured as in phacking pkg
