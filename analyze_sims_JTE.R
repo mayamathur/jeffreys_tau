@@ -187,7 +187,8 @@ make_both_winner_tables(.agg = agg2 %>% filter( Ytype == "bin-OR" & method.prett
 
 # ~~ Bayesian methods -------------------------------------------------
 
-t = agg %>% filter(method %in% c("bayesmeta-joint-central", "bayesmeta-joint-shortest")) %>%
+# the 2 intervals should be nearly identical for mu, because its posterior is almost symmetric
+t = agg2 %>% filter(method %in% c("bayesmeta-joint-central", "bayesmeta-joint-shortest")) %>%
   group_by(scen.name) %>%
   summarise( sd(Mhat),
              sd(Shat),
@@ -197,7 +198,7 @@ summary(t$`sd(Mhat)`)
 summary(t$`sd(Shat)`)
 summary(t$`sd(MLo)`) 
 
-t = agg %>% filter(method %in% c("bayesmeta-tau-central", "bayesmeta-tau-shortest")) %>%
+t = agg2 %>% filter(method %in% c("bayesmeta-tau-central", "bayesmeta-tau-shortest")) %>%
   group_by(scen.name) %>%
   summarise( sd(Mhat),
              sd(Shat),
@@ -999,7 +1000,6 @@ dp = dp %>% filter( !is.na(method.pretty) ) %>% droplevels()
 
 
 ### MhatBias
-# expect the measures of central tendency to be the same
 p = ggplot( data = dp,
             
             aes(x = as.factor(k.pub),
@@ -1016,7 +1016,7 @@ p = ggplot( data = dp,
   labs(color  = "Measure of central tendency", fill = "Measure of central tendency") +
   
   xlab("k") +
-  ylab( bquote( bold( hat(tau) ~ " bias") ) ) +
+  ylab( bquote( bold( hat(mu) ~ " bias") ) ) +
   
   coord_cartesian(ylim = c(-0.05, 0.05)) +
   
@@ -1030,6 +1030,99 @@ p = ggplot( data = dp,
   guides(color = guide_legend(nrow=2)) +
   facet_grid( ~ Ytype.pretty )
 p
+
+my_ggsave( name = "jeffreys2_MhatBias_point_estimates_comparison.pdf",
+           .plot = p,
+           .overleaf.dir = overleaf.dir.figs,
+           .results.dir = results.dir,
+           .width = 13,
+           .height = 6)
+
+
+### MhatMAE
+# expect the measures of central tendency to be the same
+p = ggplot( data = dp,
+            
+            aes(x = as.factor(k.pub),
+                y = MhatMAE,
+                color = method.pretty,
+                fill = method.pretty) ) +
+  
+  geom_hline(yintercept = 0,
+             lty = 2) +
+  
+  geom_boxplot(width=0.6,
+               alpha = .5,
+               outlier.shape = NA) +
+  labs(color  = "Measure of central tendency", fill = "Measure of central tendency") +
+  
+  xlab("k") +
+  ylab( bquote( bold( hat(mu) ~ " MAE") ) ) +
+  
+  #coord_cartesian(ylim = c(-0.05, 0.05)) +
+  
+  theme_bw(base_size = 16) +
+  
+  theme( text = element_text(face = "bold"),
+         axis.title = element_text(size=16),
+         panel.grid.major.x = element_blank(),
+         panel.grid.minor.x = element_blank(),
+         legend.position = "bottom" ) +
+  guides(color = guide_legend(nrow=2)) +
+  facet_grid( ~ Ytype.pretty )
+p
+
+my_ggsave( name = "jeffreys2_MhatMAE_point_estimates_comparison.pdf",
+           .plot = p,
+           .overleaf.dir = overleaf.dir.figs,
+           .results.dir = results.dir,
+           .width = 13,
+           .height = 6)
+
+
+
+
+### MhatRMSE
+# expect the measures of central tendency to be the same
+p = ggplot( data = dp,
+            
+            aes(x = as.factor(k.pub),
+                y = MhatRMSE,
+                color = method.pretty,
+                fill = method.pretty) ) +
+  
+  geom_hline(yintercept = 0,
+             lty = 2) +
+  
+  geom_boxplot(width=0.6,
+               alpha = .5,
+               outlier.shape = NA) +
+  labs(color  = "Measure of central tendency", fill = "Measure of central tendency") +
+  
+  xlab("k") +
+  ylab( bquote( bold( hat(mu) ~ " RMSE") ) ) +
+  
+  coord_cartesian(ylim = c(0, 0.8)) +
+  
+  theme_bw(base_size = 16) +
+  
+  theme( text = element_text(face = "bold"),
+         axis.title = element_text(size=16),
+         panel.grid.major.x = element_blank(),
+         panel.grid.minor.x = element_blank(),
+         legend.position = "bottom" ) +
+  guides(color = guide_legend(nrow=2)) +
+  facet_grid( ~ Ytype.pretty )
+p
+
+
+my_ggsave( name = "jeffreys2_MhatRMSE_point_estimates_comparison.pdf",
+           .plot = p,
+           .overleaf.dir = overleaf.dir.figs,
+           .results.dir = results.dir,
+           .width = 13,
+           .height = 6)
+
 
 
 
