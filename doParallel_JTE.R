@@ -396,7 +396,7 @@ doParallel.seconds = system.time({
       rep.res = run_method_safe(method.label = c("bayesmeta-tau-central-jointpmode",
                                                  "bayesmeta-tau-central-margpmode",
                                                  "bayesmeta-tau-central-margpmean",
-                                                 "bayesmeta-tau-central-margpmode"),
+                                                 "bayesmeta-tau-central-margpmed"),
                                 method.fn = function() {
                                   
                                   pretty_bayesmeta(.dat = d,
@@ -421,7 +421,7 @@ doParallel.seconds = system.time({
       rep.res = run_method_safe(method.label = c("bayesmeta-tau-shortest-jointpmode",
                                                  "bayesmeta-tau-shortest-margpmode",
                                                  "bayesmeta-tau-shortest-margpmean",
-                                                 "bayesmeta-tau-shortest-margpmode"),
+                                                 "bayesmeta-tau-shortest-margpmed"),
                                 method.fn = function() {
                                   
                                   pretty_bayesmeta(.dat = d,
@@ -445,7 +445,7 @@ doParallel.seconds = system.time({
       rep.res = run_method_safe(method.label = c("bayesmeta-joint-shortest-jointpmode",
                                                  "bayesmeta-joint-shortest-margpmode",
                                                  "bayesmeta-joint-shortest-margpmean",
-                                                 "bayesmeta-joint-shortest-margpmode"),
+                                                 "bayesmeta-joint-shortest-margpmed"),
                                 method.fn = function() {
                                   
                                   pretty_bayesmeta(.dat = d,
@@ -469,7 +469,7 @@ doParallel.seconds = system.time({
       rep.res = run_method_safe(method.label = c("bayesmeta-joint-central-jointpmode",
                                                  "bayesmeta-joint-central-margpmode",
                                                  "bayesmeta-joint-central-margpmean",
-                                                 "bayesmeta-joint-central-margpmode"),
+                                                 "bayesmeta-joint-central-margpmed"),
                                 method.fn = function() {
                                   
                                   pretty_bayesmeta(.dat = d,
@@ -494,7 +494,6 @@ doParallel.seconds = system.time({
       rep.res = run_method_safe(method.label = c("jeffreys-tau-pmean",
                                                  "jeffreys-tau-pmed",
                                                  "jeffreys-tau-max-lp-iterate",
-                                                 #@TEMP for running HDI:
                                                  "jeffreys-tau-hdi"),
                                 method.fn = function() estimate_jeffreys_tau_only(.yi = d$yi,
                                                                                   .sei = d$sei,

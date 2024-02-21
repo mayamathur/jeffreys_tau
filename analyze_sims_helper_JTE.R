@@ -69,20 +69,20 @@ make_agg_data = function( .s,
     "MhatEstFail",
     "MhatCIFail",
     "ShatEstFail",
-    "ShatCIFail",
+    "ShatCIFail"
     
-    # Stan diagnostics, part 2
-    "StanWarned",
-    "MhatRhatGt1.01",
-    "MhatRhatGt1.05",
-    "MhatRhatGt1.10",
-    "MhatRhatMax",
-    "OptimConverged",
-    
-    "ShatRhatGt1.01",
-    "ShatRhatGt1.05",
-    "ShatRhatGt1.10",
-    "ShatRhatMax"
+    # # Stan diagnostics, part 2
+    # "StanWarned",
+    # "MhatRhatGt1.01",
+    # "MhatRhatGt1.05",
+    # "MhatRhatGt1.10",
+    # "MhatRhatMax",
+    # "OptimConverged",
+    # 
+    # "ShatRhatGt1.01",
+    # "ShatRhatGt1.05",
+    # "ShatRhatGt1.10",
+    # "ShatRhatMax"
   )
   
   
@@ -226,17 +226,18 @@ make_agg_data = function( .s,
             # OptimxPropAgreeShatWinner = meanNA(optimx.Pagree.Shat.winner),
             # OptimxPropAgreeConvergersShatWinner = meanNA(optimx.Pagree.of.convergers.Shat.winner),
             
-            # static within scenario
-            StanWarned = meanNA(stan.warned),
-            MhatRhatGt1.01 = meanNA(MhatRhat > 1.01),
-            MhatRhatGt1.05 = meanNA(MhatRhat > 1.05),
-            MhatRhatGt1.10 = meanNA(MhatRhat > 1.10),
-            MhatRhatMax = max(MhatRhat),
-            
-            ShatRhatGt1.01 = meanNA(ShatRhat > 1.01),
-            ShatRhatGt1.05 = meanNA(ShatRhat > 1.05),
-            ShatRhatGt1.10 = meanNA(ShatRhat > 1.10),
-            ShatRhatMax = max(ShatRhat),
+            # COMMENTED OUT IF NOT RUNNING ANY MCMC METHODS:
+            # # static within scenario
+            # StanWarned = meanNA(stan.warned),
+            # MhatRhatGt1.01 = meanNA(MhatRhat > 1.01),
+            # MhatRhatGt1.05 = meanNA(MhatRhat > 1.05),
+            # MhatRhatGt1.10 = meanNA(MhatRhat > 1.10),
+            # MhatRhatMax = max(MhatRhat),
+            # 
+            # ShatRhatGt1.01 = meanNA(ShatRhat > 1.01),
+            # ShatRhatGt1.05 = meanNA(ShatRhat > 1.05),
+            # ShatRhatGt1.10 = meanNA(ShatRhat > 1.10),
+            # ShatRhatMax = max(ShatRhat),
             
             # SLURM timing stats
             doParallelSeconds = meanNA(doParallel.seconds),

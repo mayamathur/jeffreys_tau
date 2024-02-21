@@ -61,22 +61,23 @@ use.View = TRUE
 # ~~ Set directories -------------------------
 code.dir = here()
 
-( data.dir = str_replace( string = here(),
-                          pattern = "Code \\(git\\)",
-                          replacement = "Results/*2024-01-31 - as in RSM_0/Datasets") )
-
-( results.dir = str_replace( string = here(),
-                             pattern = "Code \\(git\\)",
-                             replacement = "Results/*2024-01-31 - as in RSM_0/Results") )
-
-# # generic directories (SAVE):
+# "official" directory names:
 # ( data.dir = str_replace( string = here(),
 #                           pattern = "Code \\(git\\)",
-#                           replacement = "Results/Working dataset") )
+#                           replacement = "Results/*2024-01-31 - as in RSM_0/Datasets") )
 # 
 # ( results.dir = str_replace( string = here(),
 #                              pattern = "Code \\(git\\)",
-#                              replacement = "Results/Working results") )
+#                              replacement = "Results/*2024-01-31 - as in RSM_0/Results") )
+
+# generic directories (SAVE):
+( data.dir = str_replace( string = here(),
+                          pattern = "Code \\(git\\)",
+                          replacement = "Results/Working dataset") )
+
+( results.dir = str_replace( string = here(),
+                             pattern = "Code \\(git\\)",
+                             replacement = "Results/Working results") )
 
 # check that they're specified correctly
 setwd(data.dir)

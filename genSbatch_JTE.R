@@ -168,10 +168,10 @@ n.files
 #     sbatch -p qsu,owners,normal /home/groups/manishad/JTE/sbatch_files/1.sbatch
 
 
-# 2024-02-01: 3120
+# 2024-02-20: 3120
 path = "/home/groups/manishad/JTE"
 setwd( paste(path, "/sbatch_files", sep="") )
-for (i in 1:1000) {
+for (i in 1001:2000) {
   system( paste("sbatch -p qsu,owners,normal /home/groups/manishad/JTE/sbatch_files/", i, ".sbatch", sep="") )
 }
 

@@ -143,10 +143,7 @@ fwrite(agg, "agg.csv")
 fwrite(agg_bad, "agg_just_the_excluded_scens_biased_yi.csv")
 
 
-SAVE:# (will need to be run separately on the cluster, saving long results)
-  
-  
-  # PREP ITERATE-LEVEL DATA FOR SCEN 1384  -------------------------------------------------
+# PREP ITERATE-LEVEL DATA FOR SCEN 1384  -------------------------------------------------
 
 # this will be a little slow (1-2 min)
 setwd(data.dir)
