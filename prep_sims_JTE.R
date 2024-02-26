@@ -84,6 +84,7 @@ nuni(aggo$scen.name)
 
 # add fancy variables for plotting, etc.
 agg = wrangle_agg_local(aggo)
+table(agg$method.pretty)
 
 # initialize global variables that describe estimate and outcome names, etc.
 # this must be after calling wrangle_agg_local
@@ -93,6 +94,8 @@ init_var_names(.agg = agg)
 first = agg[ !duplicated(agg$scen.name), ]
 first %>% group_by(k.pub) %>%
   summarise(n())
+
+agg = agg %>% filter(!is.na(scen.name))
 
 
 # ~ Individual studies should be unbiased -------------------------------------------------
@@ -160,17 +163,14 @@ s2 = s2 %>% rowwise() %>%
 
 # recode variables
 s2$method.pretty.mu.inf = s2$method 
-s2$method.pretty.mu.inf[ s2$method == "bayesmeta-joint-central" ] = "Jeffreys2"
-s2$method.pretty.mu.inf[ s2$method == "bayesmeta-joint-shortest" ] = NA  # same as above
+s2$method.pretty.mu.inf[ s2$method == "bayesmeta-joint-shortest-margpmode" ] = "Jeffreys2-shortest" 
+s2$method.pretty.mu.inf[ s2$method == "bayesmeta-tau-shortest-margpmode" ] = "Jeffreys1-shortest"
 
-s2$method.pretty.mu.inf[ s2$method == "bayesmeta-tau-central" ] = "Jeffreys1"
-s2$method.pretty.mu.inf[ s2$method == "bayesmeta-tau-shortest" ] = NA  # same as above
-
-s2$method.pretty.mu.inf[ s2$method == "ML" ] = "MLE-Wald"
-s2$method.pretty.mu.inf[ s2$method == "PM" ] = "PM-Wald"
-s2$method.pretty.mu.inf[ s2$method == "DL" ] = "DL-Wald"
-s2$method.pretty.mu.inf[ s2$method == "DL2" ] = "DL2-Wald"
-s2$method.pretty.mu.inf[ s2$method == "REML" ] = "REML-Wald"
+s2$method.pretty.mu.inf[ s2$method == "ML" ] = "ML-HKSJ"
+s2$method.pretty.mu.inf[ s2$method == "PM" ] = "PM-HKSJ"
+s2$method.pretty.mu.inf[ s2$method == "DL" ] = "DL-HKSJ"
+s2$method.pretty.mu.inf[ s2$method == "DL2" ] = "DL2-HKSJ"
+s2$method.pretty.mu.inf[ s2$method == "REML" ] = "REML-HKSJ"
 s2$method.pretty.mu.inf[ s2$method == "exact" ] = "Exact"
 
 
@@ -179,8 +179,8 @@ fwrite( s2, "pretty_long_results_job_1384.csv" )
 
 
 
-# NOT IN USE (FROM OTHER PROJECTS):
-# MERGE 4 SIMULATION DATASETS (ITERATE LEVEL) -------------------------------------------------
+# NOT IN USE (SAVED FROM OTHER PROJECTS):
+# MERGE 4 SIMULATION DATASETS (ITERATE LEVEL) 
 
 # # bind the stitched files
 # for (i in 1:length(data.dir.suffixes) ) {
@@ -224,7 +224,7 @@ fwrite( s2, "pretty_long_results_job_1384.csv" )
 
 
 
-# # STITCH FROM SCRATCH -------------------------------------------------
+# # STITCH FROM SCRATCH
 # 
 # if ( stitch.from.scratch == TRUE ) {
 #   setwd(data.dir)

@@ -317,65 +317,56 @@ wrangle_agg_local = function(agg) {
   ### method.pretty: label methods more intelligently for use in plots
   # this version does not combine any methods
   agg$method.pretty = agg$method 
-  agg$method.pretty[ agg$method == "bayesmeta-joint-central" ] = "Jeffreys2-central"
-  agg$method.pretty[ agg$method == "bayesmeta-joint-shortest" ] = "Jeffreys2-shortest"
-  agg$method.pretty[ agg$method == "bayesmeta-tau-central" ] = "Jeffreys1-central"
-  agg$method.pretty[ agg$method == "bayesmeta-tau-shortest" ] = "Jeffreys1-shortest"
-  agg$method.pretty[ agg$method == "ML" ] = "MLE-Wald-Qprofile"
-  agg$method.pretty[ agg$method == "PM" ] = "PM-Wald-Qprofile"
-  agg$method.pretty[ agg$method == "DL" ] = "DL-Wald-Qprofile"
-  agg$method.pretty[ agg$method == "DL2" ] = "DL2-Wald-Qprofile"
-  agg$method.pretty[ agg$method == "REML" ] = "REML-Wald-Qprofile"
+  agg$method.pretty[ agg$method == "bayesmeta-joint-central-margpmode" ] = "Jeffreys2-central"
+  agg$method.pretty[ agg$method == "bayesmeta-joint-shortest-margpmode" ] = "Jeffreys2-shortest"
+  agg$method.pretty[ agg$method == "bayesmeta-tau-central-margpmode" ] = "Jeffreys1-central"
+  agg$method.pretty[ agg$method == "bayesmeta-tau-shortest-margpmode" ] = "Jeffreys1-shortest"
+  agg$method.pretty[ agg$method == "ML" ] = "ML-HKSJ-Qprofile"
+  agg$method.pretty[ agg$method == "PM" ] = "PM-HKSJ-Qprofile"
+  agg$method.pretty[ agg$method == "DL" ] = "DL-HKSJ-Qprofile"
+  agg$method.pretty[ agg$method == "DL2" ] = "DL2-HKSJ-Qprofile"
+  agg$method.pretty[ agg$method == "REML" ] = "REML-HKSJ-Qprofile"
+  agg$method.pretty[ agg$method == "MLE-profile" ] = "ML-profile"
   agg$method.pretty[ agg$method == "exact" ] = "Exact"
-  # other methods not in paper:
-  agg$method.pretty[ agg$method == "robu" ] = "RVE"
-  agg$method.pretty[ agg$method == "jeffreys-pmode" ] = "jeffreys-joint-pmode"
   
   table(agg$method, agg$method.pretty)
   
   
   ### method.pretty.est: group methods that are identical when considering mu or tau estimation only
   agg$method.pretty.est = agg$method 
-  agg$method.pretty.est[ agg$method == "bayesmeta-joint-central" ] = "Jeffreys2"
-  agg$method.pretty.est[ agg$method == "bayesmeta-joint-shortest" ] = NA  # same as above
+  agg$method.pretty.est[ agg$method == "bayesmeta-joint-central-margpmode" ] = "Jeffreys2"
+  agg$method.pretty.est[ agg$method == "bayesmeta-joint-shortest-margpmode" ] = NA  # same as above
   
-  agg$method.pretty.est[ agg$method == "bayesmeta-tau-central" ] = "Jeffreys1"
-  agg$method.pretty.est[ agg$method == "bayesmeta-tau-shortest" ] = NA  # same as above
+  agg$method.pretty.est[ agg$method == "bayesmeta-tau-central-margpmode" ] = "Jeffreys1"
+  agg$method.pretty.est[ agg$method == "bayesmeta-tau-shortest-margpmode" ] = NA  # same as above
   
-  agg$method.pretty.est[ agg$method == "ML" ] = "MLE"
-  agg$method.pretty.est[ agg$method == "MLE-profile" ] = NA  # same as above
+  agg$method.pretty.est[ agg$method == "ML" ] = "ML"
+  agg$method.pretty.est[ agg$method == "ML-profile" ] = NA  # same as above
   # other methods, like PM, DL, etc., will retain same name
   
   table(agg$method, agg$method.pretty.est)
   
-  ### method.pretty.mu.inf: group methods that are identical when considering mu inference only
-  # note that central and shortest intervals are identical for mu because normal posterior
-  # same for MLE-Wald and MLE-profile?
+  ### method.pretty.mu.inf
   agg$method.pretty.mu.inf = agg$method 
-  agg$method.pretty.mu.inf[ agg$method == "bayesmeta-joint-central" ] = "Jeffreys2"
-  agg$method.pretty.mu.inf[ agg$method == "bayesmeta-joint-shortest" ] = NA  # same as above
-  
-  agg$method.pretty.mu.inf[ agg$method == "bayesmeta-tau-central" ] = "Jeffreys1"
-  agg$method.pretty.mu.inf[ agg$method == "bayesmeta-tau-shortest" ] = NA  # same as above
-  
-  agg$method.pretty.mu.inf[ agg$method == "ML" ] = "MLE-Wald"
-  agg$method.pretty.mu.inf[ agg$method == "PM" ] = "PM-Wald"
-  agg$method.pretty.mu.inf[ agg$method == "DL" ] = "DL-Wald"
-  agg$method.pretty.mu.inf[ agg$method == "DL2" ] = "DL2-Wald"
-  agg$method.pretty.mu.inf[ agg$method == "REML" ] = "REML-Wald"
+  agg$method.pretty.mu.inf[ agg$method == "bayesmeta-joint-shortest-margpmode" ] = "Jeffreys2-shortest" 
+  agg$method.pretty.mu.inf[ agg$method == "bayesmeta-tau-shortest-margpmode" ] = "Jeffreys1-shortest"
+
+  agg$method.pretty.mu.inf[ agg$method == "ML" ] = "ML-HKSJ"
+  agg$method.pretty.mu.inf[ agg$method == "PM" ] = "PM-HKSJ"
+  agg$method.pretty.mu.inf[ agg$method == "DL" ] = "DL-HKSJ"
+  agg$method.pretty.mu.inf[ agg$method == "DL2" ] = "DL2-HKSJ"
+  agg$method.pretty.mu.inf[ agg$method == "REML" ] = "REML-HKSJ"
   agg$method.pretty.mu.inf[ agg$method == "exact" ] = "Exact"
   
-  ### method.pretty.tau.inf: group methods that are identical when considering mu inference only
-  # note that central and shortest intervals are identical for mu because normal posterior
-  # same for MLE-Wald and MLE-profile?
+  ### method.pretty.tau.inf
   agg$method.pretty.tau.inf = agg$method 
-  agg$method.pretty.tau.inf[ agg$method == "bayesmeta-joint-central" ] = "Jeffreys2-central"
-  agg$method.pretty.tau.inf[ agg$method == "bayesmeta-joint-shortest" ] = "Jeffreys2-shortest"
+  agg$method.pretty.tau.inf[ agg$method == "bayesmeta-joint-central-margpmode" ] = "Jeffreys2-central"
+  agg$method.pretty.tau.inf[ agg$method == "bayesmeta-joint-shortest-margpmode" ] = "Jeffreys2-shortest"
   
-  agg$method.pretty.tau.inf[ agg$method == "bayesmeta-tau-central" ] = "Jeffreys1-central"
-  agg$method.pretty.tau.inf[ agg$method == "bayesmeta-tau-shortest" ] = "Jeffreys1-shortest"  # same as above
+  agg$method.pretty.tau.inf[ agg$method == "bayesmeta-tau-central-margpmode" ] = "Jeffreys1-central"
+  agg$method.pretty.tau.inf[ agg$method == "bayesmeta-tau-shortest-margpmode" ] = "Jeffreys1-shortest"  
   
-  agg$method.pretty.tau.inf[ agg$method == "ML" ] = "MLE-Qprofile"
+  agg$method.pretty.tau.inf[ agg$method == "ML" ] = "ML-Qprofile"
   agg$method.pretty.tau.inf[ agg$method == "PM" ] = "PM-Qprofile"
   agg$method.pretty.tau.inf[ agg$method == "DL" ] = "DL-Qprofile"
   agg$method.pretty.tau.inf[ agg$method == "DL2" ] = "DL2-Qprofile"
@@ -482,6 +473,7 @@ make_winner_table_col = function(.agg,
   # keep only methods that are relevant to this particular Yname
   if ( yName %in% c("MhatMAE", "MhatRMSE",
                     "ShatMAE", "ShatRMSE") ) {
+
     .agg = .agg %>% filter(method.pretty.est %in% methods_pretty_est)
     
     # temporary variable for ease below
@@ -658,13 +650,13 @@ make_winner_table = function( .agg,
     if ( .yName == .yNames[1] ){
       t.all = newCol
     } else {
-      
       # fix possible dimension mismatches
       # can happen when different cols (e.g., estimation vs. inference) have different numbers of methods
       n1 = nrow(t.all)
       n2 = nrow(newCol)
       # fill in extra "NA" rows so they can be bound
-      if (n1 < n2) t.all[ n1:n2, ] = NA
+      t.all = as.data.frame(t.all)
+      if (n1 < n2) t.all[ (n1+1):n2, ] = NA
       
       t.all = suppressMessages( bind_cols(t.all, newCol) )
     }
@@ -704,8 +696,8 @@ make_both_winner_tables = function( .agg,
                                                 "ShatMAE", "ShatRMSE", "ShatCover", "ShatCoverNominal", "ShatWidth"),
                                     summarise.fun.name = "mean",  # "mean" or "median"
                                     show.worst10th = FALSE,
-                                    #display = "xtable"
-                                    display = "dataframe"
+                                    display = "xtable"
+                                    #display = "dataframe"
                                     #display = c("dataframe", "xtable")
 ){
   
@@ -999,7 +991,7 @@ my_boxplots = function(xName = NA,
     correct.order = c( "Jeffreys2", 
                        "Jeffreys1",
                        
-                       "MLE",
+                       "ML",
                        "REML",
                        
                        "DL",
@@ -1117,7 +1109,7 @@ my_line_plot = function(
     correct.order = c( "Jeffreys2", 
                        "Jeffreys1",
                        
-                       "MLE",
+                       "ML",
                        "REML",
                        
                        "DL",
@@ -1128,14 +1120,14 @@ my_line_plot = function(
     # levels(.agg$method.pretty.temp)
     # table(.agg$method.pretty.temp, useNA = "ifany")
     
-    # must be in same order as methods_pretty_est
-    .colors = c("#F2340E",
+    # must be in same order as correct.order above
+    .colors = c("#F2340E", 
                 
-                "#E075DB",
+                "#E075DB", 
                 
                 
-                "#0E96F0",
-                "black",
+                "#0E96F0", 
+                "black", 
                 
                 "#246105",
                 "#8CB876",
@@ -1153,18 +1145,18 @@ my_line_plot = function(
     .agg$method.pretty.temp = .agg$method.pretty.mu.inf
     
     # reorder methods
-    correct.order = c( "Jeffreys2", 
-                       "Jeffreys1",
+    correct.order = c( "Jeffreys2-shortest", 
+                       "Jeffreys1-shortest",
                        
-                       "MLE-Wald",
-                       "MLE-profile",
+                       "ML-HKSJ",
+                       "ML-profile",
                        
-                       "REML-Wald",
+                       "REML-HKSJ",
                        
-                       "DL-Wald",
-                       "DL2-Wald",
+                       "DL-HKSJ",
+                       "DL2-HKSJ",
                        
-                       "PM-Wald",
+                       "PM-HKSJ",
                        "Exact")
     .agg$method.pretty.temp = factor(.agg$method.pretty.temp, levels = correct.order)
     # levels(.agg$method.pretty.temp)
@@ -1196,7 +1188,6 @@ my_line_plot = function(
     # temporary variable for ease below
     .agg$method.pretty.temp = .agg$method.pretty.tau.inf
     
-    
     # reorder methods
     correct.order = c( "Jeffreys2-central", 
                        "Jeffreys2-shortest",
@@ -1204,8 +1195,8 @@ my_line_plot = function(
                        "Jeffreys1-central",
                        "Jeffreys1-shortest",
                        
-                       "MLE-Qprofile",
-                       "MLE-profile",
+                       "ML-Qprofile",
+                       "ML-profile",
                        
                        "REML-Qprofile",
                        
@@ -1340,10 +1331,11 @@ my_line_plot = function(
   p = p + coord_cartesian( ylim = c( min(y.breaks), max(y.breaks) ) ) +
     scale_y_continuous( breaks = y.breaks )
   
+
   
   # ~ Log axis --------
   if ( .Yname %in% c("MhatWidth", "ShatWidth") ) {
-    p = p + scale_y_log10()
+    p = p + scale_y_log10( breaks = y.breaks)
   }
   
   if ( .writePlot == TRUE ) {
@@ -1803,7 +1795,7 @@ init_var_names = function(.agg) {
   # i.e., not jeffreys-pmean, jeffreys-pmed, etc.
   # methods.to.show <<- c("REML", "DL", "PM", "DL2", "RVE", "Jeffreys")
   
-  methods_pretty_est <<- c("MLE",
+  methods_pretty_est <<- c("ML",
                            "REML",
                            "DL",
                            "PM",
@@ -1811,23 +1803,22 @@ init_var_names = function(.agg) {
                            "Jeffreys1",
                            "Jeffreys2")
   
-  
-  methods_pretty_mu_inf <<- c("MLE-Wald",
-                              "REML-Wald",
-                              "DL-Wald",
-                              "PM-Wald",
-                              "DL2-Wald",
+  methods_pretty_mu_inf <<- c("ML-HKSJ",
+                              "REML-HKSJ",
+                              "DL-HKSJ",
+                              "PM-HKSJ",
+                              "DL2-HKSJ",
                               "Exact",
-                              "MLE-profile",
-                              "Jeffreys1", 
-                              "Jeffreys2")
+                              "ML-profile",
+                              "Jeffreys1-shortest", 
+                              "Jeffreys2-shortest")
   
-  methods_pretty_tau_inf <<- c("MLE-Qprofile",
+  methods_pretty_tau_inf <<- c("ML-Qprofile",
                                "REML-Qprofile",
                                "DL-Qprofile",
                                "PM-Qprofile",
                                "DL2-Qprofile",
-                               "MLE-profile",
+                               "ML-profile",
                                "Jeffreys1-central", 
                                "Jeffreys1-shortest", 
                                "Jeffreys2-central", 
@@ -1860,7 +1851,7 @@ init_var_names = function(.agg) {
   }
   
   
-  Wald_methods_pretty <<- stringsWith(pattern =  "Wald", unique(.agg$method.pretty.mu.inf))
+  HKSJ_methods_pretty <<- stringsWith(pattern =  "HKSJ", unique(.agg$method.pretty.mu.inf))
   
   cat( paste("\n\nManipulated parameter vars: ",
              paste(param.vars.manip2, collapse= ", ") ) )

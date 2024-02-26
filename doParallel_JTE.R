@@ -856,7 +856,7 @@ if ( run.local == TRUE ) {
 if ( run.local == FALSE ) {
   
   # write long results for one job only
-  if ( jobname == 1384 ) {
+  if ( scen == 1384 ) {
     setwd("/home/groups/manishad/JTE/long_results")
     fwrite( rs, paste( "long_results", jobname, ".csv", sep="_" ) )
   }
