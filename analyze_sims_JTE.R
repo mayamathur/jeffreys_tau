@@ -135,12 +135,15 @@ expect_equal( unique(agg$sim.reps.actual), 500 )
 # this must be after calling wrangle_agg_local
 init_var_names(.agg = agg)
 
-# summarize scen params
-CreateTableOne( dat = agg,
-                vars = param.vars.manip2,
-                factorVars = param.vars.manip2,
-                strata = "Ytype" )
+# # summarize scen params
+# CreateTableOne( dat = agg,
+#                 vars = param.vars.manip2,
+#                 factorVars = param.vars.manip2,
+#                 strata = "Ytype" )
 
+# scen 1384 data
+setwd(data.dir)
+s2 = fread("pretty_long_results_job_1384.csv")
 
 
 # ~~ Check runtimes of sbatch files -------------------------
@@ -435,7 +438,7 @@ update_result_csv( name = paste( "Perc normal scens ShatCoverNominal Jeffreys2-c
 x = CI_comparison(.agg = agg2 %>% 
                     filter(true.dist == "norm") %>%
                     filter(Ytype == "bin-OR"),
-                  .target.method.pretty = "Jeffreys2-central",
+                  .target.method.pretty = "Jeffreys2-shortest",
                   .comparison.method.pretty = "REML-HKSJ-Qprofile")
 
 update_result_csv( name = paste( "Bin-OR ", names(x) ),
@@ -444,14 +447,14 @@ update_result_csv( name = paste( "Bin-OR ", names(x) ),
 
 update_result_csv( name = "Sims - Mean perc narrower Jeffreys vs REML - Ybin",
                    value = perc_CI_narrower(.agg = agg2 %>% filter(Ytype == "bin-OR" & true.dist == "norm"),
-                                            .target.method.pretty = "Jeffreys2-central",
+                                            .target.method.pretty = "Jeffreys2-shortest",
                                             .comparison.method.pretty = "REML-HKSJ-Qprofile"),
                    print = TRUE )
 
 
 update_result_csv( name = "Sims - Mean perc narrower Jeffreys vs REML - Ybin small metas",
                    value = perc_CI_narrower(.agg = agg2 %>% filter(Ytype == "bin-OR" & true.dist == "norm" & k.pub <= 5),
-                                            .target.method.pretty = "Jeffreys2-central",
+                                            .target.method.pretty = "Jeffreys2-shortest",
                                             .comparison.method.pretty = "REML-HKSJ-Qprofile"),
                    print = TRUE )
 
@@ -460,12 +463,12 @@ update_result_csv( name = "Sims - Mean perc narrower Jeffreys vs REML - Ybin sma
 x = CI_comparison(.agg = agg2 %>% 
                     filter(k.pub > 5 & true.dist == "norm") %>%
                     filter(Ytype == "cont-SMD"),
-                  .target.method.pretty = "Jeffreys2-central",
+                  .target.method.pretty = "Jeffreys2-shortest",
                   .comparison.method.pretty = "REML-HKSJ-Qprofile")
 
 # **doesn't make sense to use Jeffreys2 for continuous outcomes since, in the k>5 scenarios where its coverage was always okay, it also doesn't improve efficiency
 perc_CI_narrower(.agg = agg2 %>% filter(Ytype == "cont-SMD" & true.dist == "norm" & k.pub > 5),
-                 .target.method.pretty = "Jeffreys2-central",
+                 .target.method.pretty = "Jeffreys2-shortest",
                  .comparison.method.pretty = "REML-HKSJ-Qprofile")
 
 
@@ -644,6 +647,10 @@ p = ggplot( data = dp,
 ggplotly(p)
 
 
+
+
+
+
 # sanity check: understand coverage differences for k=100
 # very interesting!
 p = ggplot( data = dp100, 
@@ -670,6 +677,7 @@ my_line_plot(.Yname = "MhatWidth",
              .agg = agg2,
              .ggtitle = "",
              .ylab = 'bquote( bold( hat(mu) ~ " CI width") )',
+             .y.breaks = c(0.1, 0.3, 1, 3, 10),
              .jitter.width = 0)
 
 # simple version for ggplotly
@@ -1255,10 +1263,6 @@ my_ggsave( name = "jeffreys2_ShatMAE_point_estimates_comparison.pdf",
 
 # ~ Look at individual iterates for scen 1384  -------------------------------------------------
 
-# scen 1384 data
-setwd(data.dir)
-s2 = fread("pretty_long_results_job_1384.csv")
-
 
 ### MhatBias vs. MhatWidth
 # **super interesting!!
@@ -1432,19 +1436,18 @@ sim_plot_multiple_outcomes(.agg = agg,
 
 # ~ Compare methods that should be similar or identical  -------------------------------------------------
 
-# ~~ ML-profile vs. ML-HKSJ-Qprofile  -------------------------------------------------
+# ~~ Different Q-profile methods  -------------------------------------------------
 
-# CIs are quite different for these two
-# shouldn't CIs for mu be the same for these two?
-t = agg %>% filter(method.pretty %in% c("ML-HKSJ-Qprofile", "ML-profile")) %>%
+# I expect these to differ because the Mhat used in the Q-profile is different
+
+# across scens
+t = agg %>% filter(method %in% c("REML", "DL", "DL2", "PM")) %>%
   group_by(scen.name) %>%
-  summarise( sd(Mhat),
-             sd(Shat),
-             sd(MLo))
+  summarise( sd(SLo),
+             sd(SHi))
 
-summary(t$`sd(Mhat)`)
-summary(t$`sd(Shat)`)
-summary(t$`sd(MLo)`)  # CIs are NOT always the same
+summary(t$`sd(SLo)`)
+summary(t$`sd(SHi)`)
 
 
 # ~~ metaLik should be equivalent to ML-profile  -------------------------------------------------
@@ -1526,9 +1529,7 @@ if (use.View = TRUE) View(t)
 
 
 
-# LOOK FOR SCENS WITH MORE VARIABILITY ON PERFORMANCE METRICS  -------------------------------------------------
-
-# scens with meaningful differences across methods in the outcomes
+# VARIABILITY ACROSS SCENS ON PERFORMANCE METRICS  -------------------------------------------------
 
 methods_for_table = c(
   "ML", "REML", "DL", "PM", "DL2", "exact","ML-profile",

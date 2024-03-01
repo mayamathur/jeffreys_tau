@@ -351,6 +351,7 @@ wrangle_agg_local = function(agg) {
   agg$method.pretty.mu.inf[ agg$method == "bayesmeta-joint-shortest-margpmode" ] = "Jeffreys2-shortest" 
   agg$method.pretty.mu.inf[ agg$method == "bayesmeta-tau-shortest-margpmode" ] = "Jeffreys1-shortest"
 
+  agg$method.pretty.mu.inf[ agg$method == "MLE-profile" ] = "ML-profile"
   agg$method.pretty.mu.inf[ agg$method == "ML" ] = "ML-HKSJ"
   agg$method.pretty.mu.inf[ agg$method == "PM" ] = "PM-HKSJ"
   agg$method.pretty.mu.inf[ agg$method == "DL" ] = "DL-HKSJ"
@@ -367,6 +368,7 @@ wrangle_agg_local = function(agg) {
   agg$method.pretty.tau.inf[ agg$method == "bayesmeta-tau-shortest-margpmode" ] = "Jeffreys1-shortest"  
   
   agg$method.pretty.tau.inf[ agg$method == "ML" ] = "ML-Qprofile"
+  agg$method.pretty.tau.inf[ agg$method == "MLE-profile" ] = "ML-profile"
   agg$method.pretty.tau.inf[ agg$method == "PM" ] = "PM-Qprofile"
   agg$method.pretty.tau.inf[ agg$method == "DL" ] = "DL-Qprofile"
   agg$method.pretty.tau.inf[ agg$method == "DL2" ] = "DL2-Qprofile"
@@ -1122,7 +1124,6 @@ my_line_plot = function(
     
     # must be in same order as correct.order above
     .colors = c("#F2340E", 
-                
                 "#E075DB", 
                 
                 
@@ -1189,11 +1190,11 @@ my_line_plot = function(
     .agg$method.pretty.temp = .agg$method.pretty.tau.inf
     
     # reorder methods
-    correct.order = c( "Jeffreys2-central", 
-                       "Jeffreys2-shortest",
+    correct.order = c( "Jeffreys2-shortest",
+                       "Jeffreys2-central", 
                        
-                       "Jeffreys1-central",
                        "Jeffreys1-shortest",
+                       "Jeffreys1-central",
                        
                        "ML-Qprofile",
                        "ML-profile",
