@@ -1264,7 +1264,7 @@ my_ggsave( name = "jeffreys2_ShatMAE_point_estimates_comparison.pdf",
 # ~ Look at individual iterates for scen 1384  -------------------------------------------------
 
 
-### MhatBias vs. MhatWidth
+### Mhat vs. MhatWidth
 # **super interesting!!
 
 mean(is.na(s2$MhatCover))
@@ -1284,10 +1284,10 @@ s2p$method.pretty.mu.inf = factor(s2p$method.pretty.mu.inf, levels = correct.ord
 any(is.na(s2p$method.pretty.mu.inf))
 
 # find good x-axis limits
-summary( s2p$MhatBias )
+summary( s2p$Mhat )
 quantile(s2p$MhatBias, c(0.05, 0.95), na.rm = TRUE)
-xmin = -0.5
-xmax = 0.6
+xmin = 0
+xmax = 1.10
 
 # find good y-axis limits
 summary( s2p$MhatWidth )
@@ -1303,10 +1303,10 @@ ymax = 4
 
 
 p = ggplot( data = s2p, 
-            aes( x = MhatBias,
+            aes( x = Mhat,
                  y = MhatWidth,
                  color = as.factor(MhatCover) ) ) +
-  geom_vline(xintercept = 0, lty = 2) +
+  geom_vline(xintercept = unique(s2p$Mu), lty = 2) +
   geom_point(alpha = 0.5) +
   facet_wrap( ~ method.pretty.mu.inf,nrow = 2) +
   
@@ -1315,13 +1315,13 @@ p = ggplot( data = s2p,
   scale_color_manual( values = c("red", "black") ) +
   
   scale_x_continuous(limits = c(xmin, xmax), 
-                     breaks = seq(xmin, xmax, 0.25) ) +
+                     breaks = seq(xmin, xmax, 0.10) ) +
   
   scale_y_continuous( limits = c(ymin, ymax),
                       breaks = seq(ymin, ymax, .5) ) +
   
   labs(color  = bquote( bold(CI ~ includes ~ mu) ) ) +
-  xlab( bquote( bold( hat(mu) ~ bias) ) ) +
+  xlab( bquote( bold( hat(mu) ) ) ) +
   ylab( "CI width" ) +
   
   theme_bw(base_size = 16) +
