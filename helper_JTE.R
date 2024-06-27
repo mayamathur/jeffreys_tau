@@ -361,6 +361,16 @@ pretty_bayesmeta = function(.dat,
 
 
 
+# n.ests: how many parameters were estimated?
+get_boot_CIs = function(boot.res, type = "bca", n.ests) {
+  bootCIs = lapply( 1:n.ests, function(x) boot.ci(boot.res, type = type, index = x) )
+  
+  # list with first entry for b and second entry for t2
+  # the middle index "4" on the bootCIs accesses the stats vector
+  # the final index chooses the CI lower (4) or upper (5) bound
+  bootCIs = lapply( 1:n.ests, function(x) c( bootCIs[[x]][[4]][4],
+                                             bootCIs[[x]][[4]][5] ) )
+}
 
 # FNS FOR FUTURE R PACKAGE ----------------------------
 

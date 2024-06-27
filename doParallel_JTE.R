@@ -4,8 +4,8 @@
 # rm( list = ls() )
 
 # are we running locally?
-run.local = FALSE
-# run.local = TRUE
+#run.local = FALSE
+run.local = TRUE
 
 # should we set scen params interactively on cluster?
 interactive.cluster.run = FALSE
@@ -34,6 +34,7 @@ toLoad = c("crayon",
            "bayesmeta",
            "metaLik",
            "HDInterval",
+           "boot",
            "phacking")  # note: to reinstall this one, need ml load jags
 
 # to install everything
@@ -179,20 +180,36 @@ if ( run.local == TRUE ) {
 
   
   ### SAVE - Illustrative scen to run locally - 708 ###
-  # this is one where Shat behavior was horrible for Jeffreys, but reasonable for other methods
   scen.params = data.frame(
-    scen.name = 708L,
+    scen.name = 1,
     #rep.methods = "ML ; MLE-profile ; exact ; REML ; DL ; DL2 ; PM ; bayesmeta-tau-central ; bayesmeta-tau-shortest ; bayesmeta-joint-central ; bayesmeta-joint-shortest",
-    rep.methods = "bayesmeta-tau-central ; bayesmeta-tau-shortest ; bayesmeta-joint-central ; bayesmeta-joint-shortest",
-    k.pub = 2L,
-    t2a = 0.01,
-    Mu = 2.3,
+    rep.methods = "ML ; bayesmeta-tau-shortest ; perm",
+    k.pub = 10,
+    t2a = 0.1^2,
+    Mu = 0.5,
     true.dist = "norm",
     p0 = 0.05,
     Ytype = "bin-OR",
     N.expr = "round( runif(n=1, min=2000, max = 4000) )",
     stan.maxtreedepth = 25L,
     stan.adapt_delta = 0.995)
+  
+  
+  # ### SAVE - Illustrative scen to run locally - 708 ###
+  # # this is one where Shat behavior was horrible for Jeffreys, but reasonable for other methods
+  # scen.params = data.frame(
+  #   scen.name = 708,
+  #   #rep.methods = "ML ; MLE-profile ; exact ; REML ; DL ; DL2 ; PM ; bayesmeta-tau-central ; bayesmeta-tau-shortest ; bayesmeta-joint-central ; bayesmeta-joint-shortest",
+  #   rep.methods = "bayesmeta-tau-central ; bayesmeta-tau-shortest ; bayesmeta-joint-central ; bayesmeta-joint-shortest",
+  #   k.pub = 2L,
+  #   t2a = 0.01,
+  #   Mu = 2.3,
+  #   true.dist = "norm",
+  #   p0 = 0.05,
+  #   Ytype = "bin-OR",
+  #   N.expr = "round( runif(n=1, min=2000, max = 4000) )",
+  #   stan.maxtreedepth = 25L,
+  #   stan.adapt_delta = 0.995)
   
   
   # # add scen numbers
@@ -332,7 +349,6 @@ doParallel.seconds = system.time({
     }
     
     
-    
     if (run.local == TRUE) srr(rep.res)
     
     
@@ -365,6 +381,92 @@ doParallel.seconds = system.time({
     
     if (run.local == TRUE) srr(rep.res)
     
+    
+    
+    # ~~ perm (Permutation Interval) -------------------------------------------------
+    
+    # Note: this method is quite slow! 
+    
+    # see "Permutation-based confidence intervals" here:
+    #  https://wviechtb.github.io/metafor/reference/permutest.html
+    # which is based on this paper:
+    # Follmann, D. A., & Proschan, M. A. (1999). Valid inference in random effects meta-analysis. Biometrics, 55(3), 732–737. https://doi.org/10.1111/j.0006-341x.1999.00732.x
+    
+    #bm
+    # requires 2 calls to metafor, so not handled in the loop above
+    if ( "perm" %in% all.methods ) {
+      rep.res = run_method_safe(method.label = c("perm"),
+                                method.fn = function() {
+                                  
+                                  # run initial meta-analysis
+                                  m0 = rma( yi = d$yi,
+                                            vi = d$vi,
+                                            method = "DL",
+                                            knha = TRUE )
+                                  
+                                  # permutation CI
+                                  mod = permutest(m0, permci = TRUE, exact = FALSE)
+                                  
+                                  
+                                  # this method doesn't do point estimation of inference for tau
+                                  return( list( stats = data.frame( 
+                                    MLo = mod$ci.lb,
+                                    MHi = mod$ci.ub) ) )
+
+                                },
+                                .rep.res = rep.res )
+    }
+    
+    
+    
+    if (run.local == TRUE) srr(rep.res)
+    
+    
+    # ~~ boot (BCa bootstrap) -------------------------------------------------
+    
+    
+    if ( "boot" %in% all.methods ) {
+      rep.res = run_method_safe(method.label = c("boot"),
+                                method.fn = function() {
+                                  
+                                  boot.iterates = 2000
+                                  
+                                  boot.res = suppressWarnings(boot(data = d,
+                                                                   parallel = "multicore",
+                                                                   R = boot.iterates,
+                                                                   statistic = function(original,
+                                                                                        indices) {
+                                                                     b = original[indices, ]
+                                                                     
+                                                                     mb = rma( yi = b$yi,
+                                                                               vi = b$vi,
+                                                                               method = "REML" )
+                                                                     
+                                                                     # if you change the number of stats returned, need to 
+                                                                     #  change n.ests below
+                                                                     return( c( as.numeric(mb$b), as.numeric( sqrt(mb$tau2) ) ) )
+                                                                     
+                                                                   }))
+                              
+                                  cis = get_boot_CIs(boot.res,
+                                                     type = "bca", 
+                                                     n.ests = ncol(boot.res$t))
+                                  
+                                  
+                                  # this method doesn't do point estimation
+                                  return( list( stats = data.frame( 
+                                    MLo = cis[[1]][1],
+                                    MHi = cis[[1]][2],
+                                    SLo = cis[[2]][1],
+                                    SHi = cis[[2]][2] ) ) )
+                                  
+                                },
+                                .rep.res = rep.res )
+    }
+    
+    if (run.local == TRUE) srr(rep.res)
+    
+  
     
     # ~~ Exact method (package rma.exact) -------------------------------------------------
     
