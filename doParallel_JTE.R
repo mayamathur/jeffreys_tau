@@ -308,7 +308,7 @@ doParallel.seconds = system.time({
     # ~ Existing Methods ------------------------------
     
     # ~~ Metafor heterogeneity estimators ------------------------------
-    
+     
     # pg 282:
     # https://cran.r-project.org/web/packages/metafor/metafor.pdf
     metafor.methods = all.methods[ all.methods %in% c("REML", "ML", "DL", "EB", "PM", "PMM", "HS", "SJ") ]
