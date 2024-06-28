@@ -897,69 +897,170 @@ prior_plot_one_k = function(.k,
 }
 
 
-# from MRM; not edited
-# # for violin plots, set global parameters that my_violins() will use as arguments
-# set_violin_params = function() {
-#   # set up y-labels and hline
-#   if ( y == "PhatAbsErr" ) {
-#     aggData <<- aggPhat
-#     ylab <<- "Absolute error in estimated proportion above q"
-#     hline <<- 0
-#     yTicks <<- seq(0, 1, .1)
-#   }
-#   
-#   if ( y == "DiffAbsErr" ) {
-#     aggData <<- aggDiff
-#     ylab <<- "Absolute error in estimated difference in proportions"
-#     hline <<- 0
-#     yTicks <<- seq(0, 1, .1)
-#   }
-#   
-#   
-#   if ( y == "PhatBias" ) {
-#     aggData <<- aggPhat
-#     ylab <<- "Bias in estimated proportion above q"
-#     hline <<- 0
-#     yTicks <<- seq(-0.5, .5, .1)
-#     
-#     #cat("\\subsubsection{Relative bias in est prop}")
-#   }
-#   
-#   if ( y == "DiffBias" ) {
-#     aggData <<- aggDiff
-#     ylab <<- "Bias in estimated difference in proportions"
-#     hline <<- 0
-#     yTicks <<- seq(-0.5, .5, .1)
-#   }
-#   
-#   if ( y == "CoverPhat" ) {
-#     aggData <<- aggPhat
-#     ylab <<- "95% CI coverage for estimated proportion above q"
-#     hline <<- 0.95
-#     yTicks <<- seq(0, 1, 0.1)
-#   }
-#   
-#   if ( y == "CoverDiff" ) {
-#     aggData <<- aggDiff
-#     ylab <<- "95% CI coverage of estimated difference in proportions"
-#     hline <<- 0.95
-#     yTicks <<- seq(0, 1, 0.1)
-#   }
-#   
-#   if ( y == "PhatCIWidth" ) {
-#     aggData <<- aggPhat
-#     ylab <<- "95% CI width for estimated proportion above q"
-#     hline <<- NA
-#     yTicks <<- seq(0, 1, 0.1)
-#   }
-#   
-#   if ( y == "DiffCIWidth" ) {
-#     aggData <<- aggDiff
-#     ylab <<- "95% CI width for estimated difference in proportions"
-#     hline <<- NA
-#     yTicks <<- seq(0, 1, 0.1)
-#   }
-# }
+
+# in response to reviewer: without facets
+prior_plot_one_k_2 = function(.k,
+                            
+                            N.expr = c( "40",
+                                        "400",
+                                        "round( runif(n=1, min=40, max = 400) )",
+                                        "round( runif(n=1, min=2000, max = 4000) )" ),
+                            
+                            # values that map onto each value of N.expr
+                            N.pretty = c("N = 40",
+                                         "N = 400",
+                                         "N ~ U(40, 400)",
+                                         "N ~ U(2000, 3000)") ) {
+  
+  # test only
+  if (FALSE) {
+    .k = 10
+    N.expr = c( "40",
+                "400",
+                "round( runif(n=1, min=40, max = 400) )",
+                "round( runif(n=1, min=2000, max = 4000) )" )
+    
+    N.pretty = c("N = 40",
+                 "N = 400",
+                 "N ~ U(40, 400)",
+                 "N ~ U(2000, 3000)") 
+  }
+  
+  ### Simulate a dataset for this k; only SEs will be used
+  sei = list()
+  
+  for ( i in 1:length(N.expr) ) {
+    
+    # first 3 params should not matter for sei distribution (for continuous Y):
+    d = sim_meta( 
+      Mu = 0,
+      t2a = 0,
+      true.dist = "norm",
+      
+      N.expr = N.expr[i],
+      Ytype = "cont-SMD",
+      p0 = NA,
+      
+      k.pub = .k)
+    
+    sei[[i]] = d$sei
+  }
+  
+  expect_equal( length(sei[[1]]), .k )
+  
+  # # sanity check
+  # hist(sei[[1]])
+  # hist(sei[[2]])
+  # hist(sei[[3]])
+  # hist(sei[[4]])
+  
+  ### Make plotting dataframe with prior evaluated for various parameters
+  # prior is independent of .mu, so just choose one
+  tau_vec = c( seq(0, 0.1, 0.001), seq(0.1, 0.25, 0.01), seq(0.25, 1, 0.05) )
+  dp2 = expand_grid( .mu = 0,
+                     .tau = tau_vec,
+                     .sei = c("sei[[1]]", "sei[[2]]", "sei[[3]]", "sei[[4]]"),
+                     prior_name = c("Jeffreys1", "Jeffreys2") )
+  
+  dp2 = dp2 %>% rowwise() %>%
+    mutate( prior.val = exp( get_lprior(mu = .mu,
+                                        tau = .tau,
+                                        sei = eval( parse( text = .sei ) ),
+                                        prior_name = prior_name )  ) )
+  
+  # sanity check
+  temp1 = dp2 %>% filter( .mu == 0, .tau == 0.05, .sei == "sei[[3]]", prior_name == "Jeffreys1" ) %>% select(prior.val)
+  temp2 = exp( get_lprior(mu = 0,
+                          tau = 0.05,
+                          sei = sei[[3]],
+                          prior_name = "Jeffreys1") )
+  expect_equal( as.numeric(temp1), temp2)
+  
+  ### Prettify plotting dataframe
+  
+  dp2$N.pretty = NA
+  dp2$N.pretty[ dp2$.sei == "sei[[1]]" ] = N.pretty[1]
+  dp2$N.pretty[ dp2$.sei == "sei[[2]]" ] = N.pretty[2]
+  dp2$N.pretty[ dp2$.sei == "sei[[3]]" ] = N.pretty[3]
+  dp2$N.pretty[ dp2$.sei == "sei[[4]]" ] = N.pretty[4]
+  table(dp2$.sei, dp2$N.pretty)
+  
+  # force ordering of legend variable
+  correct.order = N.pretty
+  
+  dp2$N.pretty = factor(dp2$N.pretty, levels = correct.order)
+  levels(dp2$N.pretty)
+  
+  ### Rescale each individual curve so that the priors have the same height
+  dp2$prior.val.scaled = NA
+  
+  for ( j in c("Jeffreys1", "Jeffreys2"))
+    for ( n in 1:4 ){
+      dp2$prior.val.scaled[ dp2$N.pretty == N.pretty[n] & dp2$prior_name == j ] = dp2$prior.val[ dp2$N.pretty == N.pretty[n] & dp2$prior_name == j ] / max(dp2$prior.val[ dp2$N.pretty == N.pretty[n] & dp2$prior_name == j ])
+    }
+  
+  
+  ### Points that maximize each curve
+  dp2 = dp2 %>% group_by(N.pretty, prior_name) %>%
+    mutate( is.max = ifelse( prior.val == max(prior.val), TRUE, FALSE ) )
+  max.points = dp2 %>% filter(is.max == TRUE)
+  
+  
+  ### Make plot
+  
+  # in same order as N.pretty
+  my.colors = c("#E39584",
+                "#F2340E",
+                "#0E96F0",
+                "#0F5A8C")
+  
+  plot = ggplot( data = dp2, 
+                 aes(x = .tau,
+                     y = prior.val.scaled,
+                     color = N.pretty,
+                     lty = prior_name) ) +
+    
+    geom_line(size = 1.1) +
+    
+    geom_point( data = max.points, 
+                aes(x = .tau,
+                    y = prior.val.scaled,
+                    color = N.pretty ),
+                size = 3) +
+    
+    xlab( bquote(tau) ) +
+    ylab( bquote(p(tau)) ) +
+    
+    geom_vline( xintercept = 0, lty = 2 ) +
+    
+    scale_x_continuous(breaks = seq( min(dp2$.tau), max(dp2$.tau), 0.1),
+                       limits = c( min(dp2$.tau), max(dp2$.tau) ) ) +
+    
+    # scale_y_continuous(breaks = seq( min(dp$log.prior), max(dp$log.prior), 0.25),
+    #                    limits = c( min(dp$.tau), max(dp$.tau) ) ) +
+    
+    scale_color_manual(values = my.colors, 
+                       name = "") +
+    
+    theme_bw(base_size = 16) +
+    ggtitle( paste("k = ", .k) ) +
+    
+    theme(text = element_text(face = "bold"),
+          axis.title = element_text(size=20),
+          legend.position = "bottom",
+          axis.text.y=element_blank(),
+          axis.ticks.y=element_blank() )
+  
+  
+  ### Return
+  return( list(k = .k,
+               sei_list = sei,
+               d = dp2,
+               plot = plot) )
+  
+}
+
+
 
 
 my_boxplots = function(xName = NA,

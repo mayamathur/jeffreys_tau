@@ -1,5 +1,3 @@
-# NOTES ----------------------------------------------------
-
 
 # PRELIMINARIES ----------------------------------------------------
 
@@ -125,17 +123,8 @@ my_ggsave(name = "prior_plot_simulated.pdf",
           .overleaf.dir = overleaf.dir.figs)
 
 
-
-
-
-
-# compare the priors
-# hmmm
-
-prior_plot_one_k(.k = 10)
-
-
-#bm: next try it for the applied example with both get_lprior and bayesmeta
+# in response to reviewer: try combining the plots 
+plot = prior_plot_one_k_2(.k = 10)
 
 
 

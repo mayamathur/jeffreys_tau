@@ -4,8 +4,8 @@
 # rm( list = ls() )
 
 # are we running locally?
-#run.local = FALSE
-run.local = TRUE
+run.local = FALSE
+#run.local = TRUE
 
 # should we set scen params interactively on cluster?
 interactive.cluster.run = FALSE
@@ -35,6 +35,7 @@ toLoad = c("crayon",
            "metaLik",
            "HDInterval",
            "boot",
+           "metatest",
            "phacking")  # note: to reinstall this one, need ml load jags
 
 # to install everything
@@ -148,10 +149,7 @@ if (run.local == FALSE) {
   # simulation reps to run within this job
   # **this need to match n.reps.in.doParallel in the genSbatch script
   # ***** Set cluster sim reps  -------------------------------------------------
-  if ( interactive.cluster.run == FALSE ) sim.reps = 500  # when running all methods except robma
-  #if ( interactive.cluster.run == FALSE ) sim.reps = 10  # when running robma only
-  
-  #if ( interactive.cluster.run == TRUE ) sim.reps = 50 
+  if ( interactive.cluster.run == FALSE ) sim.reps = 50  
   
   # set the number of cores
   registerDoParallel(cores=16)
@@ -183,7 +181,7 @@ if ( run.local == TRUE ) {
   scen.params = data.frame(
     scen.name = 1,
     #rep.methods = "ML ; MLE-profile ; exact ; REML ; DL ; DL2 ; PM ; bayesmeta-tau-central ; bayesmeta-tau-shortest ; bayesmeta-joint-central ; bayesmeta-joint-shortest",
-    rep.methods = "ML ; bayesmeta-tau-shortest ; perm",
+    rep.methods = "ML ; perm ; metatest ; boot",
     k.pub = 10,
     t2a = 0.1^2,
     Mu = 0.5,
@@ -391,9 +389,6 @@ doParallel.seconds = system.time({
     #  https://wviechtb.github.io/metafor/reference/permutest.html
     # which is based on this paper:
     # Follmann, D. A., & Proschan, M. A. (1999). Valid inference in random effects meta-analysis. Biometrics, 55(3), 732–737. https://doi.org/10.1111/j.0006-341x.1999.00732.x
-    
-    #bm
-    # requires 2 calls to metafor, so not handled in the loop above
     if ( "perm" %in% all.methods ) {
       rep.res = run_method_safe(method.label = c("perm"),
                                 method.fn = function() {
@@ -424,12 +419,12 @@ doParallel.seconds = system.time({
     
     # ~~ boot (BCa bootstrap) -------------------------------------------------
     
-    
+    # slow, but not nearly as slow as perm!
     if ( "boot" %in% all.methods ) {
       rep.res = run_method_safe(method.label = c("boot"),
                                 method.fn = function() {
                                   
-                                  boot.iterates = 2000
+                                  boot.iterates = 1000
                                   
                                   boot.res = suppressWarnings(boot(data = d,
                                                                    parallel = "multicore",
@@ -467,6 +462,13 @@ doParallel.seconds = system.time({
     if (run.local == TRUE) srr(rep.res)
     
   
+    # ~~ Barlett correction (package metatest) -------------------------------------------------
+    
+    # # pkg always gives a warning about recylcing vector if you run intercept-only, 
+    # #  even though docs say you can do this
+    # mod = suppressWarnings( metatest(yi ~ 1, variance = vi, data = d) )
+    # mod$bartLLR
+    
     
     # ~~ Exact method (package rma.exact) -------------------------------------------------
     
