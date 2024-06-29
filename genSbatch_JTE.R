@@ -167,7 +167,8 @@ n.files
 #     sbatch -p qsu,owners,normal /home/groups/manishad/JTE/sbatch_files/1.sbatch
 
 
-# 2024-06-27: 6,240
+# 2024-06-28: 31,200
+# first 520 are for k.pub = 10
 path = "/home/groups/manishad/JTE"
 setwd( paste(path, "/sbatch_files", sep="") )
 for (i in 2:1000) {

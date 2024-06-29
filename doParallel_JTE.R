@@ -464,7 +464,7 @@ doParallel.seconds = system.time({
   
     # ~~ Barlett correction (package metatest) -------------------------------------------------
     
-    # # pkg always gives a warning about recylcing vector if you run intercept-only, 
+    # # pkg always gives a warning about recycling vector if you run intercept-only, 
     # #  even though docs say you can do this
     # mod = suppressWarnings( metatest(yi ~ 1, variance = vi, data = d) )
     # mod$bartLLR
