@@ -116,7 +116,7 @@ agg$true.dist.pretty = factor( agg$true.dist.pretty, levels = c("Normal effects"
 
 
 
-# main analysis dataset
+### main analysis dataset
 agg2 = agg %>% filter(k.pub <= 20)
 
 # check method recoding
@@ -141,9 +141,31 @@ init_var_names(.agg = agg)
 #                 factorVars = param.vars.manip2,
 #                 strata = "Ytype" )
 
-# scen 1384 data
+### scen 1384 data
 setwd(data.dir)
 s2 = fread("pretty_long_results_job_1384.csv")
+
+### dataset of just a few k=10 scens with perm method
+( temp.dir = str_replace( string = data.dir,
+                          pattern = "Working dataset",
+                          replacement = "2024-07-01 - add perm in k=10 scens only") )
+
+setwd(temp.dir)
+aggperm = fread("aggo.csv")
+
+t = aggperm %>% group_by(method) %>%
+  summarise(meanNA(MhatCover),
+            mean(is.na(MhatCover)),
+            meanNA(MhatWidth))
+dim(t)
+
+View(t)
+
+# compare performance of boot and perm
+x1 = aggperm$MhatCover[ aggperm$method == "boot" ]
+x2 = aggperm$MhatCover[ aggperm$method == "perm" ]
+
+plot(x1, x2)
 
 
 # ~~ Check runtimes of sbatch files -------------------------

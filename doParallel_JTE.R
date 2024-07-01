@@ -35,7 +35,7 @@ toLoad = c("crayon",
            "metaLik",
            "HDInterval",
            "boot",
-           "metatest",
+           #"metatest",
            "phacking")  # note: to reinstall this one, need ml load jags
 
 # to install everything
@@ -177,18 +177,19 @@ if ( run.local == TRUE ) {
   # ~~ ****** Set Local Sim Params -----------------------------
 
   
-  ### SAVE - Illustrative scen to run locally - 708 ###
+  ### debug perm CI ###
+ # first scen of genSbatch, which timed out
   scen.params = data.frame(
     scen.name = 1,
     #rep.methods = "ML ; MLE-profile ; exact ; REML ; DL ; DL2 ; PM ; bayesmeta-tau-central ; bayesmeta-tau-shortest ; bayesmeta-joint-central ; bayesmeta-joint-shortest",
-    rep.methods = "ML ; perm ; metatest ; boot",
+    rep.methods = "perm",
     k.pub = 10,
-    t2a = 0.1^2,
-    Mu = 0.5,
+    t2a = 0.01^2,
+    Mu = 0,
     true.dist = "norm",
     p0 = 0.05,
-    Ytype = "bin-OR",
-    N.expr = "round( runif(n=1, min=2000, max = 4000) )",
+    Ytype = "cont-SMD",
+    N.expr = "40",
     stan.maxtreedepth = 25L,
     stan.adapt_delta = 0.995)
   

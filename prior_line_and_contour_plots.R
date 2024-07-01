@@ -81,7 +81,7 @@ source("analyze_sims_helper_JTE.R")
 source("helper_JTE.R")  # for lprior(), etc.
 
 
-# ** LINE PLOT: TAU FOR DIFFERENT N.EXPR  -------------------------------------------------
+# ** FIGURE 1 LINE PLOT: TAU FOR DIFFERENT N.EXPR  -------------------------------------------------
 
 # Idea: panels are different values of k; lines are different sei distributions taken from the sims
 
@@ -126,6 +126,42 @@ my_ggsave(name = "prior_plot_simulated.pdf",
 # in response to reviewer: try combining the plots 
 plot = prior_plot_one_k_2(.k = 10)
 
+
+# ~ In response to reviewer: reparameterize SMD  -------------------------------------------------
+
+# sanity check:
+# from debug(escalc)
+
+# For measure="SMD", one can choose between vtype="LS" (the default) for the usual large-sample approximation to compute the sampling variances (equation 8 in Hedges, 1982),
+
+# if (vtype[i] == "LS") 
+#   vi[i] <- 1/n1i[i] + 1/n2i[i] + yi[i]^2/(2 * 
+#                                             npi[i])
+# where npi = total N
+
+N = 10
+Mu = -4
+
+d = sim_meta( 
+  Mu = Mu,
+  t2a = 0,
+  true.dist = "norm",
+  
+  N.expr = N,
+  Ytype = "cont-SMD",
+  p0 = NA,
+  
+  k.pub = 500)
+
+
+# manual approximation of escalc formula above for case of E[N1] = E[N2]
+my_sei = sqrt( (8+Mu^2)/(2*N) )
+
+summary(d$sei - my_sei)
+
+
+(8+Mu^2)/(2*N)  # manual simplification of escalc formula above for case of E[N1] = E[N2]
+# yes, matches :)
 
 
 

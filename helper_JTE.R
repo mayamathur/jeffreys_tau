@@ -784,6 +784,7 @@ sim_one_study = function( Mu,  # overall mean for meta-analysis
   
   # as in MRM helper code
   if ( Ytype == "cont-SMD" ) {
+
     # group assignments
     X = c( rep( 0, N/2 ), rep( 1, N/2 ) )
     
@@ -830,8 +831,6 @@ sim_one_study = function( Mu,  # overall mean for meta-analysis
       # sanity check to be returned
       nY0_theory = p0 * (muN/2)
       nY1_theory = p0 * exp(mui) * (muN/2)
-      
-      browser()
       
       # sanity check
       if (FALSE){

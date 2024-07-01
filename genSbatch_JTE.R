@@ -40,14 +40,17 @@ lapply( allPackages,
 
 ### 2024-06-27 - full set ###
 scen.params = tidyr::expand_grid(
-  rep.methods = "ML ; MLE-profile ; perm ; boot ; exact ; REML ; DL ; DL2 ; PM ; bayesmeta-tau-central ; bayesmeta-tau-shortest ; bayesmeta-joint-central ; bayesmeta-joint-shortest",
+  rep.methods = "ML ; MLE-profile ; boot ; exact ; REML ; DL ; DL2 ; PM ; bayesmeta-tau-central ; bayesmeta-tau-shortest ; bayesmeta-joint-central ; bayesmeta-joint-shortest",
 
   
   # *If you reorder the args, need to adjust wrangle_agg_local
   ### args shared between sim environments
-  k.pub = c(10,
-            2, 3, 5, 20, 100),  # intentionally out of order so that jobs with most interesting choices with complete first
+  # k.pub = c(10,
+  #           2, 3, 5, 20, 100),  # intentionally out of order so that jobs with most interesting choices with complete first
 
+  # TEMP: ONLY RUN 10 
+  k.pub = 10,
+  
   t2a = c(0.01^2, 0.1^2, 0.05^2, 0.2^2, 0.5^2),
 
   # same with Mu
@@ -144,8 +147,8 @@ sbatch_params <- data.frame(jobname,
                             # for RSM_1 sims with sim.env=stefan, n.reps.per.scen=500, and n.reps.in.doParallel=20 (1750 files):
                             # how to specify job times: https://www.sherlock.stanford.edu/docs/advanced-topics/job-management/#job-submission-limits
                             # days-hh:mm:ss
-                            #jobtime = "2-00:00:00",  # 2 day (only used for k=100 scens)
-                            jobtime = "04:00:00",  # when running all methods, 4:00:00 is enough for all k EXCEPT k=100, which needs 2 days
+                            jobtime = "2-00:00:00",  # 2 day (only used for k=100 scens)
+                            #jobtime = "08:00:00",  # when running all methods, 4:00:00 is enough for all k EXCEPT k=100, which needs 2 days
                             quality = "normal",
                             node_number = 1,
                             mem_per_node = 64000,
@@ -167,11 +170,10 @@ n.files
 #     sbatch -p qsu,owners,normal /home/groups/manishad/JTE/sbatch_files/1.sbatch
 
 
-# 2024-06-28: 31,200
-# first 520 are for k.pub = 10
+# 2024-06-28: 5,200 (only k.pub = 10)
 path = "/home/groups/manishad/JTE"
 setwd( paste(path, "/sbatch_files", sep="") )
-for (i in 2:1000) {
+for (i in 1:1000) {
   system( paste("sbatch -p qsu,owners,normal /home/groups/manishad/JTE/sbatch_files/", i, ".sbatch", sep="") )
 }
 
