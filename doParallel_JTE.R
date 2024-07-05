@@ -5,7 +5,7 @@
 
 # are we running locally?
 run.local = FALSE
-#run.local = TRUE
+# run.local = TRUE
 
 # should we set scen params interactively on cluster?
 interactive.cluster.run = FALSE
@@ -35,6 +35,7 @@ toLoad = c("crayon",
            "metaLik",
            "HDInterval",
            "boot",
+           "rma.exact",
            #"metatest",
            "phacking")  # note: to reinstall this one, need ml load jags
 
@@ -176,23 +177,43 @@ if ( run.local == TRUE ) {
   
   # ~~ ****** Set Local Sim Params -----------------------------
 
-  
-  ### debug perm CI ###
- # first scen of genSbatch, which timed out
-  scen.params = data.frame(
-    scen.name = 1,
+  # debugging timeouts: from genSbatch
+  scen.params = tidyr::expand_grid(
+    rep.methods = "ML ; MLE-profile ; boot ; exact ; REML ; DL ; DL2 ; PM ; bayesmeta-tau-central ; bayesmeta-tau-shortest ; bayesmeta-joint-central ; bayesmeta-joint-shortest",
+    
+    # TEMP ONLY:
+    # all methods EXCEPT boot
     #rep.methods = "ML ; MLE-profile ; exact ; REML ; DL ; DL2 ; PM ; bayesmeta-tau-central ; bayesmeta-tau-shortest ; bayesmeta-joint-central ; bayesmeta-joint-shortest",
-    rep.methods = "perm",
+    
+    
+    # *If you reorder the args, need to adjust wrangle_agg_local
+    ### args shared between sim environments
+    # k.pub = c(10,
+    #           2, 3, 5, 20, 100),  # intentionally out of order so that jobs with most interesting choices with complete first
+    
+    # TEMP ONLY:
     k.pub = 10,
-    t2a = 0.01^2,
-    Mu = 0,
-    true.dist = "norm",
-    p0 = 0.05,
-    Ytype = "cont-SMD",
-    N.expr = "40",
-    stan.maxtreedepth = 25L,
-    stan.adapt_delta = 0.995)
-  
+    
+    t2a = c(0.01^2, 0.1^2, 0.05^2, 0.2^2, 0.5^2),
+    
+    # same with Mu
+    Mu = c(0, 0.5, 1.1, 2.3), # same as Langan's log-ORs
+    true.dist = c("norm", "expo"),
+    p0 = c(NA, 0.05, 0.1, 0.5),
+    
+    Ytype = c("cont-SMD", "bin-OR"),
+    
+    N.expr = c( "40",
+                "round( runif(n=1, min=40, max = 400) )",
+                "400",
+                "round( runif(n=1, min=2000, max = 4000) )" ),
+    
+    # Stan control args
+    stan.maxtreedepth = 25,
+    stan.adapt_delta = 0.995,
+    
+    get.CIs = TRUE,
+    run.optimx = FALSE )
   
   # ### SAVE - Illustrative scen to run locally - 708 ###
   # # this is one where Shat behavior was horrible for Jeffreys, but reasonable for other methods
@@ -444,9 +465,11 @@ doParallel.seconds = system.time({
                                                                      
                                                                    }))
                               
-                                  cis = get_boot_CIs(boot.res,
-                                                     type = "bca", 
-                                                     n.ests = ncol(boot.res$t))
+                                  #@DEBUGGING ONLY!
+                                  cis = list( c(-99, 99), c(-99, 99) )
+                                  # cis = get_boot_CIs(boot.res,
+                                  #                    type = "bca", 
+                                  #                    n.ests = ncol(boot.res$t))
                                   
                                   
                                   # this method doesn't do point estimation
