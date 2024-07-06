@@ -449,7 +449,7 @@ doParallel.seconds = system.time({
                                   boot.iterates = 1000
                                   
                                   boot.res = suppressWarnings(boot(data = d,
-                                                                   parallel = "multicore",
+                                                                   parallel = "no",
                                                                    R = boot.iterates,
                                                                    statistic = function(original,
                                                                                         indices) {

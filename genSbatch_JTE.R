@@ -40,11 +40,11 @@ lapply( allPackages,
 
 ### 2024-06-27 - full set ###
 scen.params = tidyr::expand_grid(
-  #rep.methods = "ML ; MLE-profile ; boot ; exact ; REML ; DL ; DL2 ; PM ; bayesmeta-tau-central ; bayesmeta-tau-shortest ; bayesmeta-joint-central ; bayesmeta-joint-shortest",
+  rep.methods = "ML ; MLE-profile ; boot ; exact ; REML ; DL ; DL2 ; PM ; bayesmeta-tau-central ; bayesmeta-tau-shortest ; bayesmeta-joint-central ; bayesmeta-joint-shortest",
 
   # TEMP ONLY:
   # all methods EXCEPT boot
-  rep.methods = "ML ; MLE-profile ; exact ; REML ; DL ; DL2 ; PM ; bayesmeta-tau-central ; bayesmeta-tau-shortest ; bayesmeta-joint-central ; bayesmeta-joint-shortest",
+  #rep.methods = "ML ; MLE-profile ; exact ; REML ; DL ; DL2 ; PM ; bayesmeta-tau-central ; bayesmeta-tau-shortest ; bayesmeta-joint-central ; bayesmeta-joint-shortest",
   
   
   # *If you reorder the args, need to adjust wrangle_agg_local
@@ -152,7 +152,7 @@ sbatch_params <- data.frame(jobname,
                             # how to specify job times: https://www.sherlock.stanford.edu/docs/advanced-topics/job-management/#job-submission-limits
                             # days-hh:mm:ss
                             #jobtime = "2-00:00:00",  # 2 day (only used for k=100 scens)
-                            jobtime = "00:30:00",  # when running all methods, 4:00:00 is enough for all k EXCEPT k=100, which needs 2 days
+                            jobtime = "04:00:00",  # when running all methods, 4:00:00 is enough for all k EXCEPT k=100, which needs 2 days
                             quality = "normal",
                             node_number = 1,
                             mem_per_node = 64000,
