@@ -204,8 +204,8 @@ if (FALSE) {
   
   # main results
   t = s %>% group_by(method) %>%
-    #filter(Ytype == "cont-SMD") %>% 
-    filter(Ytype == "bin-OR") %>% 
+    filter(Ytype == "cont-SMD") %>% 
+    #filter(Ytype == "bin-OR") %>% 
 
     summarise( reps = n(),
                # EstFail = mean(is.na(Mhat)),

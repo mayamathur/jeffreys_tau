@@ -16,7 +16,7 @@ allPackages = c("here",
                 "gmm",
                 "doParallel",
                 "foreach")
- 
+
 
 ( packagesNeeded = allPackages[ !( allPackages %in% installed.packages()[,"Package"] ) ] )
 if( length(packagesNeeded) > 0 ) install.packages(packagesNeeded)
@@ -38,10 +38,10 @@ lapply( allPackages,
 # - I think a similar thing will be true with the Rhats if you omit jeffreys-mcmc?
 
 
-### 2024-06-27 - full set ###
+### 2024-07-08 - k=10, cont-SMD only for investigating boot ###
 scen.params = tidyr::expand_grid(
   rep.methods = "ML ; MLE-profile ; boot ; exact ; REML ; DL ; DL2 ; PM ; bayesmeta-tau-central ; bayesmeta-tau-shortest ; bayesmeta-joint-central ; bayesmeta-joint-shortest",
-
+  
   # TEMP ONLY:
   # all methods EXCEPT boot
   #rep.methods = "ML ; MLE-profile ; exact ; REML ; DL ; DL2 ; PM ; bayesmeta-tau-central ; bayesmeta-tau-shortest ; bayesmeta-joint-central ; bayesmeta-joint-shortest",
@@ -56,16 +56,55 @@ scen.params = tidyr::expand_grid(
   k.pub = 10,
   
   t2a = c(0.01^2, 0.1^2, 0.05^2, 0.2^2, 0.5^2),
-
+  
   # same with Mu
   Mu = c(0, 0.5, 1.1, 2.3), # same as Langan's log-ORs
   true.dist = c("norm", "expo"),
   p0 = c(NA, 0.05, 0.1, 0.5),
-
+  
   #Ytype = c("cont-SMD", "bin-OR"),
   
   # TEMP ONLY:
   Ytype = c("cont-SMD"),
+  
+  N.expr = c( "40",
+              "round( runif(n=1, min=40, max = 400) )",
+              "400",
+              "round( runif(n=1, min=2000, max = 4000) )" ),
+  
+  # Stan control args
+  stan.maxtreedepth = 25,
+  stan.adapt_delta = 0.995,
+  
+  get.CIs = TRUE,
+  run.optimx = FALSE )
+
+
+### More k=10 scens, but not all (both binary and continuous) ###
+scen.params = tidyr::expand_grid(
+  rep.methods = "ML ; MLE-profile ; boot ; exact ; REML ; DL ; DL2 ; PM ; bayesmeta-tau-central ; bayesmeta-tau-shortest ; bayesmeta-joint-central ; bayesmeta-joint-shortest",
+
+  # TEMP ONLY:
+  # all methods EXCEPT boot
+  # rep.methods = "ML ; MLE-profile ; exact ; REML ; DL ; DL2 ; PM ; bayesmeta-tau-central ; bayesmeta-tau-shortest ; bayesmeta-joint-central ; bayesmeta-joint-shortest",
+
+
+  # *If you reorder the args, need to adjust wrangle_agg_local
+  ## args shared between sim environments
+  k.pub = c(10), 
+
+
+  t2a = c(0.01^2, 0.1^2, 0.05^2, 0.2^2, 0.5^2),
+
+  # same with Mu
+  #Mu = c(0, 0.5, 1.1, 2.3), # same as Langan's log-ORs
+  # only a subset of Mu choices:
+  Mu = c(0.5), # same as Langan's log-ORs
+  true.dist = c("norm", "expo"),
+  # only a subset of p0:
+  p0 = c(NA, 0.1),
+
+  Ytype = c("cont-SMD", "bin-OR"),
 
   N.expr = c( "40",
               "round( runif(n=1, min=40, max = 400) )",
@@ -78,6 +117,44 @@ scen.params = tidyr::expand_grid(
 
   get.CIs = TRUE,
   run.optimx = FALSE )
+
+
+# ### Full set ###
+# scen.params = tidyr::expand_grid(
+#   rep.methods = "ML ; MLE-profile ; boot ; exact ; REML ; DL ; DL2 ; PM ; bayesmeta-tau-central ; bayesmeta-tau-shortest ; bayesmeta-joint-central ; bayesmeta-joint-shortest",
+# 
+#   # TEMP ONLY:
+#   # all methods EXCEPT boot
+#   # rep.methods = "ML ; MLE-profile ; exact ; REML ; DL ; DL2 ; PM ; bayesmeta-tau-central ; bayesmeta-tau-shortest ; bayesmeta-joint-central ; bayesmeta-joint-shortest",
+# 
+# 
+#   # *If you reorder the args, need to adjust wrangle_agg_local
+#   ## args shared between sim environments
+#   k.pub = c(10,
+#             2, 3, 5, 20, 100),  # intentionally out of order so that jobs with most interesting choices with complete first
+# 
+# 
+#   t2a = c(0.01^2, 0.1^2, 0.05^2, 0.2^2, 0.5^2),
+# 
+#   # same with Mu
+#   Mu = c(0, 0.5, 1.1, 2.3), # same as Langan's log-ORs
+#   true.dist = c("norm", "expo"),
+#   p0 = c(NA, 0.05, 0.1, 0.5),
+# 
+#   Ytype = c("cont-SMD", "bin-OR"),
+# 
+#   N.expr = c( "40",
+#               "round( runif(n=1, min=40, max = 400) )",
+#               "400",
+#               "round( runif(n=1, min=2000, max = 4000) )" ),
+# 
+#   # Stan control args
+#   stan.maxtreedepth = 25,
+#   stan.adapt_delta = 0.995,
+# 
+#   get.CIs = TRUE,
+#   run.optimx = FALSE )
+
 
 table(scen.params$p0, useNA = "ifany")
 
@@ -132,6 +209,8 @@ n.reps.per.scen = 500
 n.reps.in.doParallel = 5
 ( n.files = ( n.reps.per.scen / n.reps.in.doParallel ) * n.scen )
 
+if ( n.reps.per.scen == n.reps.in.doParallel ) message("\n\n OK to write only the short results in doParallel and use stitch_short_res_JTE.R because each scen is 1 job")
+if ( n.reps.per.scen > n.reps.in.doParallel ) message("\n\n Need to write the long results in doParallel and use stitch_long_res_JTE.R because each scen is multiple jobs")
 
 
 

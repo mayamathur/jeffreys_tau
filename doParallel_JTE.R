@@ -443,7 +443,7 @@ doParallel.seconds = system.time({
     
     # slow, but not nearly as slow as perm!
     if ( "boot" %in% all.methods ) {
-      rep.res = run_method_safe(method.label = c("boot"),
+      rep.res = run_method_safe(method.label = c("boot-bca", "boot-perc"),
                                 method.fn = function() {
                                   
                                   boot.iterates = 500
@@ -469,21 +469,25 @@ doParallel.seconds = system.time({
                                   
                                   cat("\n\n boot.resample.sec = ", boot.resample.sec)
                               
-                                  
+                                  # get CIs
                                   boot.ci.sec = system.time({
-                                  # cis = list( c(-99, 99), c(-99, 99) )  # for debugging timeout issues
-                                  cis = get_boot_CIs(boot.res,
+                                  cis_bca = get_boot_CIs(boot.res,
                                                      type = "bca",
                                                      n.ests = ncol(boot.res$t))
+                                  
+                                  cis_perc = get_boot_CIs(boot.res,
+                                                     type = "perc",
+                                                     n.ests = ncol(boot.res$t))
+                                  
                                   })[3]
                                   cat("\n\n boot.ci.sec = ", boot.ci.sec)
                                   
                                   # this method doesn't do point estimation
                                   return( list( stats = data.frame( 
-                                    MLo = cis[[1]][1],
-                                    MHi = cis[[1]][2],
-                                    SLo = cis[[2]][1],
-                                    SHi = cis[[2]][2],
+                                    MLo = c( cis_bca[[1]][1], cis_perc[[1]][1] ),
+                                    MHi = c( cis_bca[[1]][2], cis_perc[[1]][2] ),
+                                    SLo = c( cis_bca[[2]][1], cis_perc[[2]][1] ),
+                                    SHi = c( cis_bca[[2]][2], cis_perc[[2]][2] ),
                                     
                                     boot.resample.sec = boot.resample.sec,
                                     boot.ci.sec = boot.ci.sec) ) )
@@ -494,15 +498,7 @@ doParallel.seconds = system.time({
     
     if (run.local == TRUE) srr(rep.res)
     
-  
-    # ~~ Barlett correction (package metatest) -------------------------------------------------
-    
-    # # pkg always gives a warning about recycling vector if you run intercept-only, 
-    # #  even though docs say you can do this
-    # mod = suppressWarnings( metatest(yi ~ 1, variance = vi, data = d) )
-    # mod$bartLLR
-    
-    
+
     # ~~ Exact method (package rma.exact) -------------------------------------------------
     
     if ( "exact" %in% all.methods ) {
