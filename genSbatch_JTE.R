@@ -155,7 +155,7 @@ sbatch_params <- data.frame(jobname,
                             # how to specify job times: https://www.sherlock.stanford.edu/docs/advanced-topics/job-management/#job-submission-limits
                             # days-hh:mm:ss
                             #jobtime = "2-00:00:00",  # 2 day (only used for k=100 scens)
-                            jobtime = "04:00:00",  # when running all methods, 4:00:00 is enough for all k EXCEPT k=100, which needs 2 days
+                            jobtime = "03:00:00",  # when running all methods, 4:00:00 is enough for all k EXCEPT k=100, which needs 2 days
                             quality = "normal",
                             node_number = 1,
                             mem_per_node = 64000,
@@ -180,7 +180,7 @@ n.files
 # 2024-07-06: 4000
 path = "/home/groups/manishad/JTE"
 setwd( paste(path, "/sbatch_files", sep="") )
-for (i in 2001:3000) {
+for (i in 1:1000) {
   system( paste("sbatch -p qsu,owners,normal /home/groups/manishad/JTE/sbatch_files/", i, ".sbatch", sep="") )
 }
 

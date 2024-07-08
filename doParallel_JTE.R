@@ -993,10 +993,16 @@ if ( run.local == TRUE ) {
 if ( run.local == FALSE ) {
   
   # write long results for one job only
-  if ( scen == 1384 ) {
-    setwd("/home/groups/manishad/JTE/long_results")
-    fwrite( rs, paste( "long_results", jobname, ".csv", sep="_" ) )
-  }
+  # USE THIS IF SIM.REPS = TOTAL REPS PER SCEN (i.e., each scen is 1 job only)
+  # if ( scen == 1384 ) {
+  #   setwd("/home/groups/manishad/JTE/long_results")
+  #   fwrite( rs, paste( "long_results", jobname, ".csv", sep="_" ) )
+  # }
+  
+  # write long results for every job
+  # USE THIS IF SIM.REPS < TOTAL REPS PER SCEN (i.e., scens take up multiple jobs, which was needed for boot method)
+  setwd("/home/groups/manishad/JTE/long_results")
+  fwrite( rs, paste( "long_results", jobname, ".csv", sep="_" ) )
   
   # pre-aggregate 
   agg_job = make_agg_data(rs)
