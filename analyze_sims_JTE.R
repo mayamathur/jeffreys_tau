@@ -21,7 +21,6 @@ library(ggplot2)
 library(data.table)
 library(tidyverse)
 library(fastDummies)
-library(xlsx)
 # meta-analysis packages
 library(metafor)
 library(robumeta)
@@ -129,6 +128,9 @@ table(agg2$method.pretty.est)
 # table(agg$method.pretty)
 
 # check that all sim reps completed
+t = agg %>% group_by()
+
+
 expect_equal( unique(agg$sim.reps.actual), 500 )
 
 # initialize global variables that describe estimate and outcome names, etc.

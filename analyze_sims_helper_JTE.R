@@ -144,6 +144,8 @@ make_agg_data = function( .s,
   
   ##### Add New Variables Calculated at Scenario Level #####
   
+  browser()
+  
   # if you have 10K iterates, script breaks from here forward if running locally
   # "vector memory limits"
   s2 = .s %>%

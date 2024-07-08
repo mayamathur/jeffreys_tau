@@ -17,7 +17,6 @@ library(ggplot2)
 library(data.table)
 library(tidyverse)
 library(fastDummies)
-library(xlsx)
 # meta-analysis packages
 library(metafor)
 library(robumeta)
@@ -111,7 +110,7 @@ mean(agg$exclude_scen_biased_yi)  # percent of scens
 message( paste( "\n\n", round( 100 * meanNA(agg$exclude_scen_biased_yi) ), "% of scens had biased yi and will be removed", sep = " ") )
 
 
-#@why are some of these NA?
+# expect no NAs here
 mean(is.na(agg$sancheck_mean_yi))
 
 # summarize scen params for these ones
