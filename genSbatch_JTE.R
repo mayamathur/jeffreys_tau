@@ -62,7 +62,10 @@ scen.params = tidyr::expand_grid(
   true.dist = c("norm", "expo"),
   p0 = c(NA, 0.05, 0.1, 0.5),
 
-  Ytype = c("cont-SMD", "bin-OR"),
+  #Ytype = c("cont-SMD", "bin-OR"),
+  
+  # TEMP ONLY:
+  Ytype = c("cont-SMD"),
 
   N.expr = c( "40",
               "round( runif(n=1, min=40, max = 400) )",
@@ -126,7 +129,7 @@ scen.params = fread("scen_params.csv")
 # number of sbatches to generate (i.e., iterations within each scenario)
 n.reps.per.scen = 500  
 # ~ *** set sim.reps  -------------------------------------------------
-n.reps.in.doParallel = 50
+n.reps.in.doParallel = 5
 ( n.files = ( n.reps.per.scen / n.reps.in.doParallel ) * n.scen )
 
 
@@ -174,10 +177,10 @@ n.files
 #     sbatch -p qsu,owners,normal /home/groups/manishad/JTE/sbatch_files/1.sbatch
 
 
-# 2024-07-05: 5,200
+# 2024-07-06: 4000
 path = "/home/groups/manishad/JTE"
 setwd( paste(path, "/sbatch_files", sep="") )
-for (i in 1:100) {
+for (i in 2001:3000) {
   system( paste("sbatch -p qsu,owners,normal /home/groups/manishad/JTE/sbatch_files/", i, ".sbatch", sep="") )
 }
 
@@ -193,7 +196,7 @@ source("helper_JTE.R")
 missed.nums = sbatch_not_run( "/home/groups/manishad/JTE/short_results",
                               "/home/groups/manishad/JTE/short_results",
                               .name.prefix = "short_results",
-                              .max.sbatch.num = 3120 )
+                              .max.sbatch.num = 3000 )
 
 
 # 1040 files

@@ -150,7 +150,7 @@ if (run.local == FALSE) {
   # simulation reps to run within this job
   # **this need to match n.reps.in.doParallel in the genSbatch script
   # ***** Set cluster sim reps  -------------------------------------------------
-  if ( interactive.cluster.run == FALSE ) sim.reps = 50
+  if ( interactive.cluster.run == FALSE ) sim.reps = 5
   
   # set the number of cores
   registerDoParallel(cores=16)
@@ -446,8 +446,9 @@ doParallel.seconds = system.time({
       rep.res = run_method_safe(method.label = c("boot"),
                                 method.fn = function() {
                                   
-                                  boot.iterates = 1000
+                                  boot.iterates = 500
                                   
+                                  boot.resample.sec = system.time({
                                   boot.res = suppressWarnings(boot(data = d,
                                                                    parallel = "no",
                                                                    R = boot.iterates,
@@ -464,20 +465,28 @@ doParallel.seconds = system.time({
                                                                      return( c( as.numeric(mb$b), as.numeric( sqrt(mb$tau2) ) ) )
                                                                      
                                                                    }))
-                              
-                                  #@DEBUGGING ONLY!
-                                  cis = list( c(-99, 99), c(-99, 99) )
-                                  # cis = get_boot_CIs(boot.res,
-                                  #                    type = "bca", 
-                                  #                    n.ests = ncol(boot.res$t))
+                                  })[3]
                                   
+                                  cat("\n\n boot.resample.sec = ", boot.resample.sec)
+                              
+                                  
+                                  boot.ci.sec = system.time({
+                                  # cis = list( c(-99, 99), c(-99, 99) )  # for debugging timeout issues
+                                  cis = get_boot_CIs(boot.res,
+                                                     type = "bca",
+                                                     n.ests = ncol(boot.res$t))
+                                  })[3]
+                                  cat("\n\n boot.ci.sec = ", boot.ci.sec)
                                   
                                   # this method doesn't do point estimation
                                   return( list( stats = data.frame( 
                                     MLo = cis[[1]][1],
                                     MHi = cis[[1]][2],
                                     SLo = cis[[2]][1],
-                                    SHi = cis[[2]][2] ) ) )
+                                    SHi = cis[[2]][2],
+                                    
+                                    boot.resample.sec = boot.resample.sec,
+                                    boot.ci.sec = boot.ci.sec) ) )
                                   
                                 },
                                 .rep.res = rep.res )

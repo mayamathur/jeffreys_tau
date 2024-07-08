@@ -53,6 +53,8 @@ tables <- foreach(i = 1:length(split_files), .packages = c("data.table")) %dopar
 # combine the results
 agg <- rbindlist(tables, fill = TRUE)
 
+summary(agg$doParallelSeconds)/60^2
+
 
 # write it
 setwd(.results.stitched.write.path)
