@@ -64,31 +64,26 @@ tables <- lapply( keepers, function(x) {
   
   y = tryCatch( read.csv(x, header = TRUE), error = function(e) NULL )
   
-  y[[ "N.expr" ]] = as.character(y[[ "N.expr" ]] )  # only needed if it is just a number, because it turns into a double for certain datasets and then can't be concatenated with character ones
+  # only needed if N.expr is just a number, because it turns into a double for certain datasets and then can't be concatenated with character ones
+  if ( "N.expr" %in% names(y) ) {
+    y[[ "N.expr" ]] = as.character(y[[ "N.expr" ]] )  
+  }
+  
   y
-  } )
+} )
 
 
 cat("\n\nFinished reading in tables")
 
-# sanity check: do all files have the same names?
-# if not, could be because some jobs were killed early so didn't get doParallelTime
-#  variable added at the end
-allNames = lapply( tables, names )
-# # find out which jobs had wrong number of names
-# lapply( allNames, function(x) all.equal(x, names ) )table(s$method)
-# allNames[[1]][ !allNames[[1]] %in% allNames[[111]] ]
-
-# bind_rows works even if datasets have different names
+# bind_rows works even if datasets have different names (e.g., due to different output from different methods)
 #  will fill in NAs
 s <- do.call(bind_rows, tables)
 
-cat("\n\nFinished s <- do.call")
+cat("\n\nFinished s <- do.call(...)")
 
 names(s) = names( read.csv(keepers[1], header= TRUE) )
 
 if( is.na(s[1,1]) ) s = s[-1,]  # delete annoying NA row
-# write.csv(s, paste(.results.stitched.write.path, .stitch.file.name, sep="/") )
 
 cat("\n\n nrow(s) =", nrow(s))
 cat("\n nuni(s$scen.name) =", nuni(s$scen.name) )
@@ -109,6 +104,8 @@ if ( any(is.na(names(s))) ) {
 }
 
 s = s %>% filter(!is.na(scen.name))
+
+s = droplevels(s)
 
 
 # check runtimes - HOURS
@@ -142,7 +139,7 @@ if (FALSE) {
   missed.nums = sbatch_not_run( "/home/groups/manishad/JTE/long_results",
                                 "/home/groups/manishad/JTE/overall_stitched",
                                 .name.prefix = "long_results",
-                                .max.sbatch.num = 2496 )
+                                .max.sbatch.num = 8000 )
   
   
   
@@ -162,9 +159,6 @@ if (FALSE) {
 
   # reps per scen
   # should be equal to reps.per.scen / reps.in.doParallel
-  s %>% group_by(scen.name, method) %>%
-    summarise(n())
-  
   as.data.frame( s %>% group_by(method, scen.name, k.pub) %>%
                    summarise(n()) )
   
@@ -202,10 +196,10 @@ if (FALSE) {
   #sum(s$k.pub == 10 & s$t2a == 0.2^2 & s$Mu == 0)
   
   
-  # main results
+  #### Main results
   t = s %>% group_by(method) %>%
-    filter(Ytype == "cont-SMD") %>% 
-    #filter(Ytype == "bin-OR") %>% 
+    #filter(Ytype == "cont-SMD") %>% 
+    filter(Ytype == "bin-OR") %>% 
 
     summarise( reps = n(),
                # EstFail = mean(is.na(Mhat)),
@@ -252,19 +246,13 @@ source("analyze_sims_helper_JTE.R")
 # if this says "problem with column OptimConverged", 
 #  you just need to comment out the optim columns in make_agg_data
 #  because you didn't run those methods
-agg = make_agg_data(s)
+aggo = make_agg_data(s)
 
 setwd(.results.stitched.write.path)
-fwrite(agg, "aggo.csv")
+fwrite(aggo, "aggo.csv")
 
-cat("\n\n nrow(agg) =", nrow(agg))
-cat("\n nuni(agg$scen.name) =", nuni(agg$scen.name) )
+cat("\n\n nrow(aggo) =", nrow(aggo))
+cat("\n nuni(aggo$scen.name) =", nuni(aggo$scen.name) )
 
-
-
-##### Move to Local #####
-
-# # stitched and agg -> local directory
-# scp mmathur@login.sherlock.stanford.edu:/home/groups/manishad/JTE/overall_stitched/* /Users/mmathur/Dropbox/Personal\ computer/Independent\ studies/2021/Sensitivity\ analysis\ for\ p-hacking\ \(JTE\)/Linked\ to\ OSF\ \(JTE\)/Sherlock\ simulation\ results/Pilot\ simulations
 
 

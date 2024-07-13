@@ -1000,8 +1000,8 @@ if ( run.local == FALSE ) {
   setwd("/home/groups/manishad/JTE/long_results")
   fwrite( rs, paste( "long_results", jobname, ".csv", sep="_" ) )
   
-  # pre-aggregate 
-  agg_job = make_agg_data(rs)
-  setwd("/home/groups/manishad/JTE/short_results")
-  fwrite( agg_job, paste( "short_results", jobname, ".csv", sep="_" ) )
+  # # pre-aggregate 
+  # agg_job = make_agg_data(rs)
+  # setwd("/home/groups/manishad/JTE/short_results")
+  # fwrite( agg_job, paste( "short_results", jobname, ".csv", sep="_" ) )
 }

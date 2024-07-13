@@ -144,8 +144,6 @@ make_agg_data = function( .s,
   
   ##### Add New Variables Calculated at Scenario Level #####
   
-  browser()
-  
   # if you have 10K iterates, script breaks from here forward if running locally
   # "vector memory limits"
   s2 = .s %>%
@@ -346,6 +344,8 @@ wrangle_agg_local = function(agg) {
   agg$method.pretty.est[ agg$method == "ML-profile" ] = NA  # same as above
   # other methods, like PM, DL, etc., will retain same name
   
+  agg$method.pretty.est[ agg$method %in% c("boot-bca", "boot-perc") ] = NA
+  
   table(agg$method, agg$method.pretty.est)
   
   ### method.pretty.mu.inf
@@ -360,6 +360,8 @@ wrangle_agg_local = function(agg) {
   agg$method.pretty.mu.inf[ agg$method == "DL2" ] = "DL2-HKSJ"
   agg$method.pretty.mu.inf[ agg$method == "REML" ] = "REML-HKSJ"
   agg$method.pretty.mu.inf[ agg$method == "exact" ] = "Exact"
+  agg$method.pretty.mu.inf[ agg$method == "boot-bca" ] = "Boot-BCa"
+  agg$method.pretty.mu.inf[ agg$method == "boot-perc" ] = "Boot-perc"
   
   ### method.pretty.tau.inf
   agg$method.pretty.tau.inf = agg$method 
@@ -376,6 +378,8 @@ wrangle_agg_local = function(agg) {
   agg$method.pretty.tau.inf[ agg$method == "DL2" ] = "DL2-Qprofile"
   agg$method.pretty.tau.inf[ agg$method == "REML" ] = "REML-Qprofile"
   agg$method.pretty.tau.inf[ agg$method == "exact" ] = "Exact"
+  agg$method.pretty.tau.inf[ agg$method == "boot-bca" ] = "Boot-BCa"
+  agg$method.pretty.tau.inf[ agg$method == "boot-perc" ] = "Boot-perc"
   
   
   agg$Ytype.pretty = NA
@@ -449,6 +453,7 @@ make_winner_table_col = function(.agg,
                                  #methods = unique(.agg$method),
                                  summarise.fun.name = "median",
                                  digits = 2) {
+  
   
   # # test only
   # .agg = agg
@@ -634,8 +639,9 @@ make_winner_table = function( .agg,
                               .yNames,
                               summarise.fun.name,
                               #display = c("dataframe", "xtable")
-                              display = "dataframe"
-                              #display = "xtable"
+                              
+                              #display = "dataframe"
+                              display = "xtable"
 ){
   
   
@@ -1913,6 +1919,8 @@ init_var_names = function(.agg) {
                               "PM-HKSJ",
                               "DL2-HKSJ",
                               "Exact",
+                              "Boot-BCa",
+                              "Boot-perc",
                               "ML-profile",
                               "Jeffreys1-shortest", 
                               "Jeffreys2-shortest")
@@ -1923,6 +1931,8 @@ init_var_names = function(.agg) {
                                "PM-Qprofile",
                                "DL2-Qprofile",
                                "ML-profile",
+                               "Boot-BCa",
+                               "Boot-perc",
                                "Jeffreys1-central", 
                                "Jeffreys1-shortest", 
                                "Jeffreys2-central", 

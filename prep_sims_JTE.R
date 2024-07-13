@@ -46,20 +46,48 @@ options(scipen=999)
 
 stitch.from.scratch = FALSE
 
+# are we running the main analysis, or the supplementary bootstrap analysis?
+# this avoids results in stats_for_paper.csv
+sim_set = "boot"
+#sim_set = "main"
+message("\n\n***** Setting sim_set = ", sim_set)
+
 
 # ~~ Set directories -------------------------
 code.dir = here()
 
-( data.dir = str_replace( string = here(),
-                          pattern = "Code \\(git\\)",
-                          replacement = "Results/Working dataset") )
+# "official" directory names:
+if ( sim_set == "main" ) {
+  ( data.dir = str_replace( string = here(),
+                            pattern = "Code \\(git\\)",
+                            replacement = "Results/*2024-02-26 - collect pmed, mean from bayesmeta (as in RSM_0)/Datasets") )
+  
+  ( results.dir = str_replace( string = here(),
+                               pattern = "Code \\(git\\)",
+                               replacement = "Results/*2024-02-26 - collect pmed, mean from bayesmeta (as in RSM_0)/Results") )
+}
 
-( results.dir = str_replace( string = here(),
-                             pattern = "Code \\(git\\)",
-                             replacement = "Results/Working results") )
+if ( sim_set == "boot" ) {
+  ( data.dir = str_replace( string = here(),
+                            pattern = "Code \\(git\\)",
+                            replacement = "Results/*2024-07-13 - add two types of boot (k=10 scens only)/Datasets") )
+  
+  ( results.dir = str_replace( string = here(),
+                               pattern = "Code \\(git\\)",
+                               replacement = "Results/*2024-07-13 - add two types of boot (k=10 scens only)/Results") )
+}
+
+# # generic directories (SAVE):
+# ( data.dir = str_replace( string = here(),
+#                           pattern = "Code \\(git\\)",
+#                           replacement = "Results/Working dataset") )
+# 
+# ( results.dir = str_replace( string = here(),
+#                              pattern = "Code \\(git\\)",
+#                              replacement = "Results/Working results") )
 
 # check that they're specified correctly
-setwd(data.dir)
+setwd( data.dir)
 setwd(results.dir)
 
 
@@ -88,11 +116,6 @@ table(agg$method.pretty)
 # initialize global variables that describe estimate and outcome names, etc.
 # this must be after calling wrangle_agg_local
 init_var_names(.agg = agg)
-
-# checking progress
-first = agg[ !duplicated(agg$scen.name), ]
-first %>% group_by(k.pub) %>%
-  summarise(n())
 
 agg = agg %>% filter(!is.na(scen.name))
 
@@ -147,109 +170,33 @@ fwrite(agg_bad, "agg_just_the_excluded_scens_biased_yi.csv")
 
 # PREP ITERATE-LEVEL DATA FOR SCEN 1384  -------------------------------------------------
 
-# this will be a little slow (1-2 min)
-setwd(data.dir)
-s2 = fread("long_results_job_1384.csv")
-
-expect_equal( 500, nrow(s2) / nuni(s2$method) )
-
-# make analysis vars
-s2 = s2 %>% rowwise() %>%
-  mutate( CI_asy = (MHi - Mhat) / (Mhat - MLo),
-          MhatBias = Mhat - Mu,
-          MhatWidth = MHi - MLo,
-          MhatCover = (MHi >= Mu & MLo <= Mu) )
-
-# recode variables
-s2$method.pretty.mu.inf = s2$method 
-s2$method.pretty.mu.inf[ s2$method == "bayesmeta-joint-shortest-margpmode" ] = "Jeffreys2-shortest" 
-s2$method.pretty.mu.inf[ s2$method == "bayesmeta-tau-shortest-margpmode" ] = "Jeffreys1-shortest"
-
-s2$method.pretty.mu.inf[ s2$method == "ML" ] = "ML-HKSJ"
-s2$method.pretty.mu.inf[ s2$method == "PM" ] = "PM-HKSJ"
-s2$method.pretty.mu.inf[ s2$method == "DL" ] = "DL-HKSJ"
-s2$method.pretty.mu.inf[ s2$method == "DL2" ] = "DL2-HKSJ"
-s2$method.pretty.mu.inf[ s2$method == "REML" ] = "REML-HKSJ"
-s2$method.pretty.mu.inf[ s2$method == "exact" ] = "Exact"
-
-
-fwrite( s2, "pretty_long_results_job_1384.csv" )
-
-
-
-
-# NOT IN USE (SAVED FROM OTHER PROJECTS):
-# MERGE 4 SIMULATION DATASETS (ITERATE LEVEL) 
-
-# # bind the stitched files
-# for (i in 1:length(data.dir.suffixes) ) {
-#   
-#   .dir = data.dir.suffixes[i]
-#   
-#   setwd(data.dir)
-#   setwd(.dir)
-#   
-#   s.chunk = fread("stitched.csv")
-#   
-#   summary(s.chunk$scen.name)
-#   
-#   if (i == 1) {
-#     s = s.chunk
-#     
-#     # just for sanity checks
-#     sanity = data.frame(sim.env = s.chunk$sim.env[1],
-#                         methods = s.chunk$rep.methods[1],
-#                         n.methods = nuni(s.chunk$method),
-#                         n.scens = nuni(s.chunk$scen.name))
-#     
-#   } else {
-#     # *need to bind_rows here to fill in NA columns (e.g., vars that don't apply for stefan sim env)
-#     # hence approach of directly binding the iterate-level data before aggregating
-#     s = bind_rows(s, s.chunk)
-#     
-#     sanity = bind_rows(sanity, 
-#                        data.frame(sim.env = s.chunk$sim.env[1],
-#                                   methods = s.chunk$rep.methods[1],
-#                                   n.methods = nuni(s.chunk$method),
-#                                   n.scens = nuni(s.chunk$scen.name)) )
-#   }
-#   
-#   setwd(results.dir)
-#   fwrite(s, "stitched_merged.csv")
-#   fwrite(sanity, "sanity.csv")
-#   
-# } # end loop over data.dir.suffixes
-
-
-
-
-# # STITCH FROM SCRATCH
-# 
-# if ( stitch.from.scratch == TRUE ) {
-#   setwd(data.dir)
-#   s = fread("stitched.csv")
-#   
-#   aggo = make_agg_data(s,
-#                        expected.sim.reps = 1000) 
-#   
-#   aggo = make_agg_data(s[1:20000,],
-#                        expected.sim.reps = 1000) 
-#   
-#   
-#   # sanity check:
-#   # should have 1 row per scen-method combo
-#   n.scens = 300
-#   n.methods = nuni(aggo$method)
-#   expect_equal( sum( n.scens * n.methods ),
-#                 nrow(aggo) )
-#   setwd(data.dir); fwrite(aggo, "agg.csv")
-#   
-#   
-#   # add fancy variables for plotting, etc.
-#   agg = wrangle_agg_local(aggo)
-#   setwd(data.dir); fwrite(agg, "agg.csv")
-#   
-# }
-
-
+if ( sim_set == "main" ) {
+  # this will be a little slow (1-2 min)
+  setwd(data.dir)
+  s2 = fread("long_results_job_1384.csv")
+  
+  expect_equal( 500, nrow(s2) / nuni(s2$method) )
+  
+  # make analysis vars
+  s2 = s2 %>% rowwise() %>%
+    mutate( CI_asy = (MHi - Mhat) / (Mhat - MLo),
+            MhatBias = Mhat - Mu,
+            MhatWidth = MHi - MLo,
+            MhatCover = (MHi >= Mu & MLo <= Mu) )
+  
+  # recode variables
+  s2$method.pretty.mu.inf = s2$method 
+  s2$method.pretty.mu.inf[ s2$method == "bayesmeta-joint-shortest-margpmode" ] = "Jeffreys2-shortest" 
+  s2$method.pretty.mu.inf[ s2$method == "bayesmeta-tau-shortest-margpmode" ] = "Jeffreys1-shortest"
+  
+  s2$method.pretty.mu.inf[ s2$method == "ML" ] = "ML-HKSJ"
+  s2$method.pretty.mu.inf[ s2$method == "PM" ] = "PM-HKSJ"
+  s2$method.pretty.mu.inf[ s2$method == "DL" ] = "DL-HKSJ"
+  s2$method.pretty.mu.inf[ s2$method == "DL2" ] = "DL2-HKSJ"
+  s2$method.pretty.mu.inf[ s2$method == "REML" ] = "REML-HKSJ"
+  s2$method.pretty.mu.inf[ s2$method == "exact" ] = "Exact"
+  
+  
+  fwrite( s2, "pretty_long_results_job_1384.csv" )
+}
 

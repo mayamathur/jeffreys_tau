@@ -2,6 +2,7 @@
 
 # NOTES ----------------------------------------------------
 
+#@NOTE ABOUT BOOT VS MAIN ANALYSIS
 
 # PRELIMINARIES ----------------------------------------------------
 
@@ -57,26 +58,44 @@ overwrite.res = TRUE
 # they open new RStudio tabs, so can be useful to skip these sanity checks
 use.View = TRUE
 
+# are we running the main analysis, or the supplementary bootstrap analysis?
+# this avoids results in stats_for_paper.csv
+sim_set = "boot"
+#sim_set = "main"
+message("\n\n***** Setting sim_set = ", sim_set)
+
 # ~~ Set directories -------------------------
 code.dir = here()
 
 # "official" directory names:
+if ( sim_set == "main" ) {
+  ( data.dir = str_replace( string = here(),
+                            pattern = "Code \\(git\\)",
+                            replacement = "Results/*2024-02-26 - collect pmed, mean from bayesmeta (as in RSM_0)/Datasets") )
+  
+  ( results.dir = str_replace( string = here(),
+                               pattern = "Code \\(git\\)",
+                               replacement = "Results/*2024-02-26 - collect pmed, mean from bayesmeta (as in RSM_0)/Results") )
+}
+
+if ( sim_set == "boot" ) {
+  ( data.dir = str_replace( string = here(),
+                            pattern = "Code \\(git\\)",
+                            replacement = "Results/*2024-07-13 - add two types of boot (k=10 scens only)/Datasets") )
+  
+  ( results.dir = str_replace( string = here(),
+                               pattern = "Code \\(git\\)",
+                               replacement = "Results/*2024-07-13 - add two types of boot (k=10 scens only)/Results") )
+}
+
+# # generic directories (SAVE):
 # ( data.dir = str_replace( string = here(),
 #                           pattern = "Code \\(git\\)",
-#                           replacement = "Results/*2024-01-31 - as in RSM_0/Datasets") )
+#                           replacement = "Results/Working dataset") )
 # 
 # ( results.dir = str_replace( string = here(),
 #                              pattern = "Code \\(git\\)",
-#                              replacement = "Results/*2024-01-31 - as in RSM_0/Results") )
-
-# generic directories (SAVE):
-( data.dir = str_replace( string = here(),
-                          pattern = "Code \\(git\\)",
-                          replacement = "Results/Working dataset") )
-
-( results.dir = str_replace( string = here(),
-                             pattern = "Code \\(git\\)",
-                             replacement = "Results/Working results") )
+#                              replacement = "Results/Working results") )
 
 # check that they're specified correctly
 setwd(data.dir)
@@ -94,7 +113,6 @@ overleaf.dir.stats = "/Users/mmathur/Dropbox/Apps/Overleaf/JTE (Jeffreys tau est
 setwd(code.dir)
 source("analyze_sims_helper_JTE.R")
 source("helper_JTE.R")  # for lprior(), etc.
-
 
 
 
@@ -116,58 +134,34 @@ agg$true.dist.pretty = factor( agg$true.dist.pretty, levels = c("Normal effects"
 
 
 ### main analysis dataset
-agg2 = agg %>% filter(k.pub <= 20)
-
-# check method recoding
-table(agg2$method.pretty)
-table(agg2$method.pretty.est)
-
-
-# # drop any "NA" methods (i.e., ones that didn't get labeled in wrangle_agg_local)
-# agg = agg %>% filter( method.pretty != "" )
-# table(agg$method.pretty)
-
-# check that all sim reps completed
-t = agg %>% group_by()
-
-
-expect_equal( unique(agg$sim.reps.actual), 500 )
-
-# initialize global variables that describe estimate and outcome names, etc.
-# this must be after calling wrangle_agg_local
-init_var_names(.agg = agg)
-
-# # summarize scen params
-# CreateTableOne( dat = agg,
-#                 vars = param.vars.manip2,
-#                 factorVars = param.vars.manip2,
-#                 strata = "Ytype" )
-
-### scen 1384 data
-setwd(data.dir)
-s2 = fread("pretty_long_results_job_1384.csv")
-
-### dataset of just a few k=10 scens with perm method
-( temp.dir = str_replace( string = data.dir,
-                          pattern = "Working dataset",
-                          replacement = "2024-07-01 - add perm in k=10 scens only") )
-
-setwd(temp.dir)
-aggperm = fread("aggo.csv")
-
-t = aggperm %>% group_by(method) %>%
-  summarise(meanNA(MhatCover),
-            mean(is.na(MhatCover)),
-            meanNA(MhatWidth))
-dim(t)
-
-View(t)
-
-# compare performance of boot and perm
-x1 = aggperm$MhatCover[ aggperm$method == "boot" ]
-x2 = aggperm$MhatCover[ aggperm$method == "perm" ]
-
-plot(x1, x2)
+if ( sim_set == "main" ) {
+  agg2 = agg %>% filter(k.pub <= 20)
+  
+  # check method recoding
+  table(agg2$method.pretty)
+  table(agg2$method.pretty.est)
+  
+  # # drop any "NA" methods (i.e., ones that didn't get labeled in wrangle_agg_local)
+  # agg = agg %>% filter( method.pretty != "" )
+  # table(agg$method.pretty)
+  
+  
+  expect_equal( unique(agg$sim.reps.actual), 500 )
+  
+  # initialize global variables that describe estimate and outcome names, etc.
+  # this must be after calling wrangle_agg_local
+  init_var_names(.agg = agg)
+  
+  # # summarize scen params
+  # CreateTableOne( dat = agg,
+  #                 vars = param.vars.manip2,
+  #                 factorVars = param.vars.manip2,
+  #                 strata = "Ytype" )
+  
+  ### scen 1384 data
+  setwd(data.dir)
+  s2 = fread("pretty_long_results_job_1384.csv")
+}
 
 
 # ~~ Check runtimes of sbatch files -------------------------
@@ -186,34 +180,17 @@ summary(agg$doParallelSecondsQ95/60^2)
 
 ### Stats about scen parameters
 # one row per scen only
-first = agg[ !duplicated(agg$scen.name), ]
-
-update_result_csv( name = "Num scens Ytype bin",
-                   value = sum(first$Ytype == "bin-OR"),
-                   print = TRUE )
-
-update_result_csv( name = "Num scens Ytype cont",
-                   value = sum(first$Ytype == "cont-SMD"),
-                   print = TRUE )
-
-
-
-# ### CI width comparisons
-# t = agg %>% filter(Ytype == "cont-SMD") %>%
-#   group_by(scen.name) %>%
-#   mutate( CI_ratio = min( MhatWidth[ method.pretty != "Jeffreys2-shortest" ] ) / MhatWidth[ method.pretty == "Jeffreys2-shortest" ] ) %>%
-#   filter( !duplicated(scen.name) )
-# 
-# expect_equal( nrow(t), nuni(agg$scen.name[agg$Ytype == "cont-SMD"]) )
-# 
-# #@definitely check these and the underlying CI_ratio calculation
-# update_result_csv( name = "Sims - Mean perc narrower Jeffreys vs winning other method - Ycont",
-#                    value = round( 100 * ( mean(t$CI_ratio) - 1 ) ),
-#                    print = TRUE )
-
-
-
-
+if ( sim_set == "main" ) {
+  first = agg[ !duplicated(agg$scen.name), ]
+  
+  update_result_csv( name = "Num scens Ytype bin",
+                     value = sum(first$Ytype == "bin-OR"),
+                     print = TRUE )
+  
+  update_result_csv( name = "Num scens Ytype cont",
+                     value = sum(first$Ytype == "cont-SMD"),
+                     print = TRUE )
+}
 
 # ~ Convergence stats by method -------------------------
 
@@ -233,11 +210,6 @@ t = agg %>% group_by(method.pretty) %>%
 
 if (use.View == TRUE) View(t)
 
-
-
-# update_result_csv( name = paste("Perc Jeffreys", names(t)),
-#                    value = round( 100 * t[1,], 2 ),
-#                    print = TRUE )
 
 
 # WINNER TABLES -------------------------
@@ -284,7 +256,7 @@ make_both_winner_tables(.agg = agg2 %>% filter( Ytype == "cont-SMD" &
 
 # ~ Overall  -------------------------------------------------
 
-# if the tables don't have all the methods you want, adjust args in make_winner_table_col
+# if the tables don't have all the methods you want, adjust methods_pretty_mu_inf and methods_pretty_tau_inf in init_var_names
 
 # WINNER TABLES 1-2
 make_both_winner_tables(.agg = agg2 %>% filter( Ytype == "cont-SMD" ) )
