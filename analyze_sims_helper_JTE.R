@@ -390,6 +390,8 @@ wrangle_agg_local = function(agg) {
   agg$t2a.pretty = NA
   agg$t2a.pretty = paste("tau^2 =", agg$t2a)
   
+  agg$tau = sqrt(agg$t2a)
+  
   agg$true.dist.pretty = NA
   agg$true.dist.pretty[agg$true.dist == "norm"] = "Normal effects"
   agg$true.dist.pretty[agg$true.dist == "expo"] = "Exponential effects"
@@ -1381,8 +1383,8 @@ my_line_plot = function(
     xlab("k") +
     ylab( eval( parse(text = .ylab) ) ) +
     
-    facet_grid(t2a ~ true.dist.pretty + Ytype.pretty,
-               labeller = label_bquote( rows = tau^2 ~ "=" ~ .(t2a) ) ) +
+    facet_grid( tau ~ true.dist.pretty + Ytype.pretty,
+               labeller = label_bquote( rows = tau ~ "=" ~ .(tau) ) ) +
     
     theme_bw(base_size = 12) +
     

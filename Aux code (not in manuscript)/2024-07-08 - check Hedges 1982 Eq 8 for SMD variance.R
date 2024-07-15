@@ -1,7 +1,7 @@
 
 # PRELIMINARIES ----------------------------------------------------
 
-#rm(list=ls())
+# rm(list=ls())
 
 # This script uses renv to preserve the R environment specs (e.g., package versions.)
 library(renv)
@@ -53,27 +53,6 @@ overwrite.res = TRUE
 # ~~ Set directories -------------------------
 code.dir = here()
 
-( data.dir = str_replace( string = here(),
-                          pattern = "Code \\(git\\)",
-                          replacement = "Results/Working dataset") )
-
-( results.dir = str_replace( string = here(),
-                             pattern = "Code \\(git\\)",
-                             replacement = "Results/Working results") )
-
-
-# check that they're specified correctly
-setwd(data.dir)
-setwd(results.dir)
-
-# below is the only absolute path
-# write results directly to directory containing TeX manuscript in Overleaf so stats can be piped directly into text
-# this is an absolute path because it must live in Dropbox, outside the project directory, in order to sync with Overleaf
-# to reproduce results, just set this to any directory on your local machine
-# results will be written to a csv file in that location
-overleaf.dir.figs = "/Users/mmathur/Dropbox/Apps/Overleaf/JTE (Jeffreys tau estimation) Overleaf/R_objects/figures"
-# test it
-setwd(overleaf.dir.figs)
 
 
 setwd(code.dir)
@@ -81,54 +60,43 @@ source("analyze_sims_helper_JTE.R")
 source("helper_JTE.R")  # for lprior(), etc.
 
 
-# ** FIGURE 1 LINE PLOT: TAU FOR DIFFERENT N.EXPR  -------------------------------------------------
-
-# Idea: panels are different values of k; lines are different sei distributions taken from the sims
-
-# as in the simulation study
-
-k.pub = c(2, 5, 10, 100)
 
 
-# list of all results (one for each k.pub)
-resl = list()
-# list of plots (one for each k.pub)
-pl = list()
+# CHECK SMD VARIANCE SIMPLIFICATION  -------------------------------------------------
+
+# sanity check:
 
 
-for ( i in 1:length(k.pub) ) {
-  res = prior_plot_one_k(.k = k.pub[i])
-  resl[[i]] = res
-  pl[[i]] = res$plot
-}
+# from debug(escalc):
+# For measure="SMD", one can choose between vtype="LS" (the default) for the usual large-sample approximation to compute the sampling variances (equation 8 in Hedges, 1982),
+# if (vtype[i] == "LS") 
+#   vi[i] <- 1/n1i[i] + 1/n2i[i] + yi[i]^2/(2 * 
+#                                             npi[i])
+# where npi = total N
 
-# shape of Jeffreys2 doesn't seem to depend on k, but shape of Jeffreys1 does (a little)
-pl[[1]]
-pl[[2]]
-pl[[3]]
-pl[[4]]
+N = 10
+Mu = -4
 
-
-# save just one of them (k=10)
-# rescale y-axis
-current.y.lims = layer_scales(pl[[3]])$y$range$range
-plot = pl[[3]] + ggtitle("") + 
-  scale_y_continuous( limits = c(0, current.y.lims[2] ) )
-
-my_ggsave(name = "prior_plot_simulated.pdf",
-          .plot = plot,
-          .width = 10,
-          .height = 10,
-          .results.dir = results.dir,
-          .overleaf.dir = overleaf.dir.figs)
+d = sim_meta( 
+  Mu = Mu,
+  t2a = 0,
+  true.dist = "norm",
+  
+  N.expr = N,
+  Ytype = "cont-SMD",
+  p0 = NA,
+  
+  k.pub = 500)
 
 
-# in response to reviewer: try combining the plots 
-plot = prior_plot_one_k_2(.k = 10)
+# manual approximation of escalc formula above for case of E[N1] = E[N2]
+my_sei = sqrt( (8+Mu^2)/(2*N) )
+
+summary(d$sei - my_sei)
 
 
-
-
+(8+Mu^2)/(2*N)  # manual simplification of escalc formula above for case of E[N1] = E[N2]
+# yes, matches :)
 
 
 

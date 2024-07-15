@@ -204,8 +204,8 @@ if (use.View == TRUE) View(t)
 if (sim_set == "boot") {
   dput(unique(agg$method))
   
-  # # create the base dataset from which to filter all winner tables
-  agg2 = agg %>% filter( k.pub <= 20 )
+  # create the base dataset from which to filter all winner tables
+  agg2 = agg
   
   
   dim(agg2); nuni(agg2$scen.name)
