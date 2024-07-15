@@ -610,11 +610,7 @@ if (sim_set == "main") {
     facet_grid(t2a ~ true.dist.pretty + Ytype.pretty )
   
   ggplotly(p)
-  
-  
-  
-  
-  
+
   
   # sanity check: understand coverage differences for k=100
   # very interesting!
@@ -1159,72 +1155,6 @@ if (sim_set == "main") {
   
   
   # SCEN 1384: Plots and stats (CI overcoverage despite better efficiency) -------------------------------------------------
-  
-  
-  # SAVE ELSEWHERE??
-  # # for binary Y, investigate the surprising finding that Jeffreys slightly over-covers, yet its CI is much narrower
-  # 
-  # # ~ Look for scens exhibiting this property  -------------------------------------------------
-  # # wide form wrt methods:
-  # wide_agg <- pivot_wider(agg2 %>% filter(method.pretty.mu.inf %in% methods_pretty_mu_inf),
-  #                         names_from = method.pretty.mu.inf,
-  #                         values_from = c(MhatCover, MhatWidth, MhatBias, MhatMAE,
-  #                                         MLo, MHi),
-  #                         names_sep = "_",
-  #                         id_cols = all_of( c( "scen.name", param.vars.manip2 ) ) )
-  # 
-  # expect_equal( nrow(wide_agg), nuni(agg2$scen.name) )
-  # 
-  # # scens where Jeffreys over-covered but was narrower than REML:
-  # scens = wide_agg$scen.name[ wide_agg$`MhatCover_Jeffreys2` > 0.95 & 
-  #                               wide_agg$`MhatCover_REML-HKSJ` < 0.95 & 
-  #                               wide_agg$`MhatWidth_Jeffreys2` < wide_agg$`MhatWidth_REML-HKSJ` ]
-  # 
-  # t = wide_agg %>% select( all_of( c( "scen.name", param.vars.manip2 ) ),
-  #                          `MhatCover_Jeffreys2`, 
-  #                          `MhatCover_REML-HKSJ`,
-  #                          
-  #                          `MhatWidth_Jeffreys2`, 
-  #                          `MhatWidth_REML-HKSJ`,
-  #                          
-  #                          `MhatBias_Jeffreys2`, 
-  #                          `MhatBias_REML-HKSJ`,
-  #                          
-  #                          `MhatMAE_Jeffreys2`, 
-  #                          `MhatMAE_REML-HKSJ`,
-  #                          
-  #                          `MLo_Jeffreys2`, 
-  #                          `MLo_REML-HKSJ`,
-  #                          
-  #                          `MHi_Jeffreys2`, 
-  #                          `MHi_REML-HKSJ`) %>%
-  #   filter(scen.name %in% scens) %>%
-  #   arrange(`MhatCover_REML-HKSJ`) 
-  #   #filter(scen.name == 1384)
-  # 
-  # if (use.View == TRUE) View(t)
-  # 
-  # # scen 1384 is striking; extract its scen params:
-  # x = agg2 %>% filter(scen.name==1384)
-  # x2 = x[1, 1:12] 
-  # ( scen_1384_params = constructive::construct( as.data.frame(x2) ) )
-  # 
-  # # I ran this scenario again locally for 100 sim reps to get iterate-level data
-  # 
-  # #$k=3$, binary $Y$,  $\mu = 0.5$, $\tau^2 = 0.04$,  normal population effects, $P(Y = 1 \mid X=0) = 0.05$,  and $N \sim U(2000, 4000)$
-  # # temp: find a different scen
-  # # this one was in the manuscript previously
-  # temp = agg %>% filter(k.pub == 3 &
-  #                  Mu == 0.5 &
-  #                  t2a == 0.04 &
-  #                  true.dist == "norm" &
-  #                  p0 == 0.05 &
-  #                  Ytype == "bin-OR" &
-  #                  N.pretty == "N ~ U(2000, 4000)")
-  # 
-  # nrow(temp)
-  # temp$scen.name
-  
   
   # ~ Look at individual iterates for scen 1384  -------------------------------------------------
   
