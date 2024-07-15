@@ -1,4 +1,21 @@
 
+# NOTES -----------------------------
+
+# Simulations were run in two batches:
+#  - 1. All scenarios for methods other than boot-bca and boot-perc
+#  - 2. Only k=10 scenarios for all methods including boot-bca and boot-perc
+
+# For batch 1, computational time is short, so each job can run an entire scenario (500 simulation iterates). 
+# Accordingly, in the very last section of this script ("WRITE LONG AND SHORT RESULTS"), we
+#  chose to write only "short" (pre-aggregated) results for each job. 
+#  Finally, we aggregated using stitch_long_res_JTE.R.
+
+# For batch 2, computational times were long, so each job could only run 5 simulation iterates. 
+#  Thus, it doesn't work to pre-aggregate scenarios within each job.
+#  Instead, in the section "WRITE LONG AND SHORT RESULTS", we wrote "long" results for each job
+#   and then aggregated using stitch_long_res_JTE.R.
+
+
 # PRELIMINARIES -----------------------------
 
 # rm( list = ls() )

@@ -1,4 +1,10 @@
 
+# NOTES ----------------------------------------------------
+
+# See notes in doParallel_JTE.R about the two simulation batches. 
+# Make sure you set the global variable sim_set below depending on the batch to be analyzed.
+
+
 # PRELIMINARIES ----------------------------------------------------
 
 #  rm(list=ls())
@@ -39,12 +45,10 @@ select = dplyr::select
 # run this only if you want to update the R environment specs
 # renv::snapshot()
 
-
-# ~~ User-specified global vars -------------------------
 # no sci notation
 options(scipen=999)
 
-stitch.from.scratch = FALSE
+# ~~ User-specified global vars -------------------------
 
 # are we running the main analysis, or the supplementary bootstrap analysis?
 # this avoids results in stats_for_paper.csv
@@ -99,7 +103,6 @@ source("analyze_sims_helper_JTE.R")
 
 
 # READ IN AGGREGATED DATA FROM CLUSTER -------------------------------------------------
-
 
 # ~ Basic prep -------------------------------------------------
 setwd(data.dir)

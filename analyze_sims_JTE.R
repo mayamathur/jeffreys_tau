@@ -1,8 +1,9 @@
 
-
 # NOTES ----------------------------------------------------
 
-#@NOTE ABOUT BOOT VS MAIN ANALYSIS
+# See notes in doParallel_JTE.R about the two simulation batches. 
+# Make sure you set the global variable sim_set below depending on the batch to be analyzed.
+
 
 # PRELIMINARIES ----------------------------------------------------
 
@@ -46,9 +47,10 @@ select = dplyr::select
 # setwd(here())
 # renv::snapshot()
 
-# ~~ User-specified global vars -------------------------
 # no sci notation
 options(scipen=999)
+
+# ~~ User-specified global vars -------------------------
 
 # control which results should be redone and/or overwritten
 # but note that not all fns respect this setting
@@ -60,8 +62,8 @@ use.View = TRUE
 
 # are we running the main analysis, or the supplementary bootstrap analysis?
 # this avoids results in stats_for_paper.csv
-#sim_set = "boot"
-sim_set = "main"
+sim_set = "boot"
+#sim_set = "main"
 message("\n\n***** Setting sim_set = ", sim_set)
 
 # ~~ Set directories -------------------------
@@ -118,7 +120,6 @@ source("helper_JTE.R")  # for lprior(), etc.
 
 # ~~ Read datasets -------------------------
 
-# if only analyzing a single sim environment (no merging):
 setwd(data.dir)
 agg = fread( "agg.csv")
 # check when the dataset was last modified to make sure we're working with correct version
@@ -145,8 +146,6 @@ if ( sim_set == "main" ) {
   setwd(data.dir)
   s2 = fread("pretty_long_results_job_1384.csv")
 }
-
-
 
 
 # ~~ Check runtimes of sbatch files -------------------------
@@ -234,18 +233,8 @@ if (sim_set == "main") {
   
   dput(unique(agg$method))
   
-  
-  # fewer BY methods
-  # methods_for_table = c(
-  #   "ML", "REML", "DL", "PM", "DL2", "exact","ML-profile",
-  #   "bayesmeta-tau-central", 
-  #   "bayesmeta-tau-shortest",
-  #   "bayesmeta-joint-shortest",
-  #   "bayesmeta-joint-central")
-  
-  # # create the base dataset from which to filter all winner tables
+  # create the base dataset from which to filter all winner tables
   agg2 = agg %>% filter( k.pub <= 20 )
-  
   
   dim(agg2); nuni(agg2$scen.name)
   # summarize scen params
@@ -253,24 +242,7 @@ if (sim_set == "main") {
                   vars = param.vars.manip2,
                   factorVars = param.vars.manip2 )
   
-  #  ~ Sanity checks -------------------------------------------------
-  
-  # only look at methods that should be exactly the same
-  
-  # very similar, but not exactly the same
-  make_both_winner_tables(.agg = agg2 %>% filter( Ytype == "cont-SMD" &
-                                                    method %in% c("bayesmeta-joint-shortest", "jeffreys-hdi") ) )
-  
-  # **big difference here: bayesmeta is way shorter
-  # could it be that the posterior is multimodal?
-  make_both_winner_tables(.agg = agg2 %>% filter( Ytype == "cont-SMD" &
-                                                    method %in% c("bayesmeta-tau-shortest", "jeffreys-tau-hdi") ) )
-  
-  # again extremely different! 
-  make_both_winner_tables(.agg = agg2 %>% filter( Ytype == "cont-SMD" &
-                                                    method %in% c("bayesmeta-tau-central", "jeffreys-tau-pmode") ) )
-  
-  
+
   # ~ Overall  -------------------------------------------------
   
   # if the tables don't have all the methods you want, adjust methods_pretty_mu_inf and methods_pretty_tau_inf in init_var_names
@@ -316,8 +288,6 @@ if (sim_set == "main") {
   }
   
   # ~ N.expr  -------------------------------------------------
-  
-  
   if ( sim_set == "main" ) {
     # in Supplement
     # WINNER TABLES 13-14
@@ -364,10 +334,7 @@ if (sim_set == "main") {
   
   # ONE-OFF PERFORMANCE STATS FOR PAPER -------------------------------------------------
   
-  
   # ~ Proportion of scens with nominal coverage  -------------------------------------------------
-  
-  
   
   # Mhat
   update_result_csv( name = paste( "Perc normal scens MhatCoverNominal HKSJ methods" ),
@@ -489,8 +456,8 @@ if (sim_set == "main") {
                                                     k.pub <= 5 &
                                                     t2a == 0.0001 ) )
   
-  #***very interesting. Mhat coverage depends heavily on t2a for ML-profile, but not for bayesmeta-joint-central! Both methods are fine for t2a = 0.0001, BUT only jeffreys is fine for t2a = 0.25.
-  
+  # Very interesting. Mhat coverage depends heavily on t2a for ML-profile, but not for bayesmeta-joint-central!
+  # Both methods are fine for t2a = 0.0001, BUT only jeffreys is fine for t2a = 0.25.
   
   
   
@@ -561,9 +528,7 @@ if (sim_set == "main") {
     group_by(k.pub, t2a, method.pretty, Ytype.pretty, true.dist.pretty) %>%
     summarise_if(is.numeric, meanNA)
   
-  # ~ Plots by k and tau -------------------------------------------------
-  
-  
+
   # ~ MhatMAE -------------------------------------------------
   
   
